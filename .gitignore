@@ -1,0 +1,30 @@
+# Database (user data, don't commit)
+matrix.db
+matrix.db-wal
+matrix.db-shm
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Bun
+bun.lockb
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
