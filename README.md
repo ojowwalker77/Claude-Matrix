@@ -35,8 +35,18 @@ Claude Code is stateless - every session starts fresh. Matrix fixes this by:
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) v1.0+
-- Claude Code v2.0+
+- [Bun](https://bun.sh) v1.0+ (includes native SQLite)
+- [Claude Code](https://claude.ai/code) v2.0+
+
+### Dependencies (auto-installed)
+
+| Package | Purpose |
+|---------|---------|
+| `@modelcontextprotocol/sdk` | MCP server protocol |
+| `@xenova/transformers` | Local embeddings (downloads `all-MiniLM-L6-v2` ~80MB on first use) |
+| `bun:sqlite` | Database (built into Bun, no install needed) |
+
+> **Note:** Vector search is done in JavaScript (brute force cosine similarity). Works well up to ~10k solutions. No external vector DB needed.
 
 ### Setup
 

@@ -35,6 +35,7 @@ export async function matrixRecall(input: RecallInput): Promise<RecallResult> {
   const queryEmbedding = await getEmbedding(input.query);
 
   // Get all solutions with embeddings
+  const params: string[] = [];
   let query = `
     SELECT id, problem, problem_embedding, solution, scope, tags, score, uses, successes, failures
     FROM solutions
@@ -42,10 +43,11 @@ export async function matrixRecall(input: RecallInput): Promise<RecallResult> {
   `;
 
   if (input.scopeFilter && input.scopeFilter !== 'all') {
-    query += ` AND scope = '${input.scopeFilter}'`;
+    query += ` AND scope = ?`;
+    params.push(input.scopeFilter);
   }
 
-  const rows = db.query(query).all() as Array<{
+  const rows = db.query(query).all(...params) as Array<{
     id: string;
     problem: string;
     problem_embedding: Uint8Array;

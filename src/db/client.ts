@@ -2,6 +2,7 @@ import { Database } from 'bun:sqlite';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { cosineSimilarity } from '../embeddings/local.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -50,23 +51,8 @@ export function bufferToEmbedding(buffer: Buffer | Uint8Array): Float32Array {
   return new Float32Array(buffer.buffer, buffer.byteOffset, buffer.length / 4);
 }
 
-// Cosine similarity for vector search (done in JS since sqlite-vec doesn't work with bun:sqlite)
-export function cosineSimilarity(a: Float32Array, b: Float32Array): number {
-  if (a.length !== b.length) return 0;
-
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i]! * b[i]!;
-    normA += a[i]! * a[i]!;
-    normB += b[i]! * b[i]!;
-  }
-
-  const denom = Math.sqrt(normA) * Math.sqrt(normB);
-  return denom === 0 ? 0 : dot / denom;
-}
+// Re-export for backwards compatibility
+export { cosineSimilarity };
 
 // Search similar solutions by embedding (brute force, fine for <10k entries)
 export function searchSimilarSolutions(
