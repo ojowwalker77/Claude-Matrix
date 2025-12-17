@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Matrix CLI - Persistent memory system for Claude Code
+# https://github.com/ojowwalker77/Claude-Matrix
+
+set -e
+
+# Check for Bun
+if ! command -v bun &> /dev/null; then
+    echo "Error: Bun is required but not installed."
+    echo ""
+    echo "Install Bun with:"
+    echo "  curl -fsSL https://bun.sh/install | bash"
+    echo ""
+    echo "Or via Homebrew:"
+    echo "  brew install oven-sh/bun/bun"
+    exit 1
+fi
+
+# Determine Matrix directory
+if [ -n "$MATRIX_DIR" ]; then
+    MATRIX_HOME="$MATRIX_DIR"
+elif [ -d "$HOME/.claude/matrix" ]; then
+    MATRIX_HOME="$HOME/.claude/matrix"
+elif [ -d "$(dirname "$0")/.." ] && [ -f "$(dirname "$0")/../package.json" ]; then
+    # Homebrew installation - script is in libexec/bin
+    MATRIX_HOME="$(cd "$(dirname "$0")/.." && pwd)"
+else
+    echo "Error: Matrix installation not found."
+    echo ""
+    echo "Expected at: ~/.claude/matrix"
+    echo "Or set MATRIX_DIR environment variable."
+    echo ""
+    echo "Install Matrix with:"
+    echo "  brew tap ojowwalker77/matrix && brew install matrix"
+    echo ""
+    echo "Or manually:"
+    echo "  git clone https://github.com/ojowwalker77/Claude-Matrix.git ~/.claude/matrix"
+    exit 1
+fi
+
+# Check for CLI entry point
+CLI_ENTRY="$MATRIX_HOME/src/cli.ts"
+if [ ! -f "$CLI_ENTRY" ]; then
+    echo "Error: CLI not found at $CLI_ENTRY"
+    echo "Matrix may need to be updated. Try: cd $MATRIX_HOME && git pull && bun install"
+    exit 1
+fi
+
+# Run CLI
+exec bun run "$CLI_ENTRY" "$@"

@@ -38,12 +38,22 @@ Claude Code is stateless - every session starts fresh. Matrix fixes this by:
 
 ## Installation
 
-### Prerequisites
+### Option 1: Homebrew (Recommended)
 
+```bash
+# Install via Homebrew
+brew tap ojowwalker77/matrix
+brew install matrix
+
+# Complete setup (auto-configures everything)
+matrix init
+```
+
+### Option 2: Manual Installation
+
+**Prerequisites:**
 - [Bun](https://bun.sh) v1.0+ (includes native SQLite)
 - [Claude Code](https://claude.ai/code) v2.0+
-
-### Setup
 
 ```bash
 # Clone to Claude's config directory
@@ -196,12 +206,91 @@ Single SQLite file (`matrix.db`) with tables:
 - `repos` - Repository fingerprints with embeddings
 - `usage_log` - Feedback history for scoring
 
+## CLI Tool
+
+Matrix includes a full CLI for querying and managing your memory database.
+
+### Commands
+
+```bash
+# Search for solutions semantically
+matrix search "OAuth implementation with refresh tokens"
+
+# List stored solutions
+matrix list solutions
+matrix list failures
+matrix list repos
+
+# Show statistics
+matrix stats
+
+# Export database
+matrix export --format=json --output=backup.json
+matrix export --format=csv --type=solutions
+
+# Show version
+matrix version
+
+# Show help
+matrix help
+```
+
+### Search Options
+
+```bash
+matrix search "query" [options]
+  --limit=N        Max results (default: 5)
+  --min-score=0.3  Minimum similarity (default: 0.3)
+  --scope=all      Filter: all | repo | stack | global
+```
+
+### List Options
+
+```bash
+matrix list [type] [options]
+  type             solutions | failures | repos (default: solutions)
+  --page=N         Page number (default: 1)
+  --limit=N        Results per page (default: 20)
+```
+
+### Export Options
+
+```bash
+matrix export [options]
+  --format=json    Output format: json | csv (default: json)
+  --output=FILE    Output file (default: stdout)
+  --type=all       Data: all | solutions | failures | repos
+```
+
+### Shell Completions
+
+```bash
+# Bash - add to ~/.bashrc
+source ~/.claude/matrix/completions/matrix.bash
+
+# Zsh - add to ~/.zshrc
+fpath=(~/.claude/matrix/completions $fpath)
+compinit
+
+# Fish
+cp ~/.claude/matrix/completions/matrix.fish ~/.config/fish/completions/
+```
+
 ## Project Structure
 
 ```
 ~/.claude/matrix/
 ├── src/
-│   ├── index.ts              # MCP server entry (minimal)
+│   ├── index.ts              # MCP server entry
+│   ├── cli.ts                # CLI entry point
+│   ├── cli/                  # CLI commands
+│   │   ├── index.ts          # Command router
+│   │   ├── init.ts           # matrix init
+│   │   ├── search.ts         # matrix search
+│   │   ├── list.ts           # matrix list
+│   │   ├── stats.ts          # matrix stats
+│   │   ├── export.ts         # matrix export
+│   │   └── utils/            # Output formatting
 │   ├── server/
 │   │   └── handlers.ts       # Tool call dispatcher
 │   ├── tools/
@@ -224,6 +313,14 @@ Single SQLite file (`matrix.db`) with tables:
 │   │   ├── tools.ts          # Tool types
 │   │   └── db.ts             # Database types
 │   └── __tests__/            # Unit tests (45 tests)
+├── bin/
+│   └── matrix                # Shell wrapper
+├── completions/              # Shell completions
+│   ├── matrix.bash
+│   ├── matrix.zsh
+│   └── matrix.fish
+├── homebrew/                 # Homebrew formula
+│   └── Formula/matrix.rb
 ├── docs/                     # Documentation
 ├── templates/
 │   └── CLAUDE.md             # Template for users
@@ -257,9 +354,11 @@ bun run src/index.ts
 - [x] Repository fingerprinting for context-aware scoring
 - [x] Unit tests with bun:test
 - [x] Modular architecture
-- [ ] Export/import for sharing solutions
-- [ ] CLI for manual queries
+- [x] CLI for manual queries (`matrix search`, `list`, `stats`, `export`)
+- [x] Export/import for sharing solutions
+- [x] Homebrew distribution
 - [ ] VSCode extension integration
+- [ ] Solution sharing between teams
 
 ## License
 
