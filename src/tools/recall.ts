@@ -1,5 +1,6 @@
 import { getDb, bufferToEmbedding, cosineSimilarity } from '../db/client.js';
 import { getEmbedding } from '../embeddings/local.js';
+import { fingerprintRepo, getOrCreateRepo, getRepoEmbedding, getAllReposWithEmbeddings } from '../repo/index.js';
 
 interface RecallInput {
   query: string;
@@ -18,6 +19,7 @@ interface SolutionMatch {
   score: number;
   uses: number;
   successRate: number;
+  contextBoost?: 'same_repo' | 'similar_stack';
 }
 
 interface RecallResult {
@@ -31,13 +33,24 @@ export async function matrixRecall(input: RecallInput): Promise<RecallResult> {
   const limit = input.limit ?? 5;
   const minScore = input.minScore ?? 0.3;
 
+  // Get current repo context
+  const detected = fingerprintRepo();
+  const currentRepoId = await getOrCreateRepo(detected);
+  const currentRepoEmbedding = getRepoEmbedding(currentRepoId);
+
+  // Build repo embedding cache for stack similarity
+  const repoEmbeddings = new Map<string, Float32Array>();
+  for (const { id, embedding } of getAllReposWithEmbeddings()) {
+    repoEmbeddings.set(id, embedding);
+  }
+
   // Generate embedding for query
   const queryEmbedding = await getEmbedding(input.query);
 
   // Get all solutions with embeddings
   const params: string[] = [];
   let query = `
-    SELECT id, problem, problem_embedding, solution, scope, tags, score, uses, successes, failures
+    SELECT id, repo_id, problem, problem_embedding, solution, scope, tags, score, uses, successes, failures
     FROM solutions
     WHERE problem_embedding IS NOT NULL
   `;
@@ -49,6 +62,7 @@ export async function matrixRecall(input: RecallInput): Promise<RecallResult> {
 
   const rows = db.query(query).all(...params) as Array<{
     id: string;
+    repo_id: string | null;
     problem: string;
     problem_embedding: Uint8Array;
     solution: string;
@@ -60,12 +74,31 @@ export async function matrixRecall(input: RecallInput): Promise<RecallResult> {
     failures: number;
   }>;
 
-  // Calculate similarities
+  // Calculate similarities with context boost
   const matches: SolutionMatch[] = [];
 
   for (const row of rows) {
     const embedding = bufferToEmbedding(row.problem_embedding);
-    const similarity = cosineSimilarity(queryEmbedding, embedding);
+    let similarity = cosineSimilarity(queryEmbedding, embedding);
+    let contextBoost: 'same_repo' | 'similar_stack' | undefined;
+
+    // Apply context boost
+    if (row.repo_id === currentRepoId) {
+      // Same repo: +15% boost
+      similarity *= 1.15;
+      contextBoost = 'same_repo';
+    } else if (row.repo_id && currentRepoEmbedding) {
+      // Check stack similarity
+      const solutionRepoEmbedding = repoEmbeddings.get(row.repo_id);
+      if (solutionRepoEmbedding) {
+        const stackSimilarity = cosineSimilarity(currentRepoEmbedding, solutionRepoEmbedding);
+        if (stackSimilarity > 0.7) {
+          // Similar stack: +8% boost
+          similarity *= 1.08;
+          contextBoost = 'similar_stack';
+        }
+      }
+    }
 
     if (similarity >= minScore) {
       const totalOutcomes = row.successes + row.failures;
@@ -81,6 +114,7 @@ export async function matrixRecall(input: RecallInput): Promise<RecallResult> {
         score: row.score,
         uses: row.uses,
         successRate: Math.round(successRate * 100) / 100,
+        contextBoost,
       });
     }
   }

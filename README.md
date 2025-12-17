@@ -1,6 +1,6 @@
 # Claude Matrix
 
-#### NOT a oficial Anthropic tool
+#### NOT an official Anthropic tool
 
 **Persistent memory system for Claude Code** - Learn from past solutions, avoid repeated mistakes.
 
@@ -13,7 +13,7 @@ Claude Code is stateless - every session starts fresh. Matrix fixes this by:
 - **Recalling solutions** - Search past implementations semantically before coding
 - **Learning from failures** - Record errors and fixes to prevent repeating mistakes
 - **Building knowledge** - Solutions improve with feedback (reward system)
-- **Context awareness** - Solutions tagged by scope (global/stack/repo)
+- **Context awareness** - Solutions boosted by repo and tech stack similarity
 
 ## Screenshots
 
@@ -25,11 +25,16 @@ Claude Code is stateless - every session starts fresh. Matrix fixes this by:
 
 ## Features
 
-- **Semantic search** - Find solutions by meaning, not keywords
-- **Local embeddings** - 100% offline using `@xenova/transformers`
-- **Single SQLite file** - Portable, no external dependencies
-- **MCP integration** - Works as Claude Code MCP server
-- **Reward system** - Solutions ranked by success rate
+| Feature | Description |
+|---------|-------------|
+| **Semantic Search** | Find solutions by meaning, not keywords |
+| **Local Embeddings** | 100% offline using `@xenova/transformers` |
+| **Repo Fingerprinting** | Auto-detect project type and boost similar solutions |
+| **Context Boost** | +15% for same repo, +8% for similar tech stack |
+| **Single SQLite File** | Portable, no external dependencies |
+| **MCP Integration** | Works as Claude Code MCP server |
+| **Reward System** | Solutions ranked by success rate |
+| **45 Unit Tests** | Comprehensive test coverage with `bun:test` |
 
 ## Installation
 
@@ -37,16 +42,6 @@ Claude Code is stateless - every session starts fresh. Matrix fixes this by:
 
 - [Bun](https://bun.sh) v1.0+ (includes native SQLite)
 - [Claude Code](https://claude.ai/code) v2.0+
-
-### Dependencies (auto-installed)
-
-| Package | Purpose |
-|---------|---------|
-| `@modelcontextprotocol/sdk` | MCP server protocol |
-| `@xenova/transformers` | Local embeddings (downloads `all-MiniLM-L6-v2` ~80MB on first use) |
-| `bun:sqlite` | Database (built into Bun, no install needed) |
-
-> **Note:** Vector search is done in JavaScript (brute force cosine similarity). Works well up to ~10k solutions. No external vector DB needed.
 
 ### Setup
 
@@ -63,7 +58,7 @@ claude mcp add matrix -s user -- bun run ~/.claude/matrix/src/index.ts
 
 # Verify
 claude mcp list
-# Should show: matrix: bun run ... - ✓ Connected
+# Should show: matrix: bun run ... - Connected
 ```
 
 ### Configure CLAUDE.md
@@ -101,13 +96,14 @@ matrix_recall("OAuth Google implementation TypeScript")
 ```
 
 Returns semantically similar solutions with:
-- Similarity score (0-1)
+- Similarity score (0-1) with context boost
 - Success rate from past uses
+- Context boost indicator (`same_repo` | `similar_stack`)
 - Related failure patterns to avoid
 
 ### matrix_store
 
-Save a solution for future recall.
+Save a solution for future recall. Automatically attaches current repo context.
 
 ```
 matrix_store(
@@ -151,11 +147,17 @@ matrix_failure(
 
 ### matrix_status
 
-Check Matrix memory statistics.
+Check Matrix memory statistics and current repo info.
 
 ```
 matrix_status()
 ```
+
+Returns:
+- Current repo name, languages, frameworks, patterns
+- Solution/failure/repo counts
+- Top tags
+- Recent solutions
 
 ## How It Works
 
@@ -163,44 +165,85 @@ matrix_status()
 
 Matrix uses `all-MiniLM-L6-v2` (384 dimensions) via `@xenova/transformers` for 100% local embeddings. First query downloads the model (~80MB), subsequent queries are instant.
 
-### Storage
+### Repo Fingerprinting
 
-Single SQLite file (`matrix.db`) with tables:
-- `solutions` - Problem/solution pairs with embeddings
-- `failures` - Error patterns and fixes
-- `repos` - Repository fingerprints (future)
-- `usage_log` - Feedback history for scoring
+Matrix automatically detects your project type by reading:
+
+| File | Languages/Frameworks Detected |
+|------|------------------------------|
+| `package.json` | TypeScript, JavaScript, React, Vue, Express, etc. |
+| `Cargo.toml` | Rust, Actix, Axum, Tokio, etc. |
+| `pyproject.toml` | Python, FastAPI, Django, Flask, etc. |
+| `go.mod` | Go, Gin, Echo, Fiber, etc. |
+
+This fingerprint is used to boost relevance of solutions from similar projects.
 
 ### Scoring
 
 Solutions are ranked by `similarity * score`:
-- `similarity` - Semantic match (0-1)
+- `similarity` - Semantic match (0-1) with context boost
 - `score` - Historical success rate (0-1), starts at 0.5
 
-Score decays over time and adjusts based on `matrix_reward` feedback.
+Context boost:
+- **Same repo**: similarity × 1.15
+- **Similar stack** (>70% fingerprint match): similarity × 1.08
+
+### Storage
+
+Single SQLite file (`matrix.db`) with tables:
+- `solutions` - Problem/solution pairs with embeddings and repo_id
+- `failures` - Error patterns and fixes
+- `repos` - Repository fingerprints with embeddings
+- `usage_log` - Feedback history for scoring
 
 ## Project Structure
 
 ```
 ~/.claude/matrix/
 ├── src/
-│   ├── index.ts           # MCP server
-│   ├── types.ts           # TypeScript types
+│   ├── index.ts              # MCP server entry (minimal)
+│   ├── server/
+│   │   └── handlers.ts       # Tool call dispatcher
+│   ├── tools/
+│   │   ├── index.ts          # Barrel exports
+│   │   ├── schemas.ts        # MCP tool schemas
+│   │   ├── recall.ts         # matrix_recall
+│   │   ├── store.ts          # matrix_store
+│   │   ├── reward.ts         # matrix_reward
+│   │   ├── failure.ts        # matrix_failure
+│   │   └── status.ts         # matrix_status
+│   ├── repo/
+│   │   ├── fingerprint.ts    # Project detection
+│   │   └── store.ts          # Repo persistence
 │   ├── db/
-│   │   ├── client.ts      # SQLite client (bun:sqlite)
-│   │   └── schema.sql     # Database schema
+│   │   ├── client.ts         # SQLite client
+│   │   └── schema.sql        # Database schema
 │   ├── embeddings/
-│   │   └── local.ts       # Local transformer embeddings
-│   └── tools/
-│       ├── recall.ts      # matrix_recall
-│       ├── store.ts       # matrix_store
-│       ├── reward.ts      # matrix_reward
-│       └── failure.ts     # matrix_failure
+│   │   └── local.ts          # Transformer embeddings
+│   ├── types/
+│   │   ├── tools.ts          # Tool types
+│   │   └── db.ts             # Database types
+│   └── __tests__/            # Unit tests (45 tests)
+├── docs/                     # Documentation
 ├── templates/
-│   └── CLAUDE.md          # Template for users
-├── matrix.db              # SQLite database (created on first run)
+│   └── CLAUDE.md             # Template for users
+├── matrix.db                 # SQLite database
+├── CHANGELOG.md              # Version history
 ├── package.json
 └── README.md
+```
+
+## Development
+
+```bash
+# Run tests
+bun test
+
+# Type check
+bun run --bun tsc --noEmit
+
+# Start server (for debugging)
+bun run src/index.ts
 ```
 
 ## Privacy
@@ -211,7 +254,9 @@ Score decays over time and adjusts based on `matrix_reward` feedback.
 
 ## Roadmap
 
-- [ ] Repository fingerprinting for context-aware scoring
+- [x] Repository fingerprinting for context-aware scoring
+- [x] Unit tests with bun:test
+- [x] Modular architecture
 - [ ] Export/import for sharing solutions
 - [ ] CLI for manual queries
 - [ ] VSCode extension integration
@@ -223,3 +268,5 @@ MIT
 ## Credits
 
 Built for [Claude Code](https://claude.ai/code) by the community.
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.

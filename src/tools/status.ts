@@ -1,8 +1,15 @@
 import { getDb } from '../db/index.js';
+import { fingerprintRepo } from '../repo/index.js';
 
 export interface StatusResult {
   status: string;
   database: string;
+  currentRepo: {
+    name: string;
+    languages: string[];
+    frameworks: string[];
+    patterns: string[];
+  };
   stats: {
     solutions: number;
     failures: number;
@@ -19,6 +26,8 @@ export interface StatusResult {
 }
 
 export function matrixStatus(): StatusResult {
+  // Get current repo info
+  const detected = fingerprintRepo();
   const db = getDb();
 
   const solutions = db.query('SELECT COUNT(*) as count FROM solutions').get() as { count: number };
@@ -43,6 +52,12 @@ export function matrixStatus(): StatusResult {
   return {
     status: 'operational',
     database: 'connected',
+    currentRepo: {
+      name: detected.name,
+      languages: detected.languages,
+      frameworks: detected.frameworks,
+      patterns: detected.patterns,
+    },
     stats: {
       solutions: solutions.count,
       failures: failures.count,

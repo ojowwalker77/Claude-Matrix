@@ -68,6 +68,10 @@ CREATE TABLE IF NOT EXISTS usage_log (
 CREATE INDEX IF NOT EXISTS idx_solutions_repo ON solutions(repo_id);
 CREATE INDEX IF NOT EXISTS idx_solutions_scope ON solutions(scope);
 CREATE INDEX IF NOT EXISTS idx_solutions_score ON solutions(score DESC);
+CREATE INDEX IF NOT EXISTS idx_solutions_scope_score ON solutions(scope, score DESC);
+CREATE INDEX IF NOT EXISTS idx_solutions_created ON solutions(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_failures_repo ON failures(repo_id);
 CREATE INDEX IF NOT EXISTS idx_failures_signature ON failures(error_signature);
+CREATE INDEX IF NOT EXISTS idx_failures_type ON failures(error_type);
 CREATE INDEX IF NOT EXISTS idx_usage_solution ON usage_log(solution_id);
+CREATE INDEX IF NOT EXISTS idx_usage_created ON usage_log(created_at DESC);

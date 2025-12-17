@@ -1,6 +1,7 @@
 import { getDb, embeddingToBuffer } from '../db/client.js';
 import { getEmbedding } from '../embeddings/local.js';
 import { randomUUID } from 'crypto';
+import { fingerprintRepo, getOrCreateRepo } from '../repo/index.js';
 
 interface StoreInput {
   problem: string;
@@ -22,6 +23,10 @@ export async function matrixStore(input: StoreInput): Promise<StoreResult> {
   const db = getDb();
   const id = `sol_${randomUUID().slice(0, 8)}`;
 
+  // Get current repo context
+  const detected = fingerprintRepo();
+  const repoId = await getOrCreateRepo(detected);
+
   // Generate embedding for semantic search
   const embedding = await getEmbedding(input.problem);
   const embBuffer = embeddingToBuffer(embedding);
@@ -33,9 +38,9 @@ export async function matrixStore(input: StoreInput): Promise<StoreResult> {
   const tags = JSON.stringify(input.tags || []);
 
   db.query(`
-    INSERT INTO solutions (id, problem, problem_embedding, solution, scope, context, tags, score)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 0.5)
-  `).run(id, input.problem, embBuffer, input.solution, input.scope, context, tags);
+    INSERT INTO solutions (id, repo_id, problem, problem_embedding, solution, scope, context, tags, score)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0.5)
+  `).run(id, repoId, input.problem, embBuffer, input.solution, input.scope, context, tags);
 
   return {
     id,
