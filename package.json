@@ -1,9 +1,12 @@
 {
   "name": "claude-matrix",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Persistent memory system for Claude Code - Learn from past solutions, avoid repeated mistakes",
   "type": "module",
   "main": "src/index.ts",
+  "bin": {
+    "matrix": "./bin/matrix"
+  },
   "author": "Matrix Contributors",
   "license": "MIT",
   "repository": {
@@ -17,10 +20,12 @@
     "memory",
     "ai",
     "embeddings",
-    "semantic-search"
+    "semantic-search",
+    "cli"
   ],
   "scripts": {
     "start": "bun run src/index.ts",
+    "cli": "bun run src/cli.ts",
     "dev": "bun --watch src/index.ts",
     "test": "bun test",
     "test:embed": "bun run src/embeddings/local.ts",

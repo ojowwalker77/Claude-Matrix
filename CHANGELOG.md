@@ -2,6 +2,29 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [0.3.0] - 2024-12-17
+
+### Added
+- **CLI Tool** - Full command-line interface for Matrix
+  - `matrix init` - Auto-setup for non-technical users (installs deps, registers MCP, sets up CLAUDE.md)
+  - `matrix search <query>` - Semantic search with `--limit`, `--min-score`, `--scope` options
+  - `matrix list [solutions|failures|repos]` - Paginated listing with `--page`, `--limit`
+  - `matrix stats` - Memory statistics with current repo info
+  - `matrix export` - Database export with `--format=json|csv`, `--output`, `--type`
+  - `matrix version` / `matrix help` - Version and usage info
+- **Homebrew Distribution** - Easy installation via Homebrew tap
+  - `brew tap ojowwalker77/matrix && brew install matrix`
+  - Auto-installs Bun dependency
+  - Post-install instructions for `matrix init`
+- **Shell Completions** - Tab completion for bash, zsh, and fish
+- **Shell Wrapper** - `bin/matrix` script with Bun detection and error handling
+
+### Changed
+- Version bump to 0.3.0
+- Updated README with CLI documentation and Homebrew instructions
+- Added `bin` entry to package.json
+- Added `cli` script to package.json
+
 ## [0.2.0] - 2024-12-17
 
 ### Added
