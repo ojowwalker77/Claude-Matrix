@@ -35,16 +35,19 @@ export async function matrixStore(input: StoreInput): Promise<StoreResult> {
   const duplicates = searchSimilarSolutions(embedding, 1, 0.9);
   if (duplicates.length > 0) {
     const existing = db.query('SELECT id, problem FROM solutions WHERE id = ?')
-      .get(duplicates[0]!.id) as { id: string; problem: string };
+      .get(duplicates[0]!.id) as { id: string; problem: string } | null;
 
-    return {
-      id: existing.id,
-      status: 'duplicate',
-      problem: existing.problem.slice(0, 100) + (existing.problem.length > 100 ? '...' : ''),
-      scope: input.scope,
-      tags: input.tags || [],
-      similarity: Math.round(duplicates[0]!.similarity * 1000) / 1000,
-    };
+    // Handle race condition: solution may have been deleted between search and fetch
+    if (existing) {
+      return {
+        id: existing.id,
+        status: 'duplicate',
+        problem: existing.problem.slice(0, 100) + (existing.problem.length > 100 ? '...' : ''),
+        scope: input.scope,
+        tags: input.tags || [],
+        similarity: Math.round(duplicates[0]!.similarity * 1000) / 1000,
+      };
+    }
   }
 
   const embBuffer = embeddingToBuffer(embedding);

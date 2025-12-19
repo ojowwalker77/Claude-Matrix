@@ -110,7 +110,7 @@ export async function matrixRecall(input: RecallInput): Promise<RecallResult> {
     }
 
     // Cap boosted similarity to prevent >1.0 scores
-    similarity = Math.min(0.95, similarity);
+    similarity = Math.min(0.99, similarity);
 
     if (similarity >= minScore) {
       const totalOutcomes = row.successes + row.failures;
