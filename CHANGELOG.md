@@ -2,6 +2,17 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [0.3.1] - 2024-12-19
+
+### Added
+- **Duplicate Detection** - Prevents storing the same solution twice (>90% similarity check)
+- **Embedding Validation** - Gracefully skips corrupted database entries instead of crashing
+
+### Fixed
+- **Similarity Overflow** - Context-boosted scores now capped at 0.99
+- **Race Condition** - Fixed edge case in duplicate detection
+- **TypeScript Errors** - Fixed strict mode issues in CLI
+
 ## [0.3.0] - 2024-12-17
 
 ### Added
