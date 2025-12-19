@@ -1,5 +1,5 @@
 import { getDb, bufferToEmbedding, cosineSimilarity } from '../db/client.js';
-import { getEmbedding } from '../embeddings/local.js';
+import { getEmbedding, EMBEDDING_DIM } from '../embeddings/local.js';
 import { fingerprintRepo, getOrCreateRepo, getRepoEmbedding, getAllReposWithEmbeddings } from '../repo/index.js';
 
 interface RecallInput {
@@ -81,7 +81,7 @@ export async function matrixRecall(input: RecallInput): Promise<RecallResult> {
     let embedding: Float32Array;
     try {
       embedding = bufferToEmbedding(row.problem_embedding);
-      if (embedding.length !== 384) {
+      if (embedding.length !== EMBEDDING_DIM) {
         continue; // Skip dimension mismatch
       }
     } catch {

@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { createHash } from 'crypto';
-import { createTestDb, closeTestDb, mockEmbedding, embeddingToBuffer } from './helpers.js';
+import { createTestDb, closeTestDb, mockEmbedding, embeddingToBuffer, seedFailure, seedCorruptedFailure } from './helpers.js';
+import { bufferToEmbedding } from '../db/client.js';
 
 let mockDb: ReturnType<typeof createTestDb>;
 
@@ -114,5 +115,45 @@ describe('error normalization', () => {
     const sig1 = computeSignature('runtime', 'Error A');
     const sig2 = computeSignature('runtime', 'Error B');
     expect(sig1).not.toBe(sig2);
+  });
+});
+
+describe('corrupted embedding handling', () => {
+  beforeEach(() => {
+    mockDb = createTestDb();
+  });
+
+  afterEach(() => {
+    closeTestDb();
+  });
+
+  test('gracefully handles corrupted failure embeddings', () => {
+    // Seed valid and corrupted failures
+    seedFailure(mockDb, 'fail_valid', 'runtime', 'Valid error', 'Valid cause', 'Valid fix', 'sig_valid');
+    seedCorruptedFailure(mockDb, 'fail_corrupt', 'runtime', 'Corrupted error', 'Corrupted cause', 'Corrupted fix', 'sig_corrupt');
+
+    // Both should be in DB
+    const count = mockDb.query('SELECT COUNT(*) as count FROM failures').get() as { count: number };
+    expect(count.count).toBe(2);
+
+    // Simulate what searchFailures does - iterate and skip corrupted
+    const rows = mockDb.query(`
+      SELECT id, error_embedding FROM failures WHERE error_embedding IS NOT NULL
+    `).all() as Array<{ id: string; error_embedding: Uint8Array }>;
+
+    const validEmbeddings: string[] = [];
+    for (const row of rows) {
+      try {
+        const embedding = bufferToEmbedding(row.error_embedding);
+        if (embedding.length !== 384) continue;
+        validEmbeddings.push(row.id);
+      } catch {
+        continue;
+      }
+    }
+
+    // Only valid failure should be processed
+    expect(validEmbeddings.length).toBe(1);
+    expect(validEmbeddings[0]).toBe('fail_valid');
   });
 });

@@ -90,3 +90,44 @@ export function seedFailure(
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(id, errorType, errorMessage, signature, embBuffer, rootCause, fixApplied);
 }
+
+// Create corrupted embedding buffer (wrong size)
+export function corruptedEmbeddingBuffer(): Buffer {
+  return Buffer.from(new Float32Array([1, 2, 3]).buffer); // Only 3 dimensions instead of 384
+}
+
+// Create embedding with wrong dimensions
+export function wrongDimensionEmbedding(dim = 100): Float32Array {
+  return mockEmbedding(dim, 0);
+}
+
+// Seed solution with corrupted embedding for testing error handling
+export function seedCorruptedSolution(
+  db: Database,
+  id: string,
+  problem: string,
+  solution: string
+): void {
+  const corruptedBuffer = corruptedEmbeddingBuffer();
+  db.query(`
+    INSERT INTO solutions (id, problem, problem_embedding, solution, scope, context, tags, score)
+    VALUES (?, ?, ?, ?, 'global', '{}', '[]', 0.5)
+  `).run(id, problem, corruptedBuffer, solution);
+}
+
+// Seed failure with corrupted embedding for testing error handling
+export function seedCorruptedFailure(
+  db: Database,
+  id: string,
+  errorType: 'runtime' | 'build' | 'test' | 'type' | 'other',
+  errorMessage: string,
+  rootCause: string,
+  fixApplied: string,
+  signature: string
+): void {
+  const corruptedBuffer = corruptedEmbeddingBuffer();
+  db.query(`
+    INSERT INTO failures (id, error_type, error_message, error_signature, error_embedding, root_cause, fix_applied)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, errorType, errorMessage, signature, corruptedBuffer, rootCause, fixApplied);
+}

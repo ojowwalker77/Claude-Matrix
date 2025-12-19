@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { cosineSimilarity } from '../embeddings/local.js';
+import { cosineSimilarity, EMBEDDING_DIM } from '../embeddings/local.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -72,7 +72,7 @@ export function searchSimilarSolutions(
   for (const row of rows) {
     try {
       const embedding = bufferToEmbedding(row.problem_embedding);
-      if (embedding.length !== 384) continue;
+      if (embedding.length !== EMBEDDING_DIM) continue;
       const similarity = cosineSimilarity(queryEmbedding, embedding);
 
       if (similarity >= minScore) {
@@ -105,7 +105,7 @@ export function searchSimilarFailures(
   for (const row of rows) {
     try {
       const embedding = bufferToEmbedding(row.error_embedding);
-      if (embedding.length !== 384) continue;
+      if (embedding.length !== EMBEDDING_DIM) continue;
       const similarity = cosineSimilarity(queryEmbedding, embedding);
 
       if (similarity >= minScore) {

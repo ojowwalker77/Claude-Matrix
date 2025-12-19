@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { getDb, embeddingToBuffer, bufferToEmbedding } from '../db/index.js';
-import { getEmbedding } from '../embeddings/index.js';
+import { getEmbedding, EMBEDDING_DIM } from '../embeddings/index.js';
 import { type DetectedRepo, fingerprintToText } from './fingerprint.js';
 
 interface RepoRow {
@@ -28,7 +28,13 @@ export function getRepoById(id: string): RepoRow | null {
 export function getRepoEmbedding(repoId: string): Float32Array | null {
   const repo = getRepoById(repoId);
   if (!repo?.fingerprint_embedding) return null;
-  return bufferToEmbedding(repo.fingerprint_embedding as unknown as Buffer);
+  try {
+    const embedding = bufferToEmbedding(repo.fingerprint_embedding as unknown as Buffer);
+    if (embedding.length !== EMBEDDING_DIM) return null;
+    return embedding;
+  } catch {
+    return null;
+  }
 }
 
 export async function getOrCreateRepo(detected: DetectedRepo): Promise<string> {
@@ -110,8 +116,15 @@ export function getAllReposWithEmbeddings(): Array<{ id: string; embedding: Floa
     SELECT id, fingerprint_embedding FROM repos WHERE fingerprint_embedding IS NOT NULL
   `).all() as Array<{ id: string; fingerprint_embedding: Uint8Array }>;
 
-  return rows.map(row => ({
-    id: row.id,
-    embedding: bufferToEmbedding(row.fingerprint_embedding as unknown as Buffer),
-  }));
+  const results: Array<{ id: string; embedding: Float32Array }> = [];
+  for (const row of rows) {
+    try {
+      const embedding = bufferToEmbedding(row.fingerprint_embedding as unknown as Buffer);
+      if (embedding.length !== EMBEDDING_DIM) continue;
+      results.push({ id: row.id, embedding });
+    } catch {
+      continue;
+    }
+  }
+  return results;
 }
