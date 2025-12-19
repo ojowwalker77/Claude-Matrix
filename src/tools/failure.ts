@@ -1,5 +1,5 @@
 import { getDb, embeddingToBuffer } from '../db/client.js';
-import { getEmbedding } from '../embeddings/local.js';
+import { getEmbedding, EMBEDDING_DIM } from '../embeddings/local.js';
 import { createHash, randomUUID } from 'crypto';
 
 interface FailureInput {
@@ -143,18 +143,23 @@ export async function searchFailures(errorMessage: string, limit: number = 3): P
   }> = [];
 
   for (const row of rows) {
-    const embedding = bufferToEmbedding(row.error_embedding);
-    const similarity = cosineSimilarity(queryEmbedding, embedding);
+    try {
+      const embedding = bufferToEmbedding(row.error_embedding);
+      if (embedding.length !== EMBEDDING_DIM) continue;
+      const similarity = cosineSimilarity(queryEmbedding, embedding);
 
-    if (similarity >= 0.5) {
-      matches.push({
-        id: row.id,
-        errorType: row.error_type,
-        errorMessage: row.error_message,
-        rootCause: row.root_cause,
-        fixApplied: row.fix_applied,
-        similarity: Math.round(similarity * 1000) / 1000,
-      });
+      if (similarity >= 0.5) {
+        matches.push({
+          id: row.id,
+          errorType: row.error_type,
+          errorMessage: row.error_message,
+          rootCause: row.root_cause,
+          fixApplied: row.fix_applied,
+          similarity: Math.round(similarity * 1000) / 1000,
+        });
+      }
+    } catch {
+      continue;
     }
   }
 

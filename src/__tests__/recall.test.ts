@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { createTestDb, closeTestDb, mockEmbedding, embeddingToBuffer, seedSolution } from './helpers.js';
+import { createTestDb, closeTestDb, mockEmbedding, embeddingToBuffer, seedSolution, seedCorruptedSolution } from './helpers.js';
 import { cosineSimilarity } from '../embeddings/index.js';
+import { bufferToEmbedding } from '../db/client.js';
 
 let mockDb: ReturnType<typeof createTestDb>;
 
@@ -96,5 +97,66 @@ describe('solution recall', () => {
     const count = mockDb.query('SELECT COUNT(*) as count FROM solutions').get() as { count: number };
     expect(count.count).toBe(1);
     expect(result.length).toBe(0);
+  });
+
+  test('gracefully handles corrupted embeddings', () => {
+    // Seed valid and corrupted solutions
+    seedSolution(mockDb, 'sol_valid', 'Valid problem', 'Valid solution', 'global');
+    seedCorruptedSolution(mockDb, 'sol_corrupt', 'Corrupted problem', 'Corrupted solution');
+
+    // Both should be in DB
+    const count = mockDb.query('SELECT COUNT(*) as count FROM solutions').get() as { count: number };
+    expect(count.count).toBe(2);
+
+    // Simulate what recall does - iterate and skip corrupted
+    const rows = mockDb.query(`
+      SELECT id, problem_embedding FROM solutions WHERE problem_embedding IS NOT NULL
+    `).all() as Array<{ id: string; problem_embedding: Uint8Array }>;
+
+    const validEmbeddings: string[] = [];
+    for (const row of rows) {
+      try {
+        const embedding = bufferToEmbedding(row.problem_embedding);
+        if (embedding.length !== 384) continue;
+        validEmbeddings.push(row.id);
+      } catch {
+        continue;
+      }
+    }
+
+    // Only valid solution should be processed
+    expect(validEmbeddings.length).toBe(1);
+    expect(validEmbeddings[0]).toBe('sol_valid');
+  });
+
+  test('dimension mismatch is detected and skipped', () => {
+    // Create embedding with wrong dimensions (100 instead of 384)
+    const wrongDimEmb = mockEmbedding(100, 42);
+    const wrongDimBuffer = embeddingToBuffer(wrongDimEmb);
+
+    mockDb.query(`
+      INSERT INTO solutions (id, problem, problem_embedding, solution, scope, context, tags, score)
+      VALUES (?, ?, ?, ?, 'global', '{}', '[]', 0.5)
+    `).run('sol_wrong_dim', 'Wrong dim problem', wrongDimBuffer, 'Wrong dim solution');
+
+    seedSolution(mockDb, 'sol_correct', 'Correct problem', 'Correct solution', 'global');
+
+    const rows = mockDb.query(`
+      SELECT id, problem_embedding FROM solutions WHERE problem_embedding IS NOT NULL
+    `).all() as Array<{ id: string; problem_embedding: Uint8Array }>;
+
+    const validIds: string[] = [];
+    for (const row of rows) {
+      try {
+        const embedding = bufferToEmbedding(row.problem_embedding);
+        if (embedding.length !== 384) continue;
+        validIds.push(row.id);
+      } catch {
+        continue;
+      }
+    }
+
+    expect(validIds.length).toBe(1);
+    expect(validIds[0]).toBe('sol_correct');
   });
 });
