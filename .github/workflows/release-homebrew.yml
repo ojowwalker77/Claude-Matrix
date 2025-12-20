@@ -1,0 +1,48 @@
+name: Update Homebrew Formula
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  homebrew:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get release info
+        id: release
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          # Download tarball and calculate SHA256
+          TARBALL_URL="https://github.com/${{ github.repository }}/archive/refs/tags/${VERSION}.tar.gz"
+          SHA256=$(curl -sL "$TARBALL_URL" | shasum -a 256 | cut -d' ' -f1)
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "url=$TARBALL_URL" >> $GITHUB_OUTPUT
+
+      - name: Update Homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: ojowwalker77/homebrew-matrix
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula
+        run: |
+          cd homebrew-tap
+
+          # Update URL and SHA256 in formula
+          sed -i 's|url ".*"|url "${{ steps.release.outputs.url }}"|' Formula/matrix.rb
+          sed -i 's|sha256 ".*"|sha256 "${{ steps.release.outputs.sha256 }}"|' Formula/matrix.rb
+
+          # Update version if it's in the formula
+          sed -i 's|version ".*"|version "${{ steps.release.outputs.version }}"|' Formula/matrix.rb
+
+      - name: Commit and push
+        run: |
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/matrix.rb
+          git commit -m "Update matrix to ${{ steps.release.outputs.version }}"
+          git push
