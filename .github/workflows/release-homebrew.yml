@@ -16,7 +16,10 @@ jobs:
 
           # Download tarball and calculate SHA256
           TARBALL_URL="https://github.com/${{ github.repository }}/archive/refs/tags/${VERSION}.tar.gz"
-          SHA256=$(curl -sL "$TARBALL_URL" | shasum -a 256 | cut -d' ' -f1)
+          if ! SHA256=$(curl -fsSL "$TARBALL_URL" | shasum -a 256 | cut -d' ' -f1); then
+            echo "Error: Failed to download or calculate SHA256 for $TARBALL_URL"
+            exit 1
+          fi
           echo "sha256=$SHA256" >> $GITHUB_OUTPUT
           echo "url=$TARBALL_URL" >> $GITHUB_OUTPUT
 
@@ -31,6 +34,11 @@ jobs:
         run: |
           cd homebrew-tap
 
+          if [ ! -f Formula/matrix.rb ]; then
+            echo "Error: Formula/matrix.rb not found"
+            exit 1
+          fi
+
           # Update URL and SHA256 in formula
           sed -i 's|url ".*"|url "${{ steps.release.outputs.url }}"|' Formula/matrix.rb
           sed -i 's|sha256 ".*"|sha256 "${{ steps.release.outputs.sha256 }}"|' Formula/matrix.rb
@@ -44,5 +52,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/matrix.rb
-          git commit -m "Update matrix to ${{ steps.release.outputs.version }}"
+          git diff --staged --quiet || git commit -m "Update matrix to ${{ steps.release.outputs.version }}"
           git push
