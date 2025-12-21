@@ -74,7 +74,7 @@ jobs:
           console.log(`Updated ${contributors.length} contributors: ${contributors.join(', ')}`);
           SCRIPT
 
-          node /tmp/update-contributors.mjs "$CONTRIBUTORS"
+          node /tmp/update-contributors.mjs "$(echo "$CONTRIBUTORS" | jq -c '.')"
 
       - name: Commit and push if changed
         run: |

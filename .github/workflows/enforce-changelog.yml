@@ -1,0 +1,37 @@
+name: Enforce Changelog
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  check-changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changelog update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Skip check if PR has 'skip-changelog' label
+          LABELS=$(gh pr view ${{ github.event.pull_request.number }} --json labels --jq '.labels[].name')
+          if echo "$LABELS" | grep -q "skip-changelog"; then
+            echo "✓ Skipping changelog check (skip-changelog label)"
+            exit 0
+          fi
+
+          # Check if CHANGELOG.md was modified
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+
+          if echo "$CHANGED_FILES" | grep -q "^CHANGELOG.md$"; then
+            echo "✓ CHANGELOG.md was updated"
+          else
+            echo "✗ Error: CHANGELOG.md was not updated"
+            echo ""
+            echo "Please add an entry to CHANGELOG.md describing your changes."
+            echo "If this PR doesn't need a changelog entry, add the 'skip-changelog' label."
+            exit 1
+          fi
