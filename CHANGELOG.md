@@ -2,6 +2,15 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [0.4.1] - 2025-12-21
+
+### Added
+- **Auto PATH Setup** - `matrix init` now configures PATH automatically
+  - Adds `~/.claude/matrix/bin` to shell config (`.zshrc`, `.bashrc`, `.bash_profile`)
+  - Detects existing PATH config to avoid duplicates
+  - `--skip-path` flag to opt out
+  - Manual installations now get same CLI experience as Homebrew
+
 ## [0.4.0] - 2024-12-20
 
 ### Added
