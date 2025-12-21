@@ -156,4 +156,4 @@ export const STICK_FIGURES: Record<PlayerDirection, string[]> = {
 export const KATAKANA = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
 
 // Auto-generated contributors - do not edit manually
-export const CONTRIBUTORS: string[] = [];
+export const CONTRIBUTORS: string[] = ["CairoAC"];
