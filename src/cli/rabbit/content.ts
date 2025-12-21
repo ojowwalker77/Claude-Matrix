@@ -154,3 +154,6 @@ export const STICK_FIGURES: Record<PlayerDirection, string[]> = {
 
 // Katakana for Matrix rain effect (half-width)
 export const KATAKANA = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
+
+// Auto-generated contributors - do not edit manually
+export const CONTRIBUTORS: string[] = [];

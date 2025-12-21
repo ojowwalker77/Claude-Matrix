@@ -100,6 +100,11 @@ matrix export --format=json
 - [Roadmap](ROADMAP.md)
 - [Architecture](docs/architecture.md)
 
+## Contributors
+
+<!-- CONTRIBUTORS-START -->
+<!-- CONTRIBUTORS-END -->
+
 ## License
 
 MIT

@@ -1,0 +1,85 @@
+name: Update Contributors
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  update-contributors:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Fetch and update contributors
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Fetch contributors (exclude bots and repo owner)
+          OWNER=$(gh api repos/${{ github.repository }} --jq '.owner.login')
+          CONTRIBUTORS=$(gh api repos/${{ github.repository }}/contributors --jq --arg owner "$OWNER" '[.[] | select(.login | endswith("[bot]") | not) | select(.login != $owner) | .login]')
+
+          # Create/update the script inline
+          cat > /tmp/update-contributors.mjs << 'SCRIPT'
+          import { readFileSync, writeFileSync } from 'fs';
+
+          const contributors = JSON.parse(process.argv[2]);
+
+          // Update README.md
+          const readme = readFileSync('README.md', 'utf8');
+          const avatarLinks = contributors
+            .map(u => `<a href="https://github.com/${u}"><img src="https://github.com/${u}.png" width="50" height="50" alt="${u}"/></a>`)
+            .join('\n');
+
+          const contributorsSection = `<!-- CONTRIBUTORS-START -->\n${avatarLinks}\n<!-- CONTRIBUTORS-END -->`;
+
+          let newReadme;
+          if (readme.includes('<!-- CONTRIBUTORS-START -->')) {
+            newReadme = readme.replace(
+              /<!-- CONTRIBUTORS-START -->[\s\S]*?<!-- CONTRIBUTORS-END -->/,
+              contributorsSection
+            );
+          } else {
+            // Insert before ## License
+            newReadme = readme.replace(
+              /## License/,
+              `## Contributors\n\n${contributorsSection}\n\n## License`
+            );
+          }
+          writeFileSync('README.md', newReadme);
+
+          // Update content.ts
+          const content = readFileSync('src/cli/rabbit/content.ts', 'utf8');
+          const arrayStr = JSON.stringify(contributors);
+
+          let newContent;
+          if (content.includes('export const CONTRIBUTORS')) {
+            newContent = content.replace(
+              /\/\/ Auto-generated contributors[\s\S]*?export const CONTRIBUTORS: string\[\] = \[[^\]]*\];/,
+              `// Auto-generated contributors - do not edit manually\nexport const CONTRIBUTORS: string[] = ${arrayStr};`
+            );
+          } else {
+            // Add at the end before last empty lines
+            newContent = content.trimEnd() + `\n\n// Auto-generated contributors - do not edit manually\nexport const CONTRIBUTORS: string[] = ${arrayStr};\n`;
+          }
+          writeFileSync('src/cli/rabbit/content.ts', newContent);
+
+          console.log(`Updated ${contributors.length} contributors: ${contributors.join(', ')}`);
+          SCRIPT
+
+          node /tmp/update-contributors.mjs "$CONTRIBUTORS"
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md src/cli/rabbit/content.ts
+          git diff --staged --quiet || git commit -m "chore: update contributors list"
+          git push

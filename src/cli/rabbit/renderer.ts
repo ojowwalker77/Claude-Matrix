@@ -1,6 +1,6 @@
 // Premium Matrix Rain Renderer - Zero Flicker, Single Buffer Write
 
-import { KATAKANA, PORTALS, INTRO_LINES, STICK_FIGURES, RABBIT_ART } from './content.js';
+import { KATAKANA, PORTALS, INTRO_LINES, STICK_FIGURES, RABBIT_ART, CONTRIBUTORS } from './content.js';
 import { GameState, getPortalContent, Player } from './game.js';
 
 // ANSI escape sequences
@@ -618,10 +618,20 @@ export function renderFinale(width: number, height: number): void {
 
   // Credits at bottom
   const credits = 'made by ojowwalker77 and Claude Opus 4.5';
-  const creditsY = height - 2;
+  const creditsY = CONTRIBUTORS.length > 0 ? height - 3 : height - 2;
   const creditsX = Math.floor((width - credits.length) / 2);
   for (let i = 0; i < credits.length; i++) {
     setCell(buffer, creditsX + i, creditsY, credits[i]!, VERY_DIM);
+  }
+
+  // Contributors line (only if there are contributors)
+  if (CONTRIBUTORS.length > 0) {
+    const contribText = `contributors: ${CONTRIBUTORS.join(', ')}`;
+    const contribY = height - 2;
+    const contribX = Math.floor((width - contribText.length) / 2);
+    for (let i = 0; i < contribText.length; i++) {
+      setCell(buffer, contribX + i, contribY, contribText[i]!, VERY_DIM);
+    }
   }
 
   const frame = bufferToString(buffer);
