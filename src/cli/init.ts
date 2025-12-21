@@ -12,6 +12,7 @@ const REPO_URL = 'https://github.com/ojowwalker77/Claude-Matrix.git';
 interface InitOptions {
   force: boolean;
   skipMcp: boolean;
+  skipPath: boolean;
   skipClaudeMd: boolean;
 }
 
@@ -19,6 +20,7 @@ function parseArgs(args: string[]): InitOptions {
   return {
     force: args.includes('--force') || args.includes('-f'),
     skipMcp: args.includes('--skip-mcp'),
+    skipPath: args.includes('--skip-path'),
     skipClaudeMd: args.includes('--skip-claude-md'),
   };
 }
@@ -133,6 +135,46 @@ async function registerMcp(): Promise<boolean> {
   }
 }
 
+async function setupPath(): Promise<boolean> {
+  info('Setting up PATH for CLI access...');
+
+  const home = process.env['HOME'] || '~';
+  const pathLine = `export PATH="$HOME/.claude/matrix/bin:$PATH"`;
+  const shellConfigs = [
+    { file: join(home, '.zshrc'), name: 'zsh' },
+    { file: join(home, '.bashrc'), name: 'bash' },
+    { file: join(home, '.bash_profile'), name: 'bash_profile' },
+  ];
+
+  let configured = false;
+
+  for (const config of shellConfigs) {
+    if (!existsSync(config.file)) continue;
+
+    const content = await Bun.file(config.file).text();
+
+    if (content.includes('.claude/matrix/bin')) {
+      success(`PATH already configured in ${dim(config.file)}`);
+      configured = true;
+      break;
+    }
+
+    const updated = content + '\n\n# Claude Matrix CLI\n' + pathLine + '\n';
+    await Bun.write(config.file, updated);
+    success(`PATH added to ${dim(config.file)}`);
+    console.log(dim(`  Run: source ${config.file}`));
+    configured = true;
+    break;
+  }
+
+  if (!configured) {
+    warn('No shell config found (.zshrc, .bashrc, .bash_profile)');
+    console.log(dim(`Add manually: ${pathLine}`));
+  }
+
+  return true;
+}
+
 async function setupClaudeMd(): Promise<boolean> {
   info('Setting up CLAUDE.md template...');
 
@@ -178,6 +220,7 @@ export async function init(args: string[]): Promise<void> {
     { name: 'Install dependencies', fn: installDeps },
     { name: 'Initialize database', fn: initDatabase },
     { name: 'Register MCP server', fn: registerMcp, skip: options.skipMcp },
+    { name: 'Setup PATH for CLI', fn: setupPath, skip: options.skipPath },
     { name: 'Setup CLAUDE.md template', fn: setupClaudeMd, skip: options.skipClaudeMd },
   ];
 
