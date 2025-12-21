@@ -24,7 +24,7 @@ jobs:
         run: |
           # Fetch contributors (exclude bots and repo owner)
           OWNER=$(gh api repos/${{ github.repository }} --jq '.owner.login')
-          CONTRIBUTORS=$(gh api repos/${{ github.repository }}/contributors --jq --arg owner "$OWNER" '[.[] | select(.login | endswith("[bot]") | not) | select(.login != $owner) | .login]')
+          CONTRIBUTORS=$(gh api repos/${{ github.repository }}/contributors | jq -c --arg owner "$OWNER" '[.[] | select(.login | endswith("[bot]") | not) | select(.login != $owner) | .login]')
 
           # Create/update the script inline
           cat > /tmp/update-contributors.mjs << 'SCRIPT'
@@ -74,7 +74,7 @@ jobs:
           console.log(`Updated ${contributors.length} contributors: ${contributors.join(', ')}`);
           SCRIPT
 
-          node /tmp/update-contributors.mjs "$(echo "$CONTRIBUTORS" | jq -c '.')"
+          node /tmp/update-contributors.mjs "$CONTRIBUTORS"
 
       - name: Commit and push if changed
         run: |
