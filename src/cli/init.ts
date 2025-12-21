@@ -1,5 +1,6 @@
 import { $ } from 'bun';
 import { existsSync } from 'fs';
+import { homedir } from 'os';
 import { join } from 'path';
 import { getDb } from '../db/index.js';
 import { bold, cyan, dim, green, yellow, red, success, error, info, warn } from './utils/output.js';
@@ -138,8 +139,15 @@ async function registerMcp(): Promise<boolean> {
 async function setupPath(): Promise<boolean> {
   info('Setting up PATH for CLI access...');
 
-  const home = process.env['HOME'] || '~';
+  const home = process.env['HOME'] || homedir();
+  if (!home || home === '~') {
+    warn('Could not determine home directory');
+    console.log(dim('Add manually: export PATH="$HOME/.claude/matrix/bin:$PATH"'));
+    return true;
+  }
+
   const pathLine = `export PATH="$HOME/.claude/matrix/bin:$PATH"`;
+  const pathPattern = /export\s+PATH=.*\.claude\/matrix\/bin/;
   const shellConfigs = [
     { file: join(home, '.zshrc'), name: 'zsh' },
     { file: join(home, '.bashrc'), name: 'bash' },
@@ -151,20 +159,25 @@ async function setupPath(): Promise<boolean> {
   for (const config of shellConfigs) {
     if (!existsSync(config.file)) continue;
 
-    const content = await Bun.file(config.file).text();
+    try {
+      const content = await Bun.file(config.file).text();
 
-    if (content.includes('.claude/matrix/bin')) {
-      success(`PATH already configured in ${dim(config.file)}`);
+      if (pathPattern.test(content)) {
+        success(`PATH already configured in ${dim(config.file)}`);
+        configured = true;
+        break;
+      }
+
+      const updated = content + '\n\n# Claude Matrix CLI\n' + pathLine + '\n';
+      await Bun.write(config.file, updated);
+      success(`PATH added to ${dim(config.file)}`);
+      console.log(dim(`  Run: source ${config.file}`));
       configured = true;
       break;
+    } catch (err) {
+      warn(`Could not modify ${config.file}: ${err}`);
+      continue;
     }
-
-    const updated = content + '\n\n# Claude Matrix CLI\n' + pathLine + '\n';
-    await Bun.write(config.file, updated);
-    success(`PATH added to ${dim(config.file)}`);
-    console.log(dim(`  Run: source ${config.file}`));
-    configured = true;
-    break;
   }
 
   if (!configured) {
