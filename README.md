@@ -4,6 +4,13 @@
 
 **Persistent memory for Claude Code** - Learn from past solutions, avoid repeated mistakes.
 
+
+
+https://github.com/user-attachments/assets/0e43c647-071d-4a7d-9de4-633fee5c5e34
+
+
+
+
 ## Getting Started
 
 ```bash
