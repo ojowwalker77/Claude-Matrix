@@ -35,11 +35,33 @@ Interactive Matrix-themed onboarding that teaches you all the features. Navigate
 
 ## Installation
 
-### Homebrew (Recommended)
+### Quick Install (Recommended)
+
+**macOS / Linux / WSL:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/ojowwalker77/Claude-Matrix/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+iwr https://raw.githubusercontent.com/ojowwalker77/Claude-Matrix/main/install.ps1 | iex
+```
+
+Auto-detects your OS, installs Bun if needed, and sets everything up.
+
+### Homebrew (macOS)
 
 ```bash
 brew tap ojowwalker77/matrix
 brew install matrix
+matrix init
+```
+
+### Manual (Git Clone)
+
+```bash
+git clone https://github.com/ojowwalker77/Claude-Matrix.git ~/.claude/matrix
+cd ~/.claude/matrix && bun install
 matrix init
 ```
 
@@ -48,13 +70,17 @@ The `init` command will prompt you to choose your editor:
 - **Cursor** - Configures `~/.cursor/mcp.json` and `~/.cursorrules`
 - **Both** - Configures both editors (shared memory)
 
-### Manual
+### Upgrading
 
 ```bash
-git clone https://github.com/ojowwalker77/Claude-Matrix.git ~/.claude/matrix
-cd ~/.claude/matrix && bun install
-matrix init
+# Check for updates
+matrix upgrade --check
+
+# Install updates
+matrix upgrade
 ```
+
+Matrix automatically checks for updates and notifies you when a new version is available.
 
 ## Tools
 

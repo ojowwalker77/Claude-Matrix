@@ -7,9 +7,13 @@ import { config } from './config.js';
 import { stats } from './stats.js';
 import { exportDb } from './export.js';
 import { version } from './version.js';
+import { upgrade } from './upgrade.js';
+import { migrate } from './migrate.js';
 import { printHelp } from './help.js';
 import { error } from './utils/output.js';
 import { isRabbitTrigger, startRabbitHole } from './rabbit.js';
+import { warn } from './warn.js';
+import { hooks } from './hooks.js';
 
 export async function runCli(args: string[]): Promise<void> {
   // Easter egg: check for "follow the white rabbit" trigger
@@ -53,10 +57,26 @@ export async function runCli(args: string[]): Promise<void> {
     case 'backup':
       return exportDb(subArgs);
 
+    case 'warn':
+    case 'warning':
+      return warn(subArgs);
+
+    case 'hooks':
+    case 'hook':
+      return hooks(subArgs);
+
     case 'version':
     case '--version':
     case '-v':
       return version();
+
+    case 'upgrade':
+    case 'update':
+      return upgrade(subArgs);
+
+    case 'migrate':
+    case 'migration':
+      return migrate(subArgs);
 
     case 'help':
     case '--help':

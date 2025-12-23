@@ -3,6 +3,9 @@ matrix.db
 matrix.db-wal
 matrix.db-shm
 
+# CLI cache files
+.update-cache.json
+
 # Dependencies
 node_modules/
 

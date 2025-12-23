@@ -14,9 +14,13 @@ ${bold('COMMANDS')}
   ${cyan('list')} ${muted('[type]')}            List solutions, failures, or repos
   ${cyan('edit')} ${muted('<id>')}              Edit a solution or failure
   ${cyan('merge')}                   Find and merge duplicate solutions
+  ${cyan('warn')} ${muted('<action>')}          Manage warnings for files/packages
+  ${cyan('hooks')}                   Manage Claude Code hooks
   ${cyan('config')}                  View and edit configuration
   ${cyan('stats')}                   Show memory statistics
   ${cyan('export')}                  Export database (JSON/CSV)
+  ${cyan('upgrade')}                 Check for and install updates
+  ${cyan('migrate')}                 Run database migrations
   ${cyan('version')}                 Show version
   ${cyan('help')}                    Show this help
 
@@ -45,6 +49,9 @@ ${bold('CONFIG SUBCOMMANDS')}
   ${muted('get <key>')}              Get a specific value
   ${muted('set <key> <val>')}        Set a specific value
   ${muted('reset')}                  Reset to defaults
+
+${bold('UPGRADE OPTIONS')}
+  ${muted('--check, -c')}            Check only, don't install
 
 ${bold('EXAMPLES')}
   ${muted('# Complete setup (for first-time users)')}
