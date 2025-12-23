@@ -2,6 +2,13 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [0.5.1] - 2025-12-23
+
+### Fixed
+- **Homebrew Installation** - Install script now runs `bun install` after `brew install`
+  - Fixes ENOENT errors for `@xenova/transformers` and `sharp` packages
+  - Homebrew formula tarball doesn't include `node_modules`, this adds the missing step
+
 ## [0.5.0] - 2025-12-23
 
 ### Added
