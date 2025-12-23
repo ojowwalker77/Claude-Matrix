@@ -1,5 +1,8 @@
+import { existsSync } from 'fs';
+import { dirname, join } from 'path';
 import { getDb } from '../db/index.js';
-import { bold, dim, success, error, info } from './utils/output.js';
+import { getConfig } from '../config/index.js';
+import { bold, dim, success, error, info, warn } from './utils/output.js';
 
 interface ExportOptions {
   format: 'json' | 'csv';
@@ -7,8 +10,14 @@ interface ExportOptions {
   type: 'all' | 'solutions' | 'failures' | 'repos';
 }
 
+function generateFilename(type: string, format: string): string {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  return `matrix-export-${type}-${timestamp}.${format}`;
+}
+
 function parseArgs(args: string[]): ExportOptions {
-  let format: 'json' | 'csv' = 'json';
+  const config = getConfig();
+  let format: 'json' | 'csv' = config.export.defaultFormat;
   let output: string | null = null;
   let type: 'all' | 'solutions' | 'failures' | 'repos' = 'all';
 
@@ -109,18 +118,40 @@ export async function exportDb(args: string[]): Promise<void> {
     content = toCSV(rows, columns);
   }
 
-  if (options.output) {
-    await Bun.write(options.output, content);
-    success(`Exported to ${bold(options.output)}`);
+  // Determine output path
+  const config = getConfig();
+  let outputPath: string;
 
-    // Show stats
-    const stats: string[] = [];
-    if (data.solutions) stats.push(`${data.solutions.length} solutions`);
-    if (data.failures) stats.push(`${data.failures.length} failures`);
-    if (data.repos) stats.push(`${data.repos.length} repos`);
-    console.log(dim(stats.join(', ')));
+  if (options.output) {
+    outputPath = options.output;
+    // Verify parent directory exists for custom paths
+    const parentDir = dirname(outputPath);
+    if (parentDir !== '.' && !existsSync(parentDir)) {
+      error(`Directory does not exist: ${parentDir}`);
+      process.exit(1);
+    }
   } else {
-    // Print to stdout
-    console.log(content);
+    // Use configured default directory
+    const dir = config.export.defaultDirectory;
+    const filename = generateFilename(options.type, options.format);
+    outputPath = join(dir, filename);
+
+    // Verify directory exists
+    if (!existsSync(dir)) {
+      warn(`Directory does not exist: ${dir}`);
+      error('Configure export directory: matrix config set export.defaultDirectory /path/to/dir');
+      process.exit(1);
+    }
   }
+
+  // Write to file
+  await Bun.write(outputPath, content);
+  success(`Exported to ${bold(outputPath)}`);
+
+  // Show stats
+  const stats: string[] = [];
+  if (data.solutions) stats.push(`${data.solutions.length} solutions`);
+  if (data.failures) stats.push(`${data.failures.length} failures`);
+  if (data.repos) stats.push(`${data.repos.length} repos`);
+  console.log(dim(stats.join(', ')));
 }

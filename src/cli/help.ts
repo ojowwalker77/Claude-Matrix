@@ -29,6 +29,11 @@ ${bold('MERGE OPTIONS')}
   ${muted('--type=TYPE')}            solutions or failures
   ${muted('--dry-run')}              Show pairs without prompts
 
+${bold('EXPORT OPTIONS')}
+  ${muted('--format=FORMAT')}        json or csv (default: json)
+  ${muted('--type=TYPE')}            all, solutions, failures, repos
+  ${muted('--output=PATH')}          Custom output path
+
 ${bold('CONFIG SUBCOMMANDS')}
   ${muted('list')}                   Show all settings
   ${muted('get <key>')}              Get a specific value
@@ -52,8 +57,14 @@ ${bold('EXAMPLES')}
   matrix config
   matrix config set search.defaultLimit 10
 
-  ${muted('# Export to JSON')}
-  matrix export --format=json --output=backup.json
+  ${muted('# Export to Downloads folder (default)')}
+  matrix export
+
+  ${muted('# Export to custom path')}
+  matrix export --output=/path/to/backup.json
+
+  ${muted('# Configure export directory')}
+  matrix config set export.defaultDirectory ~/Documents
 
 ${bold('ENVIRONMENT')}
   ${cyan('MATRIX_DB')}      Custom database path

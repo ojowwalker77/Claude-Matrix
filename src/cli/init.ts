@@ -77,6 +77,9 @@ async function promptEditor(): Promise<EditorChoice> {
           askQuestion();
         }
       });
+    };
+    askQuestion();
+  });
 }
 
 async function checkBun(): Promise<boolean> {

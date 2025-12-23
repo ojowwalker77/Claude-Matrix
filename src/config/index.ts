@@ -17,6 +17,10 @@ export interface MatrixConfig {
   list: {
     defaultLimit: number;
   };
+  export: {
+    defaultDirectory: string;
+    defaultFormat: 'json' | 'csv';
+  };
   display: {
     colors: boolean;
     boxWidth: number;
@@ -27,6 +31,10 @@ export interface MatrixConfig {
     highThreshold: number;
     midThreshold: number;
   };
+}
+
+function getDownloadsDirectory(): string {
+  return join(homedir(), 'Downloads');
 }
 
 export const DEFAULT_CONFIG: MatrixConfig = {
@@ -40,6 +48,10 @@ export const DEFAULT_CONFIG: MatrixConfig = {
   },
   list: {
     defaultLimit: 20,
+  },
+  export: {
+    defaultDirectory: getDownloadsDirectory(),
+    defaultFormat: 'json',
   },
   display: {
     colors: true,
@@ -66,6 +78,9 @@ function deepMerge(target: MatrixConfig, source: Partial<MatrixConfig>): MatrixC
   }
   if (source.list) {
     result.list = { ...result.list, ...source.list };
+  }
+  if (source.export) {
+    result.export = { ...result.export, ...source.export };
   }
   if (source.display) {
     result.display = { ...result.display, ...source.display };

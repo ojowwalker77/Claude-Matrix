@@ -2,6 +2,13 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [0.4.3] - 2025-12-22
+
+### Fixed
+- **Export saves to file** - `matrix export` now saves to Downloads folder by default
+  - Configurable via `matrix config set export.defaultDirectory /path`
+  - Generates timestamped filenames: `matrix-export-{type}-{timestamp}.json`
+
 ## [0.4.2] - 2025-12-22
 
 ### Added
