@@ -130,4 +130,111 @@ export const TOOLS: Tool[] = [
       properties: {},
     },
   },
+  // Warning tools for Hooks integration
+  {
+    name: 'matrix_warn_check',
+    description: 'Check if a file or package has warnings (personal grudges). Use before editing cursed files or installing problematic packages.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['file', 'package'],
+          description: 'Type of warning to check',
+        },
+        target: {
+          type: 'string',
+          description: 'File path or package name to check',
+        },
+        ecosystem: {
+          type: 'string',
+          enum: ['npm', 'pip', 'cargo', 'go'],
+          description: 'Package ecosystem (for packages only)',
+        },
+      },
+      required: ['type', 'target'],
+    },
+  },
+  {
+    name: 'matrix_warn_add',
+    description: 'Add a warning for a file or package. Use to mark problematic dependencies or cursed files.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['file', 'package'],
+          description: 'Type of warning',
+        },
+        target: {
+          type: 'string',
+          description: 'File path (supports glob patterns like src/legacy/*) or package name',
+        },
+        reason: {
+          type: 'string',
+          description: 'Why this file/package is problematic',
+        },
+        severity: {
+          type: 'string',
+          enum: ['info', 'warn', 'block'],
+          description: 'Severity level: info=note, warn=caution, block=stop and ask',
+        },
+        ecosystem: {
+          type: 'string',
+          enum: ['npm', 'pip', 'cargo', 'go'],
+          description: 'Package ecosystem (for packages only)',
+        },
+        repoSpecific: {
+          type: 'boolean',
+          description: 'If true, warning only applies to current repository',
+        },
+      },
+      required: ['type', 'target', 'reason'],
+    },
+  },
+  {
+    name: 'matrix_warn_remove',
+    description: 'Remove a warning by ID or by type+target.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Warning ID to remove',
+        },
+        type: {
+          type: 'string',
+          enum: ['file', 'package'],
+          description: 'Type of warning (use with target)',
+        },
+        target: {
+          type: 'string',
+          description: 'File path or package name (use with type)',
+        },
+        ecosystem: {
+          type: 'string',
+          enum: ['npm', 'pip', 'cargo', 'go'],
+          description: 'Package ecosystem (for packages only)',
+        },
+      },
+    },
+  },
+  {
+    name: 'matrix_warn_list',
+    description: 'List all warnings.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['file', 'package'],
+          description: 'Filter by warning type',
+        },
+        repoOnly: {
+          type: 'boolean',
+          description: 'If true, only show warnings specific to current repository',
+        },
+      },
+    },
+  },
 ];

@@ -4,6 +4,7 @@ import { homedir } from 'os';
 import { join } from 'path';
 import { createInterface } from 'readline';
 import { getDb } from '../db/index.js';
+import { set } from '../config/index.js';
 import { bold, cyan, dim, green, yellow, red, success, error, info, warn } from './utils/output.js';
 
 const MATRIX_DIR = process.env['MATRIX_DIR'] || join(process.env['HOME'] || '~', '.claude', 'matrix');
@@ -27,7 +28,31 @@ interface InitOptions {
   skipMcp: boolean;
   skipPath: boolean;
   skipRules: boolean;
+  skipHooks: boolean;
   editor?: EditorChoice;
+}
+
+// Hooks configuration
+const CLAUDE_SETTINGS_PATH = join(process.env['HOME'] || homedir(), '.claude', 'settings.json');
+
+interface HookConfig {
+  matcher?: string;
+  hooks: Array<{
+    type: string;
+    command: string;
+    timeout?: number;
+  }>;
+}
+
+interface ClaudeSettings {
+  hooks?: {
+    UserPromptSubmit?: HookConfig[];
+    PreToolUse?: HookConfig[];
+    PostToolUse?: HookConfig[];
+    Stop?: HookConfig[];
+    [key: string]: HookConfig[] | undefined;
+  };
+  [key: string]: unknown;
 }
 
 function parseArgs(args: string[]): InitOptions {
@@ -36,6 +61,7 @@ function parseArgs(args: string[]): InitOptions {
     skipMcp: args.includes('--skip-mcp'),
     skipPath: args.includes('--skip-path'),
     skipRules: args.includes('--skip-rules') || args.includes('--skip-claude-md'),
+    skipHooks: args.includes('--skip-hooks'),
     editor: undefined,
   };
 }
@@ -355,6 +381,143 @@ async function setupPath(): Promise<boolean> {
   return true;
 }
 
+// Hooks setup functions
+async function promptHooksSetup(): Promise<{ enableHooks: boolean; enableCache: boolean }> {
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const askQuestion = (question: string): Promise<string> => {
+    return new Promise((resolve) => {
+      rl.question(question, (answer) => {
+        if (answer === null) {
+          console.log('\nAborted.');
+          rl.close();
+          process.exit(0);
+        }
+        resolve(answer.toLowerCase().trim());
+      });
+    });
+  };
+
+  console.log(`\n${bold('Matrix Hooks Setup')}\n`);
+  console.log(dim('  Hooks provide automatic context injection, package auditing,'));
+  console.log(dim('  file warnings, and solution storage prompts.\n'));
+
+  const enableHooks = await askQuestion(`${bold('Enable Matrix hooks?')} ${dim('[y/n]')}: `);
+
+  if (enableHooks !== 'y' && enableHooks !== 'yes') {
+    rl.close();
+    return { enableHooks: false, enableCache: false };
+  }
+
+  console.log();
+  console.log(dim('  API caching stores OSV/Bundlephobia responses for 24 hours'));
+  console.log(dim('  to reduce latency on repeated package checks.\n'));
+
+  const enableCache = await askQuestion(`${bold('Enable 24h API cache?')} ${dim('[y/n]')}: `);
+
+  rl.close();
+  return {
+    enableHooks: true,
+    enableCache: enableCache === 'y' || enableCache === 'yes'
+  };
+}
+
+function isMatrixHook(config: HookConfig): boolean {
+  return config.hooks?.some(h => h.command?.includes('matrix')) ?? false;
+}
+
+async function registerHooks(): Promise<boolean> {
+  info('Registering Matrix hooks with Claude Code...');
+
+  try {
+    let settings: ClaudeSettings = {};
+
+    if (existsSync(CLAUDE_SETTINGS_PATH)) {
+      const content = await Bun.file(CLAUDE_SETTINGS_PATH).text();
+      settings = JSON.parse(content);
+    }
+
+    settings.hooks = settings.hooks || {};
+
+    // UserPromptSubmit
+    settings.hooks.UserPromptSubmit = settings.hooks.UserPromptSubmit || [];
+    const existingUPS = settings.hooks.UserPromptSubmit.filter(h => !isMatrixHook(h));
+    settings.hooks.UserPromptSubmit = [
+      ...existingUPS,
+      {
+        hooks: [{
+          type: 'command',
+          command: `bun run ${MATRIX_DIR}/src/hooks/user-prompt-submit.ts`,
+          timeout: 60,
+        }],
+      },
+    ];
+
+    // PreToolUse
+    settings.hooks.PreToolUse = settings.hooks.PreToolUse || [];
+    const existingPTU = settings.hooks.PreToolUse.filter(h => !isMatrixHook(h));
+    settings.hooks.PreToolUse = [
+      ...existingPTU,
+      {
+        matcher: 'Bash',
+        hooks: [{
+          type: 'command',
+          command: `bun run ${MATRIX_DIR}/src/hooks/pre-tool-bash.ts`,
+          timeout: 30,
+        }],
+      },
+      {
+        matcher: 'Edit|Write',
+        hooks: [{
+          type: 'command',
+          command: `bun run ${MATRIX_DIR}/src/hooks/pre-tool-edit.ts`,
+          timeout: 10,
+        }],
+      },
+    ];
+
+    // PostToolUse
+    settings.hooks.PostToolUse = settings.hooks.PostToolUse || [];
+    const existingPOTU = settings.hooks.PostToolUse.filter(h => !isMatrixHook(h));
+    settings.hooks.PostToolUse = [
+      ...existingPOTU,
+      {
+        matcher: 'Bash',
+        hooks: [{
+          type: 'command',
+          command: `bun run ${MATRIX_DIR}/src/hooks/post-tool-bash.ts`,
+          timeout: 10,
+        }],
+      },
+    ];
+
+    // Stop
+    settings.hooks.Stop = settings.hooks.Stop || [];
+    const existingStop = settings.hooks.Stop.filter(h => !isMatrixHook(h));
+    settings.hooks.Stop = [
+      ...existingStop,
+      {
+        hooks: [{
+          type: 'command',
+          command: `bun run ${MATRIX_DIR}/src/hooks/stop-session.ts`,
+          timeout: 30,
+        }],
+      },
+    ];
+
+    await Bun.write(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2) + '\n');
+    success('Matrix hooks registered in settings.json');
+    return true;
+  } catch (err) {
+    error(`Failed to register hooks: ${err}`);
+    console.log(dim('You can register manually: matrix hooks install'));
+    return false;
+  }
+}
+
 export async function init(args: string[]): Promise<void> {
   const options = parseArgs(args);
 
@@ -423,6 +586,29 @@ export async function init(args: string[]): Promise<void> {
     }
   }
 
+  // Hooks setup (Claude Code only)
+  let hooksInstalled = false;
+  if ((editor === 'claude' || editor === 'both') && !options.skipHooks) {
+    const hooksChoice = await promptHooksSetup();
+
+    if (hooksChoice.enableHooks) {
+      // Update config with cache preference
+      set('hooks.enabled', true);
+      set('hooks.enableApiCache', hooksChoice.enableCache);
+
+      // Register hooks
+      const hooksResult = await registerHooks();
+      if (!hooksResult && !options.force) {
+        failed = true;
+      } else {
+        hooksInstalled = true;
+      }
+    } else {
+      set('hooks.enabled', false);
+      console.log(dim('\n  Hooks disabled. Enable later with: matrix hooks install'));
+    }
+  }
+
   if (failed) {
     console.log(yellow('\nSetup completed with warnings.'));
   } else {
@@ -432,8 +618,14 @@ export async function init(args: string[]): Promise<void> {
   console.log(bold('Next steps:'));
   if (editor === 'claude') {
     console.log(`  ${cyan('1.')} Restart Claude Code (or open a new terminal)`);
-    console.log(`  ${cyan('2.')} Ask Claude to solve a complex problem`);
-    console.log(`  ${cyan('3.')} Watch Matrix learn from your solutions`);
+    if (hooksInstalled) {
+      console.log(`  ${cyan('2.')} Hooks will auto-inject context for complex prompts`);
+      console.log(`  ${cyan('3.')} Package installs will be audited for CVEs`);
+      console.log(`  ${cyan('4.')} Ask Claude to solve a complex problem`);
+    } else {
+      console.log(`  ${cyan('2.')} Ask Claude to solve a complex problem`);
+      console.log(`  ${cyan('3.')} Watch Matrix learn from your solutions`);
+    }
   } else if (editor === 'cursor') {
     console.log(`  ${cyan('1.')} Restart Cursor to load MCP configuration`);
     console.log(`  ${cyan('2.')} Enable MCP in Cursor settings if not already enabled`);
@@ -442,11 +634,20 @@ export async function init(args: string[]): Promise<void> {
   } else {
     console.log(`  ${cyan('1.')} Restart Claude Code and/or Cursor`);
     console.log(`  ${cyan('2.')} For Cursor: Enable MCP in settings if not already enabled`);
-    console.log(`  ${cyan('3.')} Solve complex problems in either editor`);
-    console.log(`  ${cyan('4.')} Matrix shares memory across both editors`);
+    if (hooksInstalled) {
+      console.log(`  ${cyan('3.')} Claude Code: Hooks are active for context injection`);
+      console.log(`  ${cyan('4.')} Solve complex problems in either editor`);
+    } else {
+      console.log(`  ${cyan('3.')} Solve complex problems in either editor`);
+      console.log(`  ${cyan('4.')} Matrix shares memory across both editors`);
+    }
   }
 
   console.log(`\n${bold('Quick test:')}`);
   console.log(dim('  matrix stats'));
-  console.log(dim('  matrix search "authentication"\n'));
+  console.log(dim('  matrix search "authentication"'));
+  if (hooksInstalled) {
+    console.log(dim('  matrix hooks status'));
+  }
+  console.log();
 }

@@ -2,6 +2,46 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [0.5.0] - 2025-12-23
+
+### Added
+- **Claude Code Hooks Integration** - 5 hooks for automatic Matrix memory integration
+  - `UserPromptSubmit` - Estimates complexity, injects relevant solutions before Claude responds
+  - `PreToolUse:Bash` - Package auditor (CVEs via OSV.dev, deprecation, bundle size, local warnings)
+  - `PreToolUse:Edit` - Cursed file detection (warns before editing problematic files)
+  - `PostToolUse:Bash` - Logs successful package installations for audit trail
+  - `Stop` - Analyzes sessions and prompts to store significant solutions
+
+- **Warning System** - Track problematic files and packages
+  - `matrix_warn_check` - Check if file/package has warnings
+  - `matrix_warn_add` - Add warnings with severity (info/warn/block)
+  - `matrix_warn_remove` - Remove warnings by ID or target
+  - `matrix_warn_list` - List all warnings
+  - Glob pattern support for file warnings (e.g., `src/legacy/*`)
+  - Ecosystem support: npm, pip, cargo, go
+
+- **Complexity Estimation** - Pattern-based complexity scoring (1-10)
+  - Detects: implementation tasks, external integrations, multi-file changes
+  - Configurable threshold for memory injection (default: 5)
+
+- **Styled Terminal Output** - Box-formatted status display for hooks
+  - Complexity score with color coding (green/cyan/yellow)
+  - Solution/error count display
+  - Attempts TTY output, falls back to stderr
+
+### Known Issues
+- Hook output visibility is limited in Claude Code terminal
+  - Workaround: Enable verbose mode with Ctrl+O
+  - Related issues:
+    - [#4084](https://github.com/anthropics/claude-code/issues/4084) - Hook output visibility blocked
+    - [#10964](https://github.com/anthropics/claude-code/issues/10964) - UserPromptSubmit stderr not displayed
+    - [#11120](https://github.com/anthropics/claude-code/issues/11120) - Startup hook stdout not displayed
+    - [#12653](https://github.com/anthropics/claude-code/issues/12653) - SessionStart stderr not displaying
+
+### Changed
+- `matrix init` now configures Claude Code hooks automatically
+- Database schema extended with `warnings` and `dependency_installs` tables
+
 ## [0.4.4] - 2025-12-22
 
 ### Added

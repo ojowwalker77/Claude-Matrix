@@ -7,6 +7,15 @@ import {
   matrixStatus,
   searchFailures,
 } from '../tools/index.js';
+import {
+  matrixWarnCheck,
+  matrixWarnAdd,
+  matrixWarnRemove,
+  matrixWarnList,
+  type WarningType,
+  type WarningSeverity,
+  type PackageEcosystem,
+} from '../tools/warn.js';
 
 export async function handleToolCall(name: string, args: Record<string, unknown>): Promise<string> {
   // Ensure DB is initialized
@@ -65,6 +74,46 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
 
     case 'matrix_status': {
       const result = matrixStatus();
+      return JSON.stringify(result, null, 2);
+    }
+
+    // Warning tools
+    case 'matrix_warn_check': {
+      const result = await matrixWarnCheck({
+        type: args['type'] as WarningType,
+        target: args['target'] as string,
+        ecosystem: args['ecosystem'] as PackageEcosystem | undefined,
+      });
+      return JSON.stringify(result, null, 2);
+    }
+
+    case 'matrix_warn_add': {
+      const result = await matrixWarnAdd({
+        type: args['type'] as WarningType,
+        target: args['target'] as string,
+        reason: args['reason'] as string,
+        severity: args['severity'] as WarningSeverity | undefined,
+        ecosystem: args['ecosystem'] as PackageEcosystem | undefined,
+        repoSpecific: args['repoSpecific'] as boolean | undefined,
+      });
+      return JSON.stringify(result, null, 2);
+    }
+
+    case 'matrix_warn_remove': {
+      const result = await matrixWarnRemove({
+        id: args['id'] as string | undefined,
+        type: args['type'] as WarningType | undefined,
+        target: args['target'] as string | undefined,
+        ecosystem: args['ecosystem'] as PackageEcosystem | undefined,
+      });
+      return JSON.stringify(result, null, 2);
+    }
+
+    case 'matrix_warn_list': {
+      const result = await matrixWarnList({
+        type: args['type'] as WarningType | undefined,
+        repoOnly: args['repoOnly'] as boolean | undefined,
+      });
       return JSON.stringify(result, null, 2);
     }
 

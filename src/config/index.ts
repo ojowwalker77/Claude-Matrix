@@ -31,6 +31,15 @@ export interface MatrixConfig {
     highThreshold: number;
     midThreshold: number;
   };
+  hooks: {
+    enabled: boolean;
+    complexityThreshold: number;
+    enableApiCache: boolean;
+    cacheTtlHours: number;
+    auditorTimeout: number;
+    skipDeprecationWarnings: boolean;
+    sizeWarningThreshold: number;
+  };
 }
 
 function getDownloadsDirectory(): string {
@@ -63,6 +72,15 @@ export const DEFAULT_CONFIG: MatrixConfig = {
     highThreshold: 0.7,
     midThreshold: 0.4,
   },
+  hooks: {
+    enabled: true,
+    complexityThreshold: 5,
+    enableApiCache: false,
+    cacheTtlHours: 24,
+    auditorTimeout: 30,
+    skipDeprecationWarnings: false,
+    sizeWarningThreshold: 500000,
+  },
 };
 
 let cachedConfig: MatrixConfig | null = null;
@@ -87,6 +105,9 @@ function deepMerge(target: MatrixConfig, source: Partial<MatrixConfig>): MatrixC
   }
   if (source.scoring) {
     result.scoring = { ...result.scoring, ...source.scoring };
+  }
+  if (source.hooks) {
+    result.hooks = { ...result.hooks, ...source.hooks };
   }
 
   return result;

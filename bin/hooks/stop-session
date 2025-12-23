@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Matrix Hook: Stop
+# Analyzes session and prompts to store solutions
+
+MATRIX_DIR="${MATRIX_DIR:-$HOME/.claude/matrix}"
+exec bun run "$MATRIX_DIR/src/hooks/stop-session.ts"
