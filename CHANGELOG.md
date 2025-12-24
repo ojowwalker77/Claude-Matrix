@@ -2,6 +2,18 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [0.5.2] - 2025-12-24
+
+### Improved
+- **Hardened install.sh** - More reliable first-run experience
+  - Auto-retry for git clone (3 attempts with backoff)
+  - Check for required dependencies (curl, git) upfront
+  - Create `~/.local/bin` if missing for CLI symlink
+  - Warn if `~/.local/bin` not in PATH with fix instructions
+  - Skip interactive prompts when piped (non-interactive mode)
+  - Add `MATRIX_FORCE=1` env var to force reinstall
+  - 3-tier fallback for `bun install` failures (normal → ignore-scripts → production)
+
 ## [0.5.1] - 2025-12-23
 
 ### Fixed

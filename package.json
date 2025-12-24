@@ -1,6 +1,6 @@
 {
   "name": "claude-matrix",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Persistent memory system for Claude Code - Learn from past solutions, avoid repeated mistakes",
   "type": "module",
   "main": "src/index.ts",

@@ -9,7 +9,6 @@ import { printHelp } from './help.js';
 import { error } from './utils/output.js';
 import { isRabbitTrigger, startRabbitHole } from './rabbit.js';
 import { hooks } from './hooks.js';
-import { sandbox } from './sandbox.js';
 
 // Lazy imports for commands that need embeddings (prevents loading @xenova/transformers at startup)
 const lazyList = () => import('./list.js').then(m => m.list);
@@ -69,10 +68,6 @@ export async function runCli(args: string[]): Promise<void> {
     case 'hooks':
     case 'hook':
       return hooks(subArgs);
-
-    case 'sandbox':
-    case 'sb':
-      return sandbox(subArgs);
 
     case 'version':
     case '--version':

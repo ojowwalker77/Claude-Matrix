@@ -19,6 +19,7 @@ ${bold('COMMANDS')}
   ${cyan('config')}                  View and edit configuration
   ${cyan('stats')}                   Show memory statistics
   ${cyan('export')}                  Export database (JSON/CSV)
+  ${cyan('verify')}                  Verify installation health
   ${cyan('upgrade')}                 Check for and install updates
   ${cyan('migrate')}                 Run database migrations
   ${cyan('version')}                 Show version

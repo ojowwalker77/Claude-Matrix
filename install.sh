@@ -108,13 +108,29 @@ install_bun() {
 
 # Resilient bun install - handles native dependency failures gracefully
 resilient_bun_install() {
-    if bun install; then
+    info "Installing dependencies..."
+
+    # First try: normal install
+    if bun install 2>&1; then
+        success "Dependencies installed"
         return 0
     fi
 
-    warn "Some native dependencies failed to install"
-    info "Retrying with --ignore-scripts (embeddings may use fallback)..."
-    bun install --ignore-scripts || true
+    # Second try: ignore postinstall scripts (sharp may fail)
+    warn "Some dependencies failed, retrying without scripts..."
+    if bun install --ignore-scripts 2>&1; then
+        success "Dependencies installed (native modules skipped)"
+        return 0
+    fi
+
+    # Third try: production only
+    warn "Full install failed, trying production only..."
+    if bun install --production --ignore-scripts 2>&1; then
+        success "Core dependencies installed"
+        return 0
+    fi
+
+    error "Failed to install dependencies. Check network and try again."
 }
 
 # Install Matrix via Homebrew (macOS only)
@@ -197,15 +213,40 @@ install_git() {
     else
         info "Cloning Matrix to $MATRIX_DIR..."
         mkdir -p "$(dirname "$MATRIX_DIR")"
-        git clone "$MATRIX_REPO" "$MATRIX_DIR"
+
+        # Clone with retry
+        local clone_attempts=0
+        while [ $clone_attempts -lt 3 ]; do
+            if git clone "$MATRIX_REPO" "$MATRIX_DIR" 2>&1; then
+                break
+            fi
+            clone_attempts=$((clone_attempts + 1))
+            if [ $clone_attempts -lt 3 ]; then
+                warn "Clone failed, retrying ($clone_attempts/3)..."
+                sleep 2
+                rm -rf "$MATRIX_DIR" 2>/dev/null || true
+            fi
+        done
+
+        if [ ! -d "$MATRIX_DIR/.git" ]; then
+            error "Failed to clone Matrix repository after 3 attempts"
+        fi
+
         cd "$MATRIX_DIR"
         resilient_bun_install
     fi
 
-    # Create symlink in ~/.local/bin if it exists
-    if [ -d "$HOME/.local/bin" ]; then
-        ln -sf "$MATRIX_DIR/bin/matrix" "$HOME/.local/bin/matrix"
-        success "Created symlink in ~/.local/bin/matrix"
+    # Create symlink in ~/.local/bin (create dir if needed)
+    mkdir -p "$HOME/.local/bin"
+    ln -sf "$MATRIX_DIR/bin/matrix" "$HOME/.local/bin/matrix"
+    success "Created symlink: ~/.local/bin/matrix"
+
+    # Add to PATH hint if not already there
+    if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
+        echo ""
+        warn "~/.local/bin is not in your PATH"
+        echo -e "  ${DIM}Add to your shell config:${RESET}"
+        echo -e "    ${CYAN}export PATH=\"\$HOME/.local/bin:\$PATH\"${RESET}"
     fi
 
     success "Matrix installed at $MATRIX_DIR"
@@ -328,21 +369,48 @@ print_success() {
     echo ""
 }
 
+# Check required commands exist
+check_requirements() {
+    local missing=""
+
+    if ! check_command curl; then
+        missing="$missing curl"
+    fi
+    if ! check_command git; then
+        missing="$missing git"
+    fi
+
+    if [ -n "$missing" ]; then
+        error "Missing required commands:$missing
+
+Install them with:
+  macOS:  xcode-select --install
+  Ubuntu: sudo apt install curl git
+  Fedora: sudo dnf install curl git"
+    fi
+}
+
 # Main installation flow
 main() {
     header
     detect_os
+    check_requirements
 
-    # Check for existing installation
+    # Check for existing installation (skip prompt if non-interactive or MATRIX_FORCE=1)
     if check_command matrix; then
         warn "Matrix is already installed"
         info "Current version: $(matrix version 2>/dev/null || echo 'unknown')"
-        echo ""
-        read -p "Do you want to reinstall/update? [y/N] " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            info "Aborted. Run 'matrix upgrade' to update."
-            exit 0
+        if [ "${MATRIX_FORCE:-}" != "1" ] && [ -t 0 ]; then
+            # Only prompt if running interactively
+            echo ""
+            read -p "Do you want to reinstall/update? [y/N] " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                info "Aborted. Run 'matrix upgrade' to update."
+                exit 0
+            fi
+        else
+            info "Proceeding with update..."
         fi
     fi
 
