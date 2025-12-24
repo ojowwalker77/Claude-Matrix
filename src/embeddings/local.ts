@@ -1,8 +1,10 @@
 // Lazy import - don't load @xenova/transformers until actually needed
 // This allows Matrix CLI to work even if sharp native binary failed to install
 
+// Re-export pure utilities (no transformers dependency)
+export { cosineSimilarity, EMBEDDING_DIM } from './utils.js';
+
 const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
-const EMBEDDING_DIM = 384;
 
 let embedder: unknown = null;
 let loadingPromise: Promise<unknown> | null = null;
@@ -66,31 +68,10 @@ export async function getEmbeddings(texts: string[]): Promise<Float32Array[]> {
   return results;
 }
 
-export function cosineSimilarity(a: Float32Array, b: Float32Array): number {
-  if (a.length !== b.length) {
-    throw new Error(`Dimension mismatch: ${a.length} vs ${b.length}`);
-  }
-
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i]! * b[i]!;
-    normA += a[i]! * a[i]!;
-    normB += b[i]! * b[i]!;
-  }
-
-  // Since we normalize, this should be close to dot product
-  // But compute properly for safety
-  const denom = Math.sqrt(normA) * Math.sqrt(normB);
-  return denom === 0 ? 0 : dot / denom;
-}
-
-export { EMBEDDING_DIM };
-
 // Test if run directly
 if (import.meta.main) {
+  const { cosineSimilarity } = await import('./utils.js');
+
   console.log('Testing embeddings...');
   const start = Date.now();
 

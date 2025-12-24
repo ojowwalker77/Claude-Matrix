@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { cosineSimilarity, EMBEDDING_DIM } from '../embeddings/local.js';
+import { cosineSimilarity, EMBEDDING_DIM } from '../embeddings/utils.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
