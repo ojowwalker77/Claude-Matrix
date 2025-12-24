@@ -17,11 +17,20 @@ import {
   bold,
 } from './utils/output.js';
 import { get, set } from '../config/index.js';
+import { getMatrixPaths } from '../paths.js';
 
 type Subcommand = 'status' | 'enable' | 'disable' | 'test' | 'install' | 'uninstall';
 
-const MATRIX_DIR = process.env['MATRIX_DIR'] || join(process.env['HOME'] || homedir(), '.claude', 'matrix');
-const CLAUDE_SETTINGS_PATH = join(process.env['HOME'] || homedir(), '.claude', 'settings.json');
+// Get paths dynamically
+function getPaths() {
+  const paths = getMatrixPaths();
+  const home = process.env['HOME'] || homedir();
+  return {
+    MATRIX_DIR: paths.root,
+    CLAUDE_SETTINGS_PATH: join(home, '.claude', 'settings.json'),
+    hooksDir: paths.hooks,
+  };
+}
 
 interface HookConfig {
   matcher?: string;
@@ -43,38 +52,43 @@ interface ClaudeSettings {
   [key: string]: unknown;
 }
 
-const MATRIX_HOOKS = {
-  UserPromptSubmit: {
-    command: `bun run ${MATRIX_DIR}/src/hooks/user-prompt-submit.ts`,
-    timeout: 60,
-    description: 'Injects Matrix memory context for complex prompts',
-  },
-  'PreToolUse:Bash': {
-    matcher: 'Bash',
-    command: `bun run ${MATRIX_DIR}/src/hooks/pre-tool-bash.ts`,
-    timeout: 30,
-    description: 'Audits package installations for CVEs and warnings',
-  },
-  'PreToolUse:Edit': {
-    matcher: 'Edit|Write',
-    command: `bun run ${MATRIX_DIR}/src/hooks/pre-tool-edit.ts`,
-    timeout: 10,
-    description: 'Checks for file warnings before editing',
-  },
-  'PostToolUse:Bash': {
-    matcher: 'Bash',
-    command: `bun run ${MATRIX_DIR}/src/hooks/post-tool-bash.ts`,
-    timeout: 10,
-    description: 'Logs successful package installations',
-  },
-  Stop: {
-    command: `bun run ${MATRIX_DIR}/src/hooks/stop-session.ts`,
-    timeout: 30,
-    description: 'Prompts to store significant sessions in Matrix',
-  },
-};
+// Generate hook definitions with current paths
+function getMatrixHooks() {
+  const { hooksDir } = getPaths();
+  return {
+    UserPromptSubmit: {
+      command: `bun run ${hooksDir}/user-prompt-submit.ts`,
+      timeout: 60,
+      description: 'Injects Matrix memory context for complex prompts',
+    },
+    'PreToolUse:Bash': {
+      matcher: 'Bash',
+      command: `bun run ${hooksDir}/pre-tool-bash.ts`,
+      timeout: 30,
+      description: 'Audits package installations for CVEs and warnings',
+    },
+    'PreToolUse:Edit': {
+      matcher: 'Edit|Write',
+      command: `bun run ${hooksDir}/pre-tool-edit.ts`,
+      timeout: 10,
+      description: 'Checks for file warnings before editing',
+    },
+    'PostToolUse:Bash': {
+      matcher: 'Bash',
+      command: `bun run ${hooksDir}/post-tool-bash.ts`,
+      timeout: 10,
+      description: 'Logs successful package installations',
+    },
+    Stop: {
+      command: `bun run ${hooksDir}/stop-session.ts`,
+      timeout: 30,
+      description: 'Prompts to store significant sessions in Matrix',
+    },
+  };
+}
 
 async function readClaudeSettings(): Promise<ClaudeSettings> {
+  const { CLAUDE_SETTINGS_PATH } = getPaths();
   if (!existsSync(CLAUDE_SETTINGS_PATH)) {
     return {};
   }
@@ -87,6 +101,7 @@ async function readClaudeSettings(): Promise<ClaudeSettings> {
 }
 
 async function writeClaudeSettings(settings: ClaudeSettings): Promise<void> {
+  const { CLAUDE_SETTINGS_PATH } = getPaths();
   await Bun.write(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2) + '\n');
 }
 
@@ -96,6 +111,7 @@ function isMatrixHook(config: HookConfig): boolean {
 
 function getHookStatus(settings: ClaudeSettings): Map<string, 'installed' | 'missing'> {
   const status = new Map<string, 'installed' | 'missing'>();
+  const MATRIX_HOOKS = getMatrixHooks();
 
   for (const [name, hookDef] of Object.entries(MATRIX_HOOKS)) {
     let eventName: string;
@@ -122,6 +138,8 @@ function getHookStatus(settings: ClaudeSettings): Map<string, 'installed' | 'mis
 }
 
 async function showStatus(): Promise<void> {
+  const { CLAUDE_SETTINGS_PATH } = getPaths();
+  const MATRIX_HOOKS = getMatrixHooks();
   const settings = await readClaudeSettings();
   const status = getHookStatus(settings);
   const configEnabled = get<boolean>('hooks.enabled') !== false;
@@ -181,6 +199,7 @@ async function disableHooks(): Promise<void> {
 }
 
 async function installHooks(): Promise<void> {
+  const MATRIX_HOOKS = getMatrixHooks();
   info('Installing Matrix hooks in Claude Code settings...');
 
   const settings = await readClaudeSettings();
@@ -292,6 +311,8 @@ async function uninstallHooks(): Promise<void> {
 }
 
 async function testHook(args: string[]): Promise<void> {
+  const { MATRIX_DIR } = getPaths();
+  const MATRIX_HOOKS = getMatrixHooks();
   const hookName = args[0];
 
   if (!hookName) {
@@ -359,6 +380,7 @@ async function testHook(args: string[]): Promise<void> {
 }
 
 function showHelp(): void {
+  const MATRIX_HOOKS = getMatrixHooks();
   console.log();
   printBox('Matrix Hooks - Manage Claude Code hooks', [], 70);
   console.log();

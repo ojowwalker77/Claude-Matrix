@@ -9,6 +9,7 @@ import { exportDb } from './export.js';
 import { version } from './version.js';
 import { upgrade } from './upgrade.js';
 import { migrate } from './migrate.js';
+import { verify } from './verify.js';
 import { printHelp } from './help.js';
 import { error } from './utils/output.js';
 import { isRabbitTrigger, startRabbitHole } from './rabbit.js';
@@ -77,6 +78,11 @@ export async function runCli(args: string[]): Promise<void> {
     case 'migrate':
     case 'migration':
       return migrate(subArgs);
+
+    case 'verify':
+    case 'check':
+    case 'doctor':
+      return verify(subArgs);
 
     case 'help':
     case '--help':

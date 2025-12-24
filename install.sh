@@ -147,11 +147,42 @@ install_git() {
     fi
 
     if [ -d "$MATRIX_DIR" ]; then
-        warn "Matrix directory already exists at $MATRIX_DIR"
-        info "Updating existing installation..."
-        cd "$MATRIX_DIR"
-        git pull
-        bun install
+        # Check if it's a valid Matrix installation
+        if [ -f "$MATRIX_DIR/package.json" ] && [ -d "$MATRIX_DIR/src" ]; then
+            info "Matrix directory exists at $MATRIX_DIR"
+            info "Updating existing installation..."
+            cd "$MATRIX_DIR"
+            git pull || warn "Git pull failed, continuing with existing code"
+            bun install
+        # Check for nested Claude-Matrix directory (common issue)
+        elif [ -d "$MATRIX_DIR/Claude-Matrix" ] && [ -f "$MATRIX_DIR/Claude-Matrix/package.json" ]; then
+            warn "Found nested installation at $MATRIX_DIR/Claude-Matrix"
+            info "Fixing directory structure..."
+
+            # Move contents up one level
+            cd "$MATRIX_DIR"
+            # Move all files from Claude-Matrix to parent
+            shopt -s dotglob 2>/dev/null || true
+            mv Claude-Matrix/* . 2>/dev/null || true
+            mv Claude-Matrix/.* . 2>/dev/null || true
+            rmdir Claude-Matrix 2>/dev/null || rm -rf Claude-Matrix 2>/dev/null || true
+            shopt -u dotglob 2>/dev/null || true
+
+            # Update and install
+            git pull || warn "Git pull failed, continuing with existing code"
+            bun install
+            success "Fixed nested installation"
+        else
+            # Directory exists but is not a valid Matrix installation
+            warn "Directory exists but is not a valid Matrix installation"
+            info "Backing up and reinstalling..."
+            mv "$MATRIX_DIR" "$MATRIX_DIR.backup.$(date +%s)"
+
+            mkdir -p "$(dirname "$MATRIX_DIR")"
+            git clone "$MATRIX_REPO" "$MATRIX_DIR"
+            cd "$MATRIX_DIR"
+            bun install
+        fi
     else
         info "Cloning Matrix to $MATRIX_DIR..."
         mkdir -p "$(dirname "$MATRIX_DIR")"
@@ -189,6 +220,82 @@ run_init() {
     fi
 }
 
+# Verify installation
+verify_installation() {
+    echo ""
+    info "Verifying installation..."
+
+    local errors=0
+    local warnings=0
+
+    # Find the matrix command
+    local matrix_cmd=""
+    if check_command matrix; then
+        matrix_cmd="matrix"
+    elif [ -x "$MATRIX_DIR/bin/matrix" ]; then
+        matrix_cmd="$MATRIX_DIR/bin/matrix"
+    fi
+
+    # Check 1: matrix version works
+    if [ -n "$matrix_cmd" ]; then
+        if $matrix_cmd version &>/dev/null; then
+            success "Matrix CLI works"
+        else
+            error_noexit "Matrix CLI returns error"
+            errors=$((errors + 1))
+        fi
+    else
+        error_noexit "Matrix command not found"
+        errors=$((errors + 1))
+    fi
+
+    # Check 2: MCP connection (if claude CLI available)
+    if check_command claude; then
+        local mcp_output=$(claude mcp list 2>&1)
+        if echo "$mcp_output" | grep -q "matrix"; then
+            if echo "$mcp_output" | grep -q "Failed to connect"; then
+                warn "MCP server registered but connection failed"
+                echo -e "  ${DIM}This may resolve after restarting Claude Code${RESET}"
+                warnings=$((warnings + 1))
+            else
+                success "MCP server connected"
+            fi
+        else
+            warn "MCP server not registered"
+            echo -e "  ${DIM}Run: matrix init --force${RESET}"
+            warnings=$((warnings + 1))
+        fi
+    else
+        echo -e "  ${DIM}Skipping MCP check (Claude CLI not found)${RESET}"
+    fi
+
+    # Check 3: Run matrix verify if available
+    if [ -n "$matrix_cmd" ]; then
+        if $matrix_cmd verify --quiet 2>/dev/null; then
+            success "All verification checks passed"
+        else
+            local verify_output=$($matrix_cmd verify 2>&1 || true)
+            if echo "$verify_output" | grep -qi "critical\|fail"; then
+                warn "Verification found issues"
+                echo -e "  ${DIM}Run: matrix verify${RESET}"
+                warnings=$((warnings + 1))
+            fi
+        fi
+    fi
+
+    echo ""
+
+    if [ $errors -gt 0 ]; then
+        return 1
+    fi
+    return 0
+}
+
+# Print error without exiting
+error_noexit() {
+    echo -e "${RED}✗${RESET} $1"
+}
+
 # Print success message
 print_success() {
     echo ""
@@ -197,7 +304,7 @@ print_success() {
     echo -e "${GREEN}╰─────────────────────────────────────╯${RESET}"
     echo ""
     echo -e "  ${DIM}Verify installation:${RESET}"
-    echo -e "    ${CYAN}matrix version${RESET}"
+    echo -e "    ${CYAN}matrix verify${RESET}"
     echo ""
     echo -e "  ${DIM}Check for updates:${RESET}"
     echo -e "    ${CYAN}matrix upgrade --check${RESET}"
@@ -245,6 +352,14 @@ main() {
 
     # Run initialization
     run_init
+
+    # Verify installation
+    if ! verify_installation; then
+        echo ""
+        warn "Installation completed with issues."
+        echo -e "  ${DIM}Run 'matrix verify' for details and fix suggestions${RESET}"
+        echo ""
+    fi
 
     # Print success message
     print_success

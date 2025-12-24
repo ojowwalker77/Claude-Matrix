@@ -1,25 +1,33 @@
 import { $ } from 'bun';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import { createInterface } from 'readline';
 import { getDb } from '../db/index.js';
 import { set } from '../config/index.js';
+import { getMatrixPaths, resetPathCache } from '../paths.js';
 import { bold, cyan, dim, green, yellow, red, success, error, info, warn } from './utils/output.js';
 
-const MATRIX_DIR = process.env['MATRIX_DIR'] || join(process.env['HOME'] || '~', '.claude', 'matrix');
 const REPO_URL = 'https://github.com/ojowwalker77/Claude-Matrix.git';
 
-// Claude Code paths
-const CLAUDE_MD_PATH = join(process.env['HOME'] || '~', '.claude', 'CLAUDE.md');
-const CLAUDE_TEMPLATE_PATH = join(MATRIX_DIR, 'templates', 'CLAUDE.md');
-
-// Cursor paths
-const CURSOR_DIR = join(process.env['HOME'] || '~', '.cursor');
-const CURSOR_MCP_PATH = join(CURSOR_DIR, 'mcp.json');
-const CURSOR_RULES_PATH = join(process.env['HOME'] || '~', '.cursorrules');
-const CURSOR_MCP_TEMPLATE = join(MATRIX_DIR, 'templates', 'cursor-mcp.json');
-const CURSOR_RULES_TEMPLATE = join(MATRIX_DIR, 'templates', '.cursorrules');
+// Get paths dynamically
+function getPaths() {
+  const paths = getMatrixPaths();
+  const home = process.env['HOME'] || homedir();
+  return {
+    MATRIX_DIR: paths.root,
+    CLAUDE_MD_PATH: join(home, '.claude', 'CLAUDE.md'),
+    CLAUDE_TEMPLATE_PATH: join(paths.templates, 'CLAUDE.md'),
+    CURSOR_DIR: join(home, '.cursor'),
+    CURSOR_MCP_PATH: join(home, '.cursor', 'mcp.json'),
+    CURSOR_RULES_PATH: join(home, '.cursorrules'),
+    CURSOR_MCP_TEMPLATE: join(paths.templates, 'cursor-mcp.json'),
+    CURSOR_RULES_TEMPLATE: join(paths.templates, '.cursorrules'),
+    CLAUDE_SETTINGS_PATH: join(home, '.claude', 'settings.json'),
+    MCP_CONFIG_PATH: join(home, '.claude', 'mcp.json'),
+    paths,
+  };
+}
 
 type EditorChoice = 'claude' | 'cursor' | 'both';
 
@@ -31,9 +39,6 @@ interface InitOptions {
   skipHooks: boolean;
   editor?: EditorChoice;
 }
-
-// Hooks configuration
-const CLAUDE_SETTINGS_PATH = join(process.env['HOME'] || homedir(), '.claude', 'settings.json');
 
 interface HookConfig {
   matcher?: string;
@@ -139,17 +144,25 @@ async function checkClaudeCli(): Promise<boolean> {
 }
 
 async function setupDirectory(): Promise<boolean> {
+  const { MATRIX_DIR } = getPaths();
+
   if (existsSync(MATRIX_DIR)) {
     if (existsSync(join(MATRIX_DIR, 'package.json'))) {
       success(`Matrix directory exists at ${dim(MATRIX_DIR)}`);
+      // Reset path cache in case directory structure changed
+      resetPathCache();
       return true;
     }
   }
 
   info('Cloning Matrix repository...');
   try {
-    await $`git clone ${REPO_URL} ${MATRIX_DIR}`;
+    const home = process.env['HOME'] || homedir();
+    const defaultDir = join(home, '.claude', 'matrix');
+    await $`git clone ${REPO_URL} ${defaultDir}`;
     success('Repository cloned');
+    // Reset path cache after cloning
+    resetPathCache();
     return true;
   } catch (err: any) {
     error('Failed to clone repository');
@@ -161,6 +174,8 @@ async function setupDirectory(): Promise<boolean> {
 }
 
 async function installDeps(): Promise<boolean> {
+  const { MATRIX_DIR } = getPaths();
+
   info('Installing dependencies...');
   try {
     await $`cd ${MATRIX_DIR} && bun install`.quiet();
@@ -185,36 +200,105 @@ function initDatabase(): boolean {
 }
 
 // Claude Code specific functions
-async function registerMcpClaude(): Promise<boolean> {
+async function registerMcpClaude(force: boolean = false): Promise<boolean> {
+  const { MATRIX_DIR, MCP_CONFIG_PATH, paths } = getPaths();
+  const expectedPath = join(paths.src, 'index.ts');
+
   info('Registering MCP server with Claude Code...');
 
   const hasClaudeCli = await checkClaudeCli();
   if (!hasClaudeCli) {
     warn('Claude CLI not found - skipping MCP registration');
     console.log(dim('Install Claude Code and run manually:'));
-    console.log(dim(`  claude mcp add matrix -s user -- bun run ${MATRIX_DIR}/src/index.ts`));
+    console.log(dim(`  claude mcp add matrix -s user -- bun run ${expectedPath}`));
     return true;
   }
 
   try {
     const listResult = await $`claude mcp list`.quiet();
-    if (listResult.text().includes('matrix')) {
-      success('MCP server already registered');
-      return true;
+    const listOutput = listResult.text();
+
+    if (listOutput.includes('matrix')) {
+      // Matrix is registered - but is it valid?
+      let needsReregister = false;
+      let reason = '';
+
+      if (existsSync(MCP_CONFIG_PATH)) {
+        try {
+          const config = JSON.parse(readFileSync(MCP_CONFIG_PATH, 'utf-8'));
+          const matrixConfig = config.mcpServers?.matrix;
+
+          if (matrixConfig) {
+            const registeredPath = matrixConfig.args?.find((a: string) => a.includes('index.ts'));
+
+            // Check if registered path exists
+            if (registeredPath && !existsSync(registeredPath)) {
+              needsReregister = true;
+              reason = `registered path does not exist: ${registeredPath}`;
+            }
+            // Check if path matches current installation
+            else if (registeredPath && !registeredPath.includes(MATRIX_DIR) && !force) {
+              warn('MCP path differs from current installation');
+              console.log(dim(`  Registered: ${registeredPath}`));
+              console.log(dim(`  Expected:   ${expectedPath}`));
+              console.log(dim('  Use --force to update'));
+              return true;
+            }
+            // Force re-registration if requested
+            else if (force && registeredPath !== expectedPath) {
+              needsReregister = true;
+              reason = 'force flag specified';
+            }
+            // Check connection status
+            else if (listOutput.includes('matrix') && listOutput.includes('Failed to connect')) {
+              needsReregister = true;
+              reason = 'connection failed';
+            }
+          }
+        } catch (e) {
+          warn(`Could not parse mcp.json: ${e}`);
+        }
+      }
+
+      if (needsReregister) {
+        warn(`Re-registering MCP server (${reason})`);
+        try {
+          await $`claude mcp remove matrix`.quiet();
+        } catch {
+          // Ignore removal errors
+        }
+      } else if (!listOutput.includes('Failed to connect')) {
+        success('MCP server already registered and valid');
+        return true;
+      }
     }
 
-    await $`claude mcp add matrix -s user -- bun run ${MATRIX_DIR}/src/index.ts`.quiet();
-    success('MCP server registered');
+    // Register MCP server
+    await $`claude mcp add matrix -s user -- bun run ${expectedPath}`.quiet();
+
+    // Verify registration worked
+    const verifyResult = await $`claude mcp list`.quiet();
+    if (verifyResult.text().includes('matrix') && !verifyResult.text().includes('Failed')) {
+      success('MCP server registered and verified');
+    } else if (verifyResult.text().includes('Failed to connect')) {
+      warn('MCP server registered but connection test failed');
+      console.log(dim('This may resolve after restarting Claude Code'));
+    } else {
+      success('MCP server registered');
+    }
+
     return true;
   } catch (err) {
     warn(`MCP registration had issues: ${err}`);
     console.log(dim('You may need to register manually:'));
-    console.log(dim(`  claude mcp add matrix -s user -- bun run ${MATRIX_DIR}/src/index.ts`));
+    console.log(dim(`  claude mcp add matrix -s user -- bun run ${expectedPath}`));
     return true;
   }
 }
 
 async function setupClaudeMd(): Promise<boolean> {
+  const { CLAUDE_MD_PATH, CLAUDE_TEMPLATE_PATH } = getPaths();
+
   info('Setting up CLAUDE.md template...');
 
   if (!existsSync(CLAUDE_TEMPLATE_PATH)) {
@@ -245,6 +329,8 @@ async function setupClaudeMd(): Promise<boolean> {
 
 // Cursor specific functions
 async function registerMcpCursor(): Promise<boolean> {
+  const { CURSOR_DIR, CURSOR_MCP_PATH, CURSOR_MCP_TEMPLATE } = getPaths();
+
   info('Configuring MCP server for Cursor...');
 
   try {
@@ -301,6 +387,8 @@ async function registerMcpCursor(): Promise<boolean> {
 }
 
 async function setupCursorRules(): Promise<boolean> {
+  const { CURSOR_RULES_PATH, CURSOR_RULES_TEMPLATE } = getPaths();
+
   info('Setting up Cursor rules...');
 
   if (!existsSync(CURSOR_RULES_TEMPLATE)) {
@@ -430,6 +518,9 @@ function isMatrixHook(config: HookConfig): boolean {
 }
 
 async function registerHooks(): Promise<boolean> {
+  const { CLAUDE_SETTINGS_PATH, paths } = getPaths();
+  const hooksDir = paths.hooks;
+
   info('Registering Matrix hooks with Claude Code...');
 
   try {
@@ -450,7 +541,7 @@ async function registerHooks(): Promise<boolean> {
       {
         hooks: [{
           type: 'command',
-          command: `bun run ${MATRIX_DIR}/src/hooks/user-prompt-submit.ts`,
+          command: `bun run ${hooksDir}/user-prompt-submit.ts`,
           timeout: 60,
         }],
       },
@@ -465,7 +556,7 @@ async function registerHooks(): Promise<boolean> {
         matcher: 'Bash',
         hooks: [{
           type: 'command',
-          command: `bun run ${MATRIX_DIR}/src/hooks/pre-tool-bash.ts`,
+          command: `bun run ${hooksDir}/pre-tool-bash.ts`,
           timeout: 30,
         }],
       },
@@ -473,7 +564,7 @@ async function registerHooks(): Promise<boolean> {
         matcher: 'Edit|Write',
         hooks: [{
           type: 'command',
-          command: `bun run ${MATRIX_DIR}/src/hooks/pre-tool-edit.ts`,
+          command: `bun run ${hooksDir}/pre-tool-edit.ts`,
           timeout: 10,
         }],
       },
@@ -488,7 +579,7 @@ async function registerHooks(): Promise<boolean> {
         matcher: 'Bash',
         hooks: [{
           type: 'command',
-          command: `bun run ${MATRIX_DIR}/src/hooks/post-tool-bash.ts`,
+          command: `bun run ${hooksDir}/post-tool-bash.ts`,
           timeout: 10,
         }],
       },
@@ -502,7 +593,7 @@ async function registerHooks(): Promise<boolean> {
       {
         hooks: [{
           type: 'command',
-          command: `bun run ${MATRIX_DIR}/src/hooks/stop-session.ts`,
+          command: `bun run ${hooksDir}/stop-session.ts`,
           timeout: 30,
         }],
       },
@@ -546,7 +637,7 @@ export async function init(args: string[]): Promise<void> {
 
   // Claude Code steps
   const claudeSteps: Array<{ name: string; fn: () => Promise<boolean> | boolean; skip?: boolean }> = [
-    { name: 'Register MCP server (Claude Code)', fn: registerMcpClaude, skip: options.skipMcp },
+    { name: 'Register MCP server (Claude Code)', fn: () => registerMcpClaude(options.force), skip: options.skipMcp },
     { name: 'Setup CLAUDE.md template', fn: setupClaudeMd, skip: options.skipRules },
   ];
 
