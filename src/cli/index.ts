@@ -15,6 +15,7 @@ import { error } from './utils/output.js';
 import { isRabbitTrigger, startRabbitHole } from './rabbit.js';
 import { warn } from './warn.js';
 import { hooks } from './hooks.js';
+import { sandbox } from './sandbox.js';
 
 export async function runCli(args: string[]): Promise<void> {
   // Easter egg: check for "follow the white rabbit" trigger
@@ -65,6 +66,10 @@ export async function runCli(args: string[]): Promise<void> {
     case 'hooks':
     case 'hook':
       return hooks(subArgs);
+
+    case 'sandbox':
+    case 'sb':
+      return sandbox(subArgs);
 
     case 'version':
     case '--version':

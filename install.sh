@@ -106,6 +106,17 @@ install_bun() {
     fi
 }
 
+# Resilient bun install - handles native dependency failures gracefully
+resilient_bun_install() {
+    if bun install; then
+        return 0
+    fi
+
+    warn "Some native dependencies failed to install"
+    info "Retrying with --ignore-scripts (embeddings may use fallback)..."
+    bun install --ignore-scripts || true
+}
+
 # Install Matrix via Homebrew (macOS only)
 install_homebrew() {
     if ! check_command brew; then
@@ -153,7 +164,7 @@ install_git() {
             info "Updating existing installation..."
             cd "$MATRIX_DIR"
             git pull || warn "Git pull failed, continuing with existing code"
-            bun install
+            resilient_bun_install
         # Check for nested Claude-Matrix directory (common issue)
         elif [ -d "$MATRIX_DIR/Claude-Matrix" ] && [ -f "$MATRIX_DIR/Claude-Matrix/package.json" ]; then
             warn "Found nested installation at $MATRIX_DIR/Claude-Matrix"
@@ -170,7 +181,7 @@ install_git() {
 
             # Update and install
             git pull || warn "Git pull failed, continuing with existing code"
-            bun install
+            resilient_bun_install
             success "Fixed nested installation"
         else
             # Directory exists but is not a valid Matrix installation
@@ -181,14 +192,14 @@ install_git() {
             mkdir -p "$(dirname "$MATRIX_DIR")"
             git clone "$MATRIX_REPO" "$MATRIX_DIR"
             cd "$MATRIX_DIR"
-            bun install
+            resilient_bun_install
         fi
     else
         info "Cloning Matrix to $MATRIX_DIR..."
         mkdir -p "$(dirname "$MATRIX_DIR")"
         git clone "$MATRIX_REPO" "$MATRIX_DIR"
         cd "$MATRIX_DIR"
-        bun install
+        resilient_bun_install
     fi
 
     # Create symlink in ~/.local/bin if it exists

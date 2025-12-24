@@ -40,6 +40,11 @@ export interface MatrixConfig {
     skipDeprecationWarnings: boolean;
     sizeWarningThreshold: number;
   };
+  daytona: {
+    apiKey: string;
+    apiUrl: string;
+    target: string;
+  };
 }
 
 function getDownloadsDirectory(): string {
@@ -81,6 +86,11 @@ export const DEFAULT_CONFIG: MatrixConfig = {
     skipDeprecationWarnings: false,
     sizeWarningThreshold: 500000,
   },
+  daytona: {
+    apiKey: '',
+    apiUrl: 'https://app.daytona.io/api',
+    target: 'us',
+  },
 };
 
 let cachedConfig: MatrixConfig | null = null;
@@ -108,6 +118,9 @@ function deepMerge(target: MatrixConfig, source: Partial<MatrixConfig>): MatrixC
   }
   if (source.hooks) {
     result.hooks = { ...result.hooks, ...source.hooks };
+  }
+  if (source.daytona) {
+    result.daytona = { ...result.daytona, ...source.daytona };
   }
 
   return result;
