@@ -2,12 +2,15 @@
 
 #### NOT an official Anthropic tool
 
-**Persistent memory for Claude Code** - Learn from past solutions, avoid repeated mistakes.
+**Tooling System for Claude Code** - Claude on Rails.
 
 ## Installation
 
+Inside Claude Code, run:
+
 ```
-/plugin install matrix@ojowwalker77
+/plugin marketplace add ojowwalker77/Claude-Matrix
+/plugin install matrix@ojowwalker77-Claude-Matrix
 ```
 
 That's it. Matrix initializes automatically on first session.
@@ -121,8 +124,10 @@ bun run start
 
 ## Upgrading
 
+Inside Claude Code:
+
 ```
-/plugin update matrix
+/plugin update matrix@ojowwalker77-Claude-Matrix
 ```
 
 ## Links
