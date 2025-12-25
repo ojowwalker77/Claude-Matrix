@@ -1,9 +1,7 @@
 import { Database } from 'bun:sqlite';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { join } from 'path';
+import { homedir } from 'os';
+import { SCHEMA_SQL } from './schema.js';
 
 // Schema version - increment when schema changes
 const SCHEMA_VERSION = 2;
@@ -67,7 +65,7 @@ const migrations: Record<number, string> = {
 };
 
 function getDbPath(): string {
-  return process.env['MATRIX_DB'] || join(__dirname, '../../matrix.db');
+  return process.env['MATRIX_DB'] || join(homedir(), '.claude', 'matrix', 'matrix.db');
 }
 
 function getCurrentVersion(db: Database): number {
@@ -136,9 +134,7 @@ export function runMigrations(): MigrationResult {
   try {
     // If fresh DB (version 0), run full schema
     if (currentVersion === 0) {
-      const schemaPath = join(__dirname, 'schema.sql');
-      const schema = readFileSync(schemaPath, 'utf-8');
-      db.exec(schema);
+      db.exec(SCHEMA_SQL);
       db.exec(`INSERT OR REPLACE INTO schema_version (version) VALUES (${SCHEMA_VERSION})`);
       db.close();
       return {
