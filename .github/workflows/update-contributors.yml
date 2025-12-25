@@ -16,9 +16,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
       - name: Fetch and update contributors
         id: update
         env:
@@ -57,35 +54,16 @@ jobs:
           }
           writeFileSync('README.md', newReadme);
 
-          // Update content.ts
-          const content = readFileSync('src/cli/rabbit/content.ts', 'utf8');
-          const arrayStr = JSON.stringify(contributors);
-
-          let newContent;
-          if (content.includes('export const CONTRIBUTORS')) {
-            newContent = content.replace(
-              /\/\/ Auto-generated contributors[\s\S]*?export const CONTRIBUTORS: string\[\] = \[[^\]]*\];/,
-              `// Auto-generated contributors - do not edit manually\nexport const CONTRIBUTORS: string[] = ${arrayStr};`
-            );
-          } else {
-            // Add at the end before last empty lines
-            newContent = content.trimEnd() + `\n\n// Auto-generated contributors - do not edit manually\nexport const CONTRIBUTORS: string[] = ${arrayStr};\n`;
-          }
-          writeFileSync('src/cli/rabbit/content.ts', newContent);
-
           console.log(`Updated ${contributors.length} contributors: ${contributors.join(', ')}`);
           SCRIPT
 
           node /tmp/update-contributors.mjs "$CONTRIBUTORS"
 
           # Check if there are changes
-          if git diff --quiet README.md src/cli/rabbit/content.ts; then
+          if git diff --quiet README.md; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
-            # Get new contributor names for branch name
-            NEW_CONTRIBUTORS=$(echo "$CONTRIBUTORS" | jq -r 'join("-")')
-            echo "contributors=$NEW_CONTRIBUTORS" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create PR with changes
@@ -99,7 +77,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git checkout -b "$BRANCH"
-          git add README.md src/cli/rabbit/content.ts
+          git add README.md
           git commit -m "chore: update contributors list"
           git push -u origin "$BRANCH"
 

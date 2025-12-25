@@ -1,13 +1,18 @@
 # Claude Matrix
 
+> **Note**: Looking for the old CLI version? See the [`legacy-main`](https://github.com/ojowwalker77/Claude-Matrix/tree/legacy-main) branch.
+
 #### NOT an official Anthropic tool
 
-**Persistent memory for Claude Code** - Learn from past solutions, avoid repeated mistakes.
+**Tooling System for Claude Code** - Claude on Rails.
 
 ## Installation
 
+Inside Claude Code, run:
+
 ```
-/plugin install matrix@ojowwalker77
+/plugin marketplace add ojowwalker77/Claude-Matrix
+/plugin install matrix@ojowwalker77-Claude-Matrix
 ```
 
 That's it. Matrix initializes automatically on first session.
@@ -101,28 +106,39 @@ Matrix hooks run automatically:
 
 ## Development
 
+### Prerequisites
+
+- [Bun](https://bun.sh) v1.0+
+- [Claude Code](https://claude.ai/code) v2.0+
+
+### Setup
+
 ```bash
-# Clone
 git clone https://github.com/ojowwalker77/Claude-Matrix
 cd Claude-Matrix
-
-# Install dependencies
 bun install
-
-# Build for current platform
 bun run build
-
-# Build for all platforms
-bun run build:all
-
-# Run MCP server directly (dev)
-bun run start
 ```
+
+### Test Locally
+
+```bash
+claude --plugin-dir /path/to/Claude-Matrix
+```
+
+### Contributing
+
+1. Fork and branch from `dev`
+2. Make changes and run `bun test`
+3. Build with `bun run build`
+4. Open PR targeting `dev` branch
 
 ## Upgrading
 
+Inside Claude Code:
+
 ```
-/plugin update matrix
+/plugin update matrix@ojowwalker77-Claude-Matrix
 ```
 
 ## Links

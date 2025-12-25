@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "matrix",
-      "source": ".",
+      "source": "./",
       "description": "Claude on Rails Tooling System - Persistent memory for Claude Code",
       "version": "0.5.4"
     }
