@@ -22,13 +22,11 @@ case "$PLATFORM" in
     BINARY="linux-x64/matrix-mcp"
     ;;
   Linux-aarch64)
-    # Fallback for Linux ARM64 (use x64 under emulation or error)
-    echo "Linux ARM64 not supported. Use x64 or macOS." >&2
-    exit 1
+    BINARY="linux-arm64/matrix-mcp"
     ;;
   *)
     echo "Unsupported platform: $PLATFORM" >&2
-    echo "Supported: Darwin-arm64, Darwin-x86_64, Linux-x86_64" >&2
+    echo "Supported: Darwin-arm64, Darwin-x86_64, Linux-x86_64, Linux-aarch64" >&2
     exit 1
     ;;
 esac

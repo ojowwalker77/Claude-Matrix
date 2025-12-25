@@ -22,12 +22,11 @@ case "$PLATFORM" in
     BINARY="linux-x64/matrix-hooks"
     ;;
   Linux-aarch64)
-    echo "Linux ARM64 not supported. Use x64 or macOS." >&2
-    exit 1
+    BINARY="linux-arm64/matrix-hooks"
     ;;
   *)
     echo "Unsupported platform: $PLATFORM" >&2
-    echo "Supported: Darwin-arm64, Darwin-x86_64, Linux-x86_64" >&2
+    echo "Supported: Darwin-arm64, Darwin-x86_64, Linux-x86_64, Linux-aarch64" >&2
     exit 1
     ;;
 esac

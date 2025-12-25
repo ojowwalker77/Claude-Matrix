@@ -30,6 +30,7 @@ const TARGETS: Target[] = [
   { name: 'macOS ARM64', bunTarget: 'bun-darwin-arm64', dir: 'darwin-arm64' },
   { name: 'macOS x64', bunTarget: 'bun-darwin-x64', dir: 'darwin-x64' },
   { name: 'Linux x64', bunTarget: 'bun-linux-x64', dir: 'linux-x64' },
+  { name: 'Linux ARM64', bunTarget: 'bun-linux-arm64', dir: 'linux-arm64' },
 ];
 
 function getCurrentPlatform(): string {
@@ -39,6 +40,7 @@ function getCurrentPlatform(): string {
   if (os === 'darwin' && arch === 'arm64') return 'darwin-arm64';
   if (os === 'darwin' && arch === 'x64') return 'darwin-x64';
   if (os === 'linux' && arch === 'x64') return 'linux-x64';
+  if (os === 'linux' && arch === 'arm64') return 'linux-arm64';
 
   throw new Error(`Unsupported platform: ${os}-${arch}`);
 }

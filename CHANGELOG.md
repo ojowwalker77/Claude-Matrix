@@ -18,7 +18,7 @@ All notable changes to Claude Matrix are documented here.
   - `hooks/hooks.json` for automatic hook registration
   - 6 slash commands: `/matrix:search`, `/matrix:list`, `/matrix:stats`, `/matrix:warn`, `/matrix:export`, `/matrix:verify`
 - **Compiled Binaries** - Cross-platform executables (no runtime dependency)
-  - macOS ARM64, macOS x64, Linux x64
+  - macOS ARM64, macOS x64, Linux x64, Linux ARM64
   - Build via `bun run build` or `bun run build:all`
 - **SessionStart Hook** - Automatic first-run initialization
   - Creates `~/.claude/matrix/` directory

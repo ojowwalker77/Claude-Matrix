@@ -27,6 +27,9 @@ jobs:
           - os: ubuntu-latest
             target: bun-linux-x64
             artifact: linux-x64
+          - os: ubuntu-24.04-arm
+            target: bun-linux-arm64
+            artifact: linux-arm64
 
     runs-on: ${{ matrix.os }}
 
@@ -85,6 +88,12 @@ jobs:
           name: binaries-linux-x64
           path: bin/linux-x64
 
+      - name: Download linux-arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-linux-arm64
+          path: bin/linux-arm64
+
       - name: Make binaries executable
         run: chmod +x bin/*/matrix-*
 
@@ -142,6 +151,7 @@ jobs:
             - macOS ARM64 (Apple Silicon)
             - macOS x64 (Intel)
             - Linux x64
+            - Linux ARM64
 
             ### Changes
             See [CHANGELOG.md](https://github.com/ojowwalker77/Claude-Matrix/blob/main/CHANGELOG.md) for details.
