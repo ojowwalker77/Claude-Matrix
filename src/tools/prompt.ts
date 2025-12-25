@@ -467,8 +467,8 @@ export async function matrixPrompt(input: PromptInput): Promise<PromptResult> {
       };
     }
     if (shortcut.action === 'execute') {
-      // Strip the shortcut and use remaining prompt, or use previous context
-      const cleanPrompt = rawPrompt.toLowerCase().replace(shortcut.trigger, '').trim();
+      // Strip the shortcut and use remaining prompt, preserving original casing
+      const cleanPrompt = rawPrompt.replace(new RegExp(`\\b${shortcut.trigger}\\b`, 'i'), '').trim();
       if (!cleanPrompt) {
         return {
           optimizedPrompt: '[Execute previous with best judgment]',
