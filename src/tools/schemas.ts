@@ -237,4 +237,28 @@ export const TOOLS: Tool[] = [
       },
     },
   },
+  // Prompt Agent
+  {
+    name: 'matrix_prompt',
+    description: 'Analyze and optimize a prompt before execution. Detects ambiguity, infers context, and either returns an optimized prompt or asks clarification questions. Use for complex or ambiguous user requests.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        rawPrompt: {
+          type: 'string',
+          description: 'The original user prompt to analyze',
+        },
+        mode: {
+          type: 'string',
+          enum: ['interactive', 'auto', 'spawn'],
+          description: 'interactive=ask for clarification, auto=use best judgment, spawn=for agent spawning (default: interactive)',
+        },
+        skipClarification: {
+          type: 'boolean',
+          description: 'If true, skip clarification questions and proceed with assumptions',
+        },
+      },
+      required: ['rawPrompt'],
+    },
+  },
 ];

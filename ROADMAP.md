@@ -584,7 +584,7 @@ matrix spawn feature/auth --prompt "fix the auth"
 - [ ] Basic worktree management (`matrix spawn`, `matrix kill`)
 
 ### Phase 2: Core Features (v0.7.0)
-- [ ] Prompt Agent as MCP tool
+- [x] Prompt Agent as MCP tool (`matrix_prompt`)
 - [ ] Context7 intercept hooks
 - [ ] Agent listing and status (`matrix agents`)
 - [ ] Memory modes (shared/isolated/readonly)
@@ -645,6 +645,7 @@ matrix spawn feature/auth --prompt "fix the auth"
 - [x] Warning system (files/packages)
 - [x] Complexity estimation
 - [x] Package auditing (CVEs, deprecation)
+- [x] Prompt Agent MCP tool (`matrix_prompt`) - analyzes prompts for ambiguity, detects shortcuts, injects context
 
 ---
 

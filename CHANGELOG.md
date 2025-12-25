@@ -2,6 +2,21 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [0.5.5] - 2025-12-25
+
+### Added
+- **Prompt Agent** (`matrix_prompt`) - Meta-agent that analyzes prompts before execution
+  - Detects ambiguity (scope, target, approach, action)
+  - Calculates confidence score (0-100%)
+  - Recognizes shortcuts: "yolo", "ship it", "nah", "abort", etc.
+  - Injects context from CLAUDE.md, git, and Matrix memory
+  - Returns optimized prompt or asks clarification questions
+
+### Fixed
+- **Plugin Setup Script** - Added `"setup": "bun install"` to plugin.json
+  - Fixes "sharp module not found" error on fresh installs
+  - Dependencies now auto-install when plugin is installed
+
 ## [0.5.4] - 2025-12-25
 
 ### Breaking Changes

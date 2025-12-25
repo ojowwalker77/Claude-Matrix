@@ -16,6 +16,7 @@ import {
   type WarningSeverity,
   type PackageEcosystem,
 } from '../tools/warn.js';
+import { matrixPrompt, type PromptInput } from '../tools/prompt.js';
 
 export async function handleToolCall(name: string, args: Record<string, unknown>): Promise<string> {
   // Ensure DB is initialized
@@ -113,6 +114,16 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
       const result = await matrixWarnList({
         type: args['type'] as WarningType | undefined,
         repoOnly: args['repoOnly'] as boolean | undefined,
+      });
+      return JSON.stringify(result, null, 2);
+    }
+
+    // Prompt Agent
+    case 'matrix_prompt': {
+      const result = await matrixPrompt({
+        rawPrompt: args['rawPrompt'] as string,
+        mode: args['mode'] as PromptInput['mode'],
+        skipClarification: args['skipClarification'] as boolean | undefined,
       });
       return JSON.stringify(result, null, 2);
     }
