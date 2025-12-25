@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_DIR}/scripts/run-hooks.sh session-start",
+            "command": "bash -c \"$HOME/.claude/matrix/bin/matrix-hooks session-start\"",
             "timeout": 30
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_DIR}/scripts/run-hooks.sh user-prompt-submit",
+            "command": "bash -c \"$HOME/.claude/matrix/bin/matrix-hooks user-prompt-submit\"",
             "timeout": 60
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_DIR}/scripts/run-hooks.sh pre-tool-bash",
+            "command": "bash -c \"$HOME/.claude/matrix/bin/matrix-hooks pre-tool-bash\"",
             "timeout": 30
           }
         ]
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_DIR}/scripts/run-hooks.sh pre-tool-edit",
+            "command": "bash -c \"$HOME/.claude/matrix/bin/matrix-hooks pre-tool-edit\"",
             "timeout": 10
           }
         ]
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_DIR}/scripts/run-hooks.sh post-tool-bash",
+            "command": "bash -c \"$HOME/.claude/matrix/bin/matrix-hooks post-tool-bash\"",
             "timeout": 10
           }
         ]
@@ -61,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_DIR}/scripts/run-hooks.sh stop-session",
+            "command": "bash -c \"$HOME/.claude/matrix/bin/matrix-hooks stop-session\"",
             "timeout": 30
           }
         ]
