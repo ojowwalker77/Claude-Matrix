@@ -6,6 +6,11 @@
 
 **Tooling System for Claude Code** - Claude on Rails.
 
+## Requirements
+
+- [Bun](https://bun.sh) v1.0+ (`curl -fsSL https://bun.sh/install | bash`)
+- [Claude Code](https://claude.ai/code) v2.0+
+
 ## Installation
 
 Inside Claude Code, run:
