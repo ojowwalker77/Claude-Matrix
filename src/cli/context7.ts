@@ -44,14 +44,12 @@ async function isContext7InstalledClaude(): Promise<boolean> {
   }
 }
 
-function isContext7InstalledCursor(): boolean {
+async function isContext7InstalledCursor(): Promise<boolean> {
   const { CURSOR_MCP_PATH } = getPaths();
   if (!existsSync(CURSOR_MCP_PATH)) return false;
 
   try {
-    const content = Bun.file(CURSOR_MCP_PATH);
-    // Quick sync read for status check
-    const text = require('fs').readFileSync(CURSOR_MCP_PATH, 'utf-8');
+    const text = await Bun.file(CURSOR_MCP_PATH).text();
     const config = JSON.parse(text);
     return !!config.mcpServers?.context7;
   } catch {
@@ -66,7 +64,7 @@ async function showStatus(): Promise<void> {
 
   const hasClaude = await checkClaudeCli();
   const claudeInstalled = hasClaude ? await isContext7InstalledClaude() : false;
-  const cursorInstalled = isContext7InstalledCursor();
+  const cursorInstalled = await isContext7InstalledCursor();
 
   console.log('  Installation Status:');
   console.log();
