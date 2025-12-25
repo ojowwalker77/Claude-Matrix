@@ -1,11 +1,9 @@
 import { Database } from 'bun:sqlite';
-import { readFileSync, existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import { homedir } from 'os';
 import { cosineSimilarity, EMBEDDING_DIM } from '../embeddings/utils.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { SCHEMA_SQL } from './schema.js';
 
 let db: Database | null = null;
 
@@ -34,11 +32,7 @@ export function getDb(): Database {
 
 function initSchema(): void {
   if (!db) throw new Error('Database not initialized');
-
-  const schemaPath = join(__dirname, 'schema.sql');
-  const schema = readFileSync(schemaPath, 'utf-8');
-
-  db.exec(schema);
+  db.exec(SCHEMA_SQL);
 }
 
 export function closeDb(): void {

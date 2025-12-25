@@ -1,11 +1,11 @@
 {
   "mcpServers": {
     "matrix": {
-      "command": "${PLUGIN_DIR}/scripts/run-mcp.sh",
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-mcp.sh",
       "env": {
         "MATRIX_DB": "${HOME}/.claude/matrix/matrix.db",
         "MATRIX_MODELS": "${HOME}/.claude/matrix/models",
-        "PLUGIN_DIR": "${PLUGIN_DIR}"
+        "PLUGIN_DIR": "${CLAUDE_PLUGIN_ROOT}"
       }
     },
     "context7": {

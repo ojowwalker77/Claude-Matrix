@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_DIR}/scripts/run-hooks.sh session-start",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh session-start",
             "timeout": 30
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_DIR}/scripts/run-hooks.sh user-prompt-submit",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh user-prompt-submit",
             "timeout": 60
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_DIR}/scripts/run-hooks.sh pre-tool-bash",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh pre-tool-bash",
             "timeout": 30
           }
         ]
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_DIR}/scripts/run-hooks.sh pre-tool-edit",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh pre-tool-edit",
             "timeout": 10
           }
         ]
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_DIR}/scripts/run-hooks.sh post-tool-bash",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh post-tool-bash",
             "timeout": 10
           }
         ]
@@ -61,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${PLUGIN_DIR}/scripts/run-hooks.sh stop-session",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh stop-session",
             "timeout": 30
           }
         ]
