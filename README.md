@@ -1,5 +1,7 @@
 # Claude Matrix
 
+> **Note**: Looking for the old CLI version? See the [`legacy-main`](https://github.com/ojowwalker77/Claude-Matrix/tree/legacy-main) branch.
+
 #### NOT an official Anthropic tool
 
 **Tooling System for Claude Code** - Claude on Rails.
