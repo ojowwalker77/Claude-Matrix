@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# Matrix Hook: PreToolUse (Bash)
-# Audits package installations for CVEs, deprecation, etc.
-
-MATRIX_DIR="${MATRIX_DIR:-$HOME/.claude/matrix}"
-exec bun run "$MATRIX_DIR/src/hooks/pre-tool-bash.ts"

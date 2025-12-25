@@ -1,0 +1,18 @@
+{
+  "name": "matrix",
+  "description": "Claude on Rails Tooling System",
+  "version": "0.5.4",
+  "author": {
+    "name": "Matrix Contributors"
+  },
+  "repository": "https://github.com/ojowwalker77/Claude-Matrix",
+  "homepage": "https://github.com/ojowwalker77/Claude-Matrix",
+  "license": "MIT",
+  "keywords": [
+    "memory",
+    "embeddings",
+    "semantic-search",
+    "mcp",
+    "learning"
+  ]
+}

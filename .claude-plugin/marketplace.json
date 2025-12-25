@@ -1,0 +1,14 @@
+{
+  "name": "matrix-marketplace",
+  "owner": {
+    "name": "Matrix Contributors"
+  },
+  "plugins": [
+    {
+      "name": "matrix",
+      "source": ".",
+      "description": "Claude on Rails Tooling System - Persistent memory for Claude Code",
+      "version": "0.5.4"
+    }
+  ]
+}

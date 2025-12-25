@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# Matrix Hook: PostToolUse (Bash)
-# Logs successful package installations
-
-MATRIX_DIR="${MATRIX_DIR:-$HOME/.claude/matrix}"
-exec bun run "$MATRIX_DIR/src/hooks/post-tool-bash.ts"

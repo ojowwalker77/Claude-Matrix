@@ -21,7 +21,7 @@ import {
 import { matrixWarnCheck } from '../tools/warn.js';
 import { printToUser, renderFileWarningBox, renderErrorBox } from './ui.js';
 
-async function main() {
+export async function run() {
   try {
     // Check if hooks are enabled
     if (!hooksEnabled()) {
@@ -85,4 +85,4 @@ async function main() {
   }
 }
 
-main();
+if (import.meta.main) run();

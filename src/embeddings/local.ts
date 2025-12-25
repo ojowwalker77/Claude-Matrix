@@ -1,10 +1,16 @@
 // Lazy import - don't load @xenova/transformers until actually needed
-// This allows Matrix CLI to work even if sharp native binary failed to install
+// This allows Matrix to work even if model download is pending
+
+import { join } from 'path';
+import { homedir } from 'os';
 
 // Re-export pure utilities (no transformers dependency)
 export { cosineSimilarity, EMBEDDING_DIM } from './utils.js';
 
 const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
+
+// Model cache directory - defaults to ~/.claude/matrix/models
+const MODELS_DIR = process.env['MATRIX_MODELS'] || join(homedir(), '.claude', 'matrix', 'models');
 
 let embedder: unknown = null;
 let loadingPromise: Promise<unknown> | null = null;
@@ -17,7 +23,12 @@ async function loadEmbedder(): Promise<unknown> {
 
   try {
     // Dynamic import - only loads when needed
-    const { pipeline } = await import('@xenova/transformers');
+    const { pipeline, env } = await import('@xenova/transformers');
+
+    // Configure model cache directory
+    env.localModelPath = MODELS_DIR;
+    env.cacheDir = MODELS_DIR;
+    env.allowRemoteModels = true;
 
     loadingPromise = pipeline('feature-extraction', MODEL_NAME, {
       quantized: true,

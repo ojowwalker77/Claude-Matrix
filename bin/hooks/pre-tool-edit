@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# Matrix Hook: PreToolUse (Edit/Write)
-# Checks for file warnings before editing
-
-MATRIX_DIR="${MATRIX_DIR:-$HOME/.claude/matrix}"
-exec bun run "$MATRIX_DIR/src/hooks/pre-tool-edit.ts"

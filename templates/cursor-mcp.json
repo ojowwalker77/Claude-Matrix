@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "matrix": {
-      "command": "bun",
-      "args": ["run", "${userHome}/.claude/matrix/src/index.ts"]
-    }
-  }
-}

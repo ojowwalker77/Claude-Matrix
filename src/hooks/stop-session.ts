@@ -164,7 +164,7 @@ async function storeSessionSummary(
   return id;
 }
 
-async function main() {
+export async function run() {
   try {
     // Check if hooks are enabled
     if (!hooksEnabled()) {
@@ -238,4 +238,4 @@ This will help Matrix recall relevant context in future similar tasks.`,
   }
 }
 
-main();
+if (import.meta.main) run();

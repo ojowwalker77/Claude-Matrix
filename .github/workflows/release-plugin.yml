@@ -1,0 +1,162 @@
+name: Release Plugin
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-14
+            target: bun-darwin-arm64
+            artifact: darwin-arm64
+          - os: macos-14
+            target: bun-darwin-x64
+            artifact: darwin-x64
+          - os: ubuntu-latest
+            target: bun-linux-x64
+            artifact: linux-x64
+          - os: ubuntu-24.04-arm
+            target: bun-linux-arm64
+            artifact: linux-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build MCP server
+        run: |
+          mkdir -p bin/${{ matrix.artifact }}
+          bun build --compile --target=${{ matrix.target }} --minify \
+            --outfile=bin/${{ matrix.artifact }}/matrix-mcp \
+            src/index.ts
+
+      - name: Build hooks binary
+        run: |
+          bun build --compile --target=${{ matrix.target }} --minify \
+            --outfile=bin/${{ matrix.artifact }}/matrix-hooks \
+            src/hooks/unified-entry.ts
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.artifact }}
+          path: bin/${{ matrix.artifact }}
+
+  package:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download darwin-arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-darwin-arm64
+          path: bin/darwin-arm64
+
+      - name: Download darwin-x64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-darwin-x64
+          path: bin/darwin-x64
+
+      - name: Download linux-x64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-linux-x64
+          path: bin/linux-x64
+
+      - name: Download linux-arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-linux-arm64
+          path: bin/linux-arm64
+
+      - name: Make binaries executable
+        run: chmod +x bin/*/matrix-*
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create plugin archive
+        run: |
+          mkdir -p dist/matrix
+
+          # Copy plugin structure
+          cp -r .claude-plugin dist/matrix/
+          cp -r commands dist/matrix/
+          cp -r hooks dist/matrix/
+          cp -r scripts dist/matrix/
+          cp -r bin dist/matrix/
+          cp .mcp.json dist/matrix/
+          cp README.md dist/matrix/
+          cp CHANGELOG.md dist/matrix/ 2>/dev/null || true
+          cp LICENSE dist/matrix/ 2>/dev/null || true
+
+          # Create archive
+          cd dist
+          tar -czf matrix-plugin-${{ steps.version.outputs.version }}.tar.gz matrix
+
+          # Also create a zip for Windows users
+          zip -r matrix-plugin-${{ steps.version.outputs.version }}.zip matrix
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Matrix Plugin v${{ steps.version.outputs.version }}
+          body: |
+            ## Claude Matrix Plugin v${{ steps.version.outputs.version }}
+
+            ### Installation
+            ```
+            /plugin install matrix@ojowwalker77
+            ```
+
+            ### Manual Installation
+            Download `matrix-plugin-${{ steps.version.outputs.version }}.tar.gz` and extract to your Claude Code plugins directory.
+
+            ### Platforms
+            - macOS ARM64 (Apple Silicon)
+            - macOS x64 (Intel)
+            - Linux x64
+            - Linux ARM64
+
+            ### Changes
+            See [CHANGELOG.md](https://github.com/ojowwalker77/Claude-Matrix/blob/main/CHANGELOG.md) for details.
+          files: |
+            dist/matrix-plugin-${{ steps.version.outputs.version }}.tar.gz
+            dist/matrix-plugin-${{ steps.version.outputs.version }}.zip
+          draft: false
+          prerelease: false

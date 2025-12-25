@@ -106,7 +106,7 @@ function formatContext(
   return fullText;
 }
 
-async function main() {
+export async function run() {
   try {
     // Check if hooks are enabled
     if (!hooksEnabled()) {
@@ -169,4 +169,4 @@ async function main() {
   }
 }
 
-main();
+if (import.meta.main) run();

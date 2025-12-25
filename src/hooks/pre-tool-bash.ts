@@ -227,7 +227,7 @@ async function auditPackage(packageName: string, ecosystem: Ecosystem): Promise<
   return { package: packageName, ecosystem, issues };
 }
 
-async function main() {
+export async function run() {
   try {
     // Check if hooks are enabled
     if (!hooksEnabled()) {
@@ -300,4 +300,4 @@ async function main() {
   }
 }
 
-main();
+if (import.meta.main) run();

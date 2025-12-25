@@ -1,12 +1,9 @@
 {
   "name": "claude-matrix",
-  "version": "0.5.3",
-  "description": "Persistent memory system for Claude Code - Learn from past solutions, avoid repeated mistakes",
+  "version": "0.5.4",
+  "description": "Claude on Rails Tooling System",
   "type": "module",
   "main": "src/index.ts",
-  "bin": {
-    "matrix": "./bin/matrix"
-  },
   "author": "Matrix Contributors",
   "license": "MIT",
   "repository": {
@@ -25,14 +22,14 @@
     "ai",
     "embeddings",
     "semantic-search",
-    "cli",
-    "cursor",
+    "plugin",
     "anthropic"
   ],
   "scripts": {
     "start": "bun run src/index.ts",
-    "cli": "bun run src/cli.ts",
     "dev": "bun --watch src/index.ts",
+    "build": "bun run scripts/build.ts",
+    "build:all": "bun run scripts/build.ts --all",
     "test": "bun test",
     "test:embed": "bun run src/embeddings/local.ts",
     "test:db": "bun run src/db/client.ts"

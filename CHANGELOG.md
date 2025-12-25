@@ -2,6 +2,41 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [0.5.4] - 2025-12-25
+
+### Breaking Changes
+- **Plugin-Only Distribution** - Matrix is now a pure Claude Code plugin
+  - Install via `/plugin install matrix@ojowwalker77`
+  - Removed CLI (`matrix` command no longer exists)
+  - Removed Cursor support
+  - Removed `install.sh`
+
+### Added
+- **Plugin Structure** - Full Claude Code plugin architecture
+  - `.claude-plugin/plugin.json` manifest
+  - `.mcp.json` with Matrix + Context7 MCP servers
+  - `hooks/hooks.json` for automatic hook registration
+  - 6 slash commands: `/matrix:search`, `/matrix:list`, `/matrix:stats`, `/matrix:warn`, `/matrix:export`, `/matrix:verify`
+- **Compiled Binaries** - Cross-platform executables (no runtime dependency)
+  - macOS ARM64, macOS x64, Linux x64, Linux ARM64
+  - Build via `bun run build` or `bun run build:all`
+- **SessionStart Hook** - Automatic first-run initialization
+  - Creates `~/.claude/matrix/` directory
+  - Initializes SQLite database
+  - Migrates existing installations
+- **GitHub Actions** - CI workflow for cross-platform releases
+
+### Changed
+- Database location standardized to `~/.claude/matrix/matrix.db`
+- Embedding models cached at `~/.claude/matrix/models/`
+- Context7 bundled as second MCP server (auto-available)
+
+### Removed
+- CLI commands (replaced by MCP tools + slash commands)
+- Cursor support (templates/.cursorrules, cursor-mcp.json)
+- install.sh (replaced by plugin system)
+- Homebrew distribution (plugin-only now)
+
 ## [0.5.3] - 2025-12-25
 
 ### Added
