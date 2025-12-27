@@ -2,6 +2,16 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.0.3] - 2025-12-27
+
+### Fixes
+
+- **Verify Command**: Fixed hooks detection - hooks are plugin-scoped via `hooks/hooks.json`, not settings.json
+- **Auto-Migration**: Schema migrations now run automatically on version upgrade
+- **Plugin Manifest**: Added `hooks` field reference to plugin.json
+
+---
+
 ## [1.0.1] - 2025-12-27
 
 ### Enhanced Memory System
