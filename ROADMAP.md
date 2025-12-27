@@ -20,14 +20,21 @@ The first stable release focuses on **Memory + Hooks + Context7**:
 - [x] Package auditing (CVEs, deprecation)
 
 ---
-Upcoming Features
+## Upcoming Features
 
 **Personal Skills Factory**
+
 Suggests personalized Claude Skills when specific workflows are detected. Matrix learns your patterns and generates reusable skills tailored to how you work.
+
 **Worktrees & Agent Orchestration**
+
 Spawn subagents in separate git worktrees to work on different features or explore and test different approaches in parallel. Isolated environments, unified results.
+
 **Tree-sitter Integration**
+
 Language-agnostic code indexing powered by Tree-sitter. Structural understanding of any language with a grammar - not just TS/JS.
+
 **Repomix Integration**
+
 Flatten external repos into Claude-digestible context. Built on Repomix by @yamadashy.
 
