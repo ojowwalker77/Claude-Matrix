@@ -1,436 +1,152 @@
 /**
- * TypeScript Parser
+ * Multi-Language Parser Facade
  *
- * Extracts symbols and imports from TypeScript/JavaScript files
- * using the TypeScript compiler API.
+ * Async parser that delegates to language-specific tree-sitter parsers.
+ * Maintains backward compatibility with the original ParseResult interface.
  */
 
-import ts from 'typescript';
-import type { ExtractedSymbol, ExtractedImport, ParseResult, SymbolKind } from './types.js';
+import type { ParseResult, ExtractedSymbol, ExtractedImport } from './types.js';
+import {
+  getLanguageByExtension,
+  initParser,
+  loadLanguage,
+  type LanguageConfig,
+} from './languages/index.js';
+import { TypeScriptParser } from './languages/typescript.js';
+import { PythonParser } from './languages/python.js';
+import { GoParser } from './languages/go.js';
+import { RustParser } from './languages/rust.js';
+import type { LanguageParser } from './languages/base.js';
+
+// Parser cache by language ID
+const parserCache = new Map<string, LanguageParser>();
+
+// Initialization promise to ensure single init
+let initPromise: Promise<void> | null = null;
 
 /**
- * Parse a TypeScript/JavaScript file and extract symbols and imports
+ * Initialize the tree-sitter parser (called once)
  */
-export function parseFile(filePath: string, content: string): ParseResult {
-  const symbols: ExtractedSymbol[] = [];
-  const imports: ExtractedImport[] = [];
-  const errors: string[] = [];
+async function ensureInitialized(): Promise<void> {
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    await initParser();
+  })();
+
+  return initPromise;
+}
+
+/**
+ * Get or create a language parser instance
+ */
+async function getParserForLanguage(config: LanguageConfig): Promise<LanguageParser | null> {
+  const cached = parserCache.get(config.id);
+  if (cached) return cached;
 
   try {
-    // Determine script kind based on extension
-    const scriptKind = getScriptKind(filePath);
+    await ensureInitialized();
+    const parser = await initParser();
+    const language = await loadLanguage(config);
 
-    // Create source file
-    const sourceFile = ts.createSourceFile(
-      filePath,
-      content,
-      ts.ScriptTarget.Latest,
-      true,  // setParentNodes
-      scriptKind
-    );
+    let langParser: LanguageParser;
 
-    // Visit all nodes
-    function visit(node: ts.Node, parentScope?: string) {
-      try {
-        // Handle different node types
-        if (ts.isFunctionDeclaration(node)) {
-          handleFunctionDeclaration(node, sourceFile, symbols, parentScope);
-        } else if (ts.isClassDeclaration(node)) {
-          handleClassDeclaration(node, sourceFile, symbols, parentScope);
-          // Visit class members with class name as scope
-          const className = node.name?.text;
-          ts.forEachChild(node, child => visit(child, className));
-          return; // Don't visit children again
-        } else if (ts.isInterfaceDeclaration(node)) {
-          handleInterfaceDeclaration(node, sourceFile, symbols, parentScope);
-        } else if (ts.isTypeAliasDeclaration(node)) {
-          handleTypeAliasDeclaration(node, sourceFile, symbols, parentScope);
-        } else if (ts.isEnumDeclaration(node)) {
-          handleEnumDeclaration(node, sourceFile, symbols, parentScope);
-        } else if (ts.isVariableStatement(node)) {
-          handleVariableStatement(node, sourceFile, symbols, parentScope);
-        } else if (ts.isMethodDeclaration(node)) {
-          handleMethodDeclaration(node, sourceFile, symbols, parentScope);
-        } else if (ts.isPropertyDeclaration(node)) {
-          handlePropertyDeclaration(node, sourceFile, symbols, parentScope);
-        } else if (ts.isImportDeclaration(node)) {
-          handleImportDeclaration(node, sourceFile, imports);
-        } else if (ts.isExportDeclaration(node)) {
-          handleExportDeclaration(node, sourceFile, symbols);
-        } else if (ts.isExportAssignment(node)) {
-          handleExportAssignment(node, sourceFile, symbols);
-        }
+    switch (config.id) {
+      case 'typescript':
+      case 'tsx':
+      case 'javascript':
+      case 'jsx':
+        langParser = new TypeScriptParser(parser, language);
+        break;
 
-        // Continue visiting children
-        ts.forEachChild(node, child => visit(child, parentScope));
-      } catch (err) {
-        // Skip problematic nodes
-      }
+      case 'python':
+        langParser = new PythonParser(parser, language);
+        break;
+
+      case 'go':
+        langParser = new GoParser(parser, language);
+        break;
+
+      case 'rust':
+        langParser = new RustParser(parser, language);
+        break;
+
+      // TODO: Add more languages as parsers are implemented
+      // case 'java':
+      // case 'c':
+      // case 'cpp':
+      // case 'ruby':
+      // case 'php':
+
+      default:
+        return null;
     }
 
-    visit(sourceFile);
+    parserCache.set(config.id, langParser);
+    return langParser;
   } catch (err) {
-    errors.push(`Parse error: ${err instanceof Error ? err.message : String(err)}`);
-  }
-
-  return { symbols, imports, errors: errors.length > 0 ? errors : undefined };
-}
-
-/**
- * Determine TypeScript script kind from file extension
- */
-function getScriptKind(filePath: string): ts.ScriptKind {
-  const ext = filePath.split('.').pop()?.toLowerCase();
-  switch (ext) {
-    case 'ts':
-      return ts.ScriptKind.TS;
-    case 'tsx':
-      return ts.ScriptKind.TSX;
-    case 'js':
-    case 'mjs':
-    case 'cjs':
-      return ts.ScriptKind.JS;
-    case 'jsx':
-      return ts.ScriptKind.JSX;
-    default:
-      return ts.ScriptKind.TS;
+    console.error(`Failed to initialize parser for ${config.id}:`, err);
+    return null;
   }
 }
 
 /**
- * Check if a node has export modifier
+ * Parse a file and extract symbols and imports
+ *
+ * This is the main entry point - now async to support tree-sitter initialization.
  */
-function hasExportModifier(node: ts.Node): boolean {
-  const modifiers = ts.canHaveModifiers(node) ? ts.getModifiers(node) : undefined;
-  return modifiers?.some(m => m.kind === ts.SyntaxKind.ExportKeyword) ?? false;
-}
+export async function parseFile(filePath: string, content: string): Promise<ParseResult> {
+  const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+  const langConfig = getLanguageByExtension(ext);
 
-/**
- * Check if a node has default modifier
- */
-function hasDefaultModifier(node: ts.Node): boolean {
-  const modifiers = ts.canHaveModifiers(node) ? ts.getModifiers(node) : undefined;
-  return modifiers?.some(m => m.kind === ts.SyntaxKind.DefaultKeyword) ?? false;
-}
-
-/**
- * Get line and column from position
- */
-function getLocation(sourceFile: ts.SourceFile, pos: number): { line: number; column: number } {
-  const { line, character } = sourceFile.getLineAndCharacterOfPosition(pos);
-  return { line: line + 1, column: character }; // 1-indexed line
-}
-
-/**
- * Get function signature
- */
-function getFunctionSignature(node: ts.FunctionDeclaration | ts.MethodDeclaration | ts.ArrowFunction): string {
-  const params = node.parameters.map(p => {
-    const name = p.name.getText();
-    const type = p.type ? `: ${p.type.getText()}` : '';
-    const optional = p.questionToken ? '?' : '';
-    return `${name}${optional}${type}`;
-  }).join(', ');
-
-  const returnType = node.type ? `: ${node.type.getText()}` : '';
-  return `(${params})${returnType}`;
-}
-
-// Handler functions for different node types
-
-function handleFunctionDeclaration(
-  node: ts.FunctionDeclaration,
-  sourceFile: ts.SourceFile,
-  symbols: ExtractedSymbol[],
-  scope?: string
-) {
-  if (!node.name) return;
-
-  const loc = getLocation(sourceFile, node.getStart());
-  const endLoc = getLocation(sourceFile, node.getEnd());
-
-  symbols.push({
-    name: node.name.text,
-    kind: 'function',
-    line: loc.line,
-    column: loc.column,
-    endLine: endLoc.line,
-    exported: hasExportModifier(node),
-    isDefault: hasDefaultModifier(node),
-    scope,
-    signature: getFunctionSignature(node),
-  });
-}
-
-function handleClassDeclaration(
-  node: ts.ClassDeclaration,
-  sourceFile: ts.SourceFile,
-  symbols: ExtractedSymbol[],
-  scope?: string
-) {
-  if (!node.name) return;
-
-  const loc = getLocation(sourceFile, node.getStart());
-  const endLoc = getLocation(sourceFile, node.getEnd());
-
-  symbols.push({
-    name: node.name.text,
-    kind: 'class',
-    line: loc.line,
-    column: loc.column,
-    endLine: endLoc.line,
-    exported: hasExportModifier(node),
-    isDefault: hasDefaultModifier(node),
-    scope,
-  });
-}
-
-function handleInterfaceDeclaration(
-  node: ts.InterfaceDeclaration,
-  sourceFile: ts.SourceFile,
-  symbols: ExtractedSymbol[],
-  scope?: string
-) {
-  const loc = getLocation(sourceFile, node.getStart());
-  const endLoc = getLocation(sourceFile, node.getEnd());
-
-  symbols.push({
-    name: node.name.text,
-    kind: 'interface',
-    line: loc.line,
-    column: loc.column,
-    endLine: endLoc.line,
-    exported: hasExportModifier(node),
-    isDefault: false,
-    scope,
-  });
-}
-
-function handleTypeAliasDeclaration(
-  node: ts.TypeAliasDeclaration,
-  sourceFile: ts.SourceFile,
-  symbols: ExtractedSymbol[],
-  scope?: string
-) {
-  const loc = getLocation(sourceFile, node.getStart());
-  const endLoc = getLocation(sourceFile, node.getEnd());
-
-  symbols.push({
-    name: node.name.text,
-    kind: 'type',
-    line: loc.line,
-    column: loc.column,
-    endLine: endLoc.line,
-    exported: hasExportModifier(node),
-    isDefault: false,
-    scope,
-    signature: node.type.getText(),
-  });
-}
-
-function handleEnumDeclaration(
-  node: ts.EnumDeclaration,
-  sourceFile: ts.SourceFile,
-  symbols: ExtractedSymbol[],
-  scope?: string
-) {
-  const loc = getLocation(sourceFile, node.getStart());
-  const endLoc = getLocation(sourceFile, node.getEnd());
-
-  symbols.push({
-    name: node.name.text,
-    kind: 'enum',
-    line: loc.line,
-    column: loc.column,
-    endLine: endLoc.line,
-    exported: hasExportModifier(node),
-    isDefault: false,
-    scope,
-  });
-}
-
-function handleVariableStatement(
-  node: ts.VariableStatement,
-  sourceFile: ts.SourceFile,
-  symbols: ExtractedSymbol[],
-  scope?: string
-) {
-  const isExported = hasExportModifier(node);
-  const isConst = node.declarationList.flags & ts.NodeFlags.Const;
-
-  for (const declaration of node.declarationList.declarations) {
-    if (!ts.isIdentifier(declaration.name)) continue;
-
-    const loc = getLocation(sourceFile, declaration.getStart());
-    const endLoc = getLocation(sourceFile, declaration.getEnd());
-
-    // Check if it's an arrow function
-    let kind: SymbolKind = isConst ? 'const' : 'variable';
-    let signature: string | undefined;
-
-    if (declaration.initializer) {
-      if (ts.isArrowFunction(declaration.initializer) || ts.isFunctionExpression(declaration.initializer)) {
-        kind = 'function';
-        signature = getFunctionSignature(declaration.initializer as ts.ArrowFunction);
-      }
-    }
-
-    symbols.push({
-      name: declaration.name.text,
-      kind,
-      line: loc.line,
-      column: loc.column,
-      endLine: endLoc.line,
-      exported: isExported,
-      isDefault: false,
-      scope,
-      signature,
-    });
-  }
-}
-
-function handleMethodDeclaration(
-  node: ts.MethodDeclaration,
-  sourceFile: ts.SourceFile,
-  symbols: ExtractedSymbol[],
-  scope?: string
-) {
-  if (!ts.isIdentifier(node.name)) return;
-
-  const loc = getLocation(sourceFile, node.getStart());
-  const endLoc = getLocation(sourceFile, node.getEnd());
-
-  symbols.push({
-    name: node.name.text,
-    kind: 'method',
-    line: loc.line,
-    column: loc.column,
-    endLine: endLoc.line,
-    exported: false, // Methods are exported via their class
-    isDefault: false,
-    scope,
-    signature: getFunctionSignature(node),
-  });
-}
-
-function handlePropertyDeclaration(
-  node: ts.PropertyDeclaration,
-  sourceFile: ts.SourceFile,
-  symbols: ExtractedSymbol[],
-  scope?: string
-) {
-  if (!ts.isIdentifier(node.name)) return;
-
-  const loc = getLocation(sourceFile, node.getStart());
-
-  symbols.push({
-    name: node.name.text,
-    kind: 'property',
-    line: loc.line,
-    column: loc.column,
-    exported: false,
-    isDefault: false,
-    scope,
-    signature: node.type?.getText(),
-  });
-}
-
-function handleImportDeclaration(
-  node: ts.ImportDeclaration,
-  sourceFile: ts.SourceFile,
-  imports: ExtractedImport[]
-) {
-  const moduleSpecifier = node.moduleSpecifier;
-  if (!ts.isStringLiteral(moduleSpecifier)) return;
-
-  const sourcePath = moduleSpecifier.text;
-  const loc = getLocation(sourceFile, node.getStart());
-  const isTypeOnly = node.importClause?.isTypeOnly ?? false;
-
-  const importClause = node.importClause;
-  if (!importClause) {
-    // Side-effect import: import 'foo'
-    imports.push({
-      importedName: '*',
-      sourcePath,
-      isDefault: false,
-      isNamespace: false,
-      isType: false,
-      line: loc.line,
-    });
-    return;
+  if (!langConfig) {
+    // Unsupported language - return empty result (not an error)
+    return {
+      symbols: [],
+      imports: [],
+    };
   }
 
-  // Default import: import Foo from 'foo'
-  if (importClause.name) {
-    imports.push({
-      importedName: importClause.name.text,
-      sourcePath,
-      isDefault: true,
-      isNamespace: false,
-      isType: isTypeOnly,
-      line: loc.line,
-    });
+  const parser = await getParserForLanguage(langConfig);
+  if (!parser) {
+    return {
+      symbols: [],
+      imports: [],
+      errors: [`Parser not implemented for ${langConfig.name}`],
+    };
   }
 
-  const namedBindings = importClause.namedBindings;
-  if (namedBindings) {
-    if (ts.isNamespaceImport(namedBindings)) {
-      // Namespace import: import * as Foo from 'foo'
-      imports.push({
-        importedName: namedBindings.name.text,
-        sourcePath,
-        isDefault: false,
-        isNamespace: true,
-        isType: isTypeOnly,
-        line: loc.line,
-      });
-    } else if (ts.isNamedImports(namedBindings)) {
-      // Named imports: import { Foo, Bar as Baz } from 'foo'
-      for (const element of namedBindings.elements) {
-        const isTypeImport = isTypeOnly || element.isTypeOnly;
-        imports.push({
-          importedName: element.propertyName?.text ?? element.name.text,
-          localName: element.propertyName ? element.name.text : undefined,
-          sourcePath,
-          isDefault: false,
-          isNamespace: false,
-          isType: isTypeImport,
-          line: loc.line,
-        });
-      }
-    }
-  }
-}
-
-function handleExportDeclaration(
-  node: ts.ExportDeclaration,
-  sourceFile: ts.SourceFile,
-  symbols: ExtractedSymbol[]
-) {
-  // Re-exports: export { Foo } from './bar'
-  // We don't track these as new symbols, they reference existing ones
-}
-
-function handleExportAssignment(
-  node: ts.ExportAssignment,
-  sourceFile: ts.SourceFile,
-  symbols: ExtractedSymbol[]
-) {
-  // export default expression
-  // We already handle this via modifiers on other declarations
+  return parser.parse(filePath, content);
 }
 
 /**
  * Parse file content and return only symbols (convenience function)
  */
-export function extractSymbols(filePath: string, content: string): ExtractedSymbol[] {
-  return parseFile(filePath, content).symbols;
+export async function extractSymbols(filePath: string, content: string): Promise<ExtractedSymbol[]> {
+  const result = await parseFile(filePath, content);
+  return result.symbols;
 }
 
 /**
  * Parse file content and return only imports (convenience function)
  */
-export function extractImports(filePath: string, content: string): ExtractedImport[] {
-  return parseFile(filePath, content).imports;
+export async function extractImports(filePath: string, content: string): Promise<ExtractedImport[]> {
+  const result = await parseFile(filePath, content);
+  return result.imports;
+}
+
+/**
+ * Check if a file extension is supported for parsing
+ */
+export function isParsingSupported(filePath: string): boolean {
+  const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+  return getLanguageByExtension(ext) !== undefined;
+}
+
+/**
+ * Get the language ID for a file path
+ */
+export function getLanguageId(filePath: string): string | undefined {
+  const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+  return getLanguageByExtension(ext)?.id;
 }

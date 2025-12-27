@@ -1,0 +1,4 @@
+# Tree-sitter WASM grammars are downloaded on-demand
+# and cached in ~/.claude/matrix/grammars/
+# Do not commit WASM files to the repository
+*.wasm

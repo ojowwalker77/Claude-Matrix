@@ -1,9 +1,9 @@
 /**
  * Repository Indexer
  *
- * Main entry point for indexing TypeScript/JavaScript repositories.
+ * Main entry point for indexing multi-language repositories.
  * Extracts symbols (functions, classes, types) and import relationships
- * for code navigation.
+ * for code navigation using tree-sitter.
  */
 
 import { readFile } from 'fs/promises';
@@ -123,8 +123,8 @@ export async function indexRepository(options: IndexerOptions): Promise<IndexRes
         // Clear existing symbols/imports for this file
         clearFileIndex(fileId);
 
-        // Parse file
-        const result = parseFile(file.path, content);
+        // Parse file (async tree-sitter)
+        const result = await parseFile(file.path, content);
 
         // Store symbols
         if (result.symbols.length > 0) {

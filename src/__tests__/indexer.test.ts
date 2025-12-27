@@ -10,7 +10,7 @@ import type { ScannedFile, RepoFileRow } from '../indexer/types.js';
 // ============================================
 
 describe('parseFile', () => {
-  test('extracts function declarations', () => {
+  test('extracts function declarations', async () => {
     const code = `
       export function handleRequest(req: Request): Response {
         return new Response('ok');
@@ -21,7 +21,7 @@ describe('parseFile', () => {
       }
     `;
 
-    const result = parseFile('test.ts', code);
+    const result = await parseFile('test.ts', code);
 
     expect(result.symbols.length).toBe(2);
 
@@ -36,7 +36,7 @@ describe('parseFile', () => {
     expect(priv?.exported).toBe(false);
   });
 
-  test('extracts class declarations', () => {
+  test('extracts class declarations', async () => {
     const code = `
       export class UserService {
         private db: Database;
@@ -47,7 +47,7 @@ describe('parseFile', () => {
       }
     `;
 
-    const result = parseFile('test.ts', code);
+    const result = await parseFile('test.ts', code);
 
     const cls = result.symbols.find(s => s.name === 'UserService');
     expect(cls).toBeDefined();
@@ -60,7 +60,7 @@ describe('parseFile', () => {
     expect(method?.scope).toBe('UserService');
   });
 
-  test('extracts interface declarations', () => {
+  test('extracts interface declarations', async () => {
     const code = `
       export interface User {
         id: string;
@@ -72,7 +72,7 @@ describe('parseFile', () => {
       }
     `;
 
-    const result = parseFile('test.ts', code);
+    const result = await parseFile('test.ts', code);
 
     expect(result.symbols.length).toBe(2);
 
@@ -84,26 +84,26 @@ describe('parseFile', () => {
     expect(internal?.exported).toBe(false);
   });
 
-  test('extracts type aliases', () => {
+  test('extracts type aliases', async () => {
     const code = `
       export type UserId = string;
       type Config = { debug: boolean };
     `;
 
-    const result = parseFile('test.ts', code);
+    const result = await parseFile('test.ts', code);
 
     const userId = result.symbols.find(s => s.name === 'UserId');
     expect(userId?.kind).toBe('type');
     expect(userId?.exported).toBe(true);
   });
 
-  test('extracts arrow functions', () => {
+  test('extracts arrow functions', async () => {
     const code = `
       export const add = (a: number, b: number): number => a + b;
       const multiply = (x: number, y: number) => x * y;
     `;
 
-    const result = parseFile('test.ts', code);
+    const result = await parseFile('test.ts', code);
 
     const add = result.symbols.find(s => s.name === 'add');
     expect(add?.kind).toBe('function');
@@ -111,7 +111,7 @@ describe('parseFile', () => {
     expect(add?.signature).toContain('a: number');
   });
 
-  test('extracts enum declarations', () => {
+  test('extracts enum declarations', async () => {
     const code = `
       export enum Status {
         Active,
@@ -120,14 +120,14 @@ describe('parseFile', () => {
       }
     `;
 
-    const result = parseFile('test.ts', code);
+    const result = await parseFile('test.ts', code);
 
     const status = result.symbols.find(s => s.name === 'Status');
     expect(status?.kind).toBe('enum');
     expect(status?.exported).toBe(true);
   });
 
-  test('extracts imports', () => {
+  test('extracts imports', async () => {
     const code = `
       import { readFile, writeFile } from 'fs';
       import path from 'path';
@@ -135,7 +135,7 @@ describe('parseFile', () => {
       import type { Request, Response } from 'express';
     `;
 
-    const result = parseFile('test.ts', code);
+    const result = await parseFile('test.ts', code);
 
     // readFile, writeFile, path, crypto, Request, Response = 6 imports
     expect(result.imports.length).toBe(6);
@@ -154,7 +154,7 @@ describe('parseFile', () => {
     expect(requestImport?.isType).toBe(true);
   });
 
-  test('handles JSX files', () => {
+  test('handles JSX files', async () => {
     const code = `
       import React from 'react';
 
@@ -163,15 +163,15 @@ describe('parseFile', () => {
       }
     `;
 
-    const result = parseFile('Button.tsx', code);
+    const result = await parseFile('Button.tsx', code);
 
     const button = result.symbols.find(s => s.name === 'Button');
     expect(button).toBeDefined();
     expect(button?.kind).toBe('function');
   });
 
-  test('handles empty files', () => {
-    const result = parseFile('empty.ts', '');
+  test('handles empty files', async () => {
+    const result = await parseFile('empty.ts', '');
     expect(result.symbols.length).toBe(0);
     expect(result.imports.length).toBe(0);
     expect(result.errors).toBeUndefined();
@@ -342,13 +342,13 @@ describe('isExcluded', () => {
 // ============================================
 
 describe('extractSymbols', () => {
-  test('returns only symbols', () => {
+  test('returns only symbols', async () => {
     const code = `
       import { foo } from './foo';
       export function bar() {}
     `;
 
-    const symbols = extractSymbols('test.ts', code);
+    const symbols = await extractSymbols('test.ts', code);
 
     expect(symbols.length).toBe(1);
     expect(symbols[0]?.name).toBe('bar');
@@ -356,13 +356,13 @@ describe('extractSymbols', () => {
 });
 
 describe('extractImports', () => {
-  test('returns only imports', () => {
+  test('returns only imports', async () => {
     const code = `
       import { foo } from './foo';
       export function bar() {}
     `;
 
-    const imports = extractImports('test.ts', code);
+    const imports = await extractImports('test.ts', code);
 
     expect(imports.length).toBe(1);
     expect(imports[0]?.importedName).toBe('foo');
