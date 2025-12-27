@@ -154,6 +154,12 @@ claude --plugin-dir /path/to/Claude-Matrix
 - [Roadmap](ROADMAP.md)
 - [Issues](https://github.com/ojowwalker77/Claude-Matrix/issues)
 
+## Contributors
+
+<!-- CONTRIBUTORS-START -->
+<a href="https://github.com/CairoAC"><img src="https://github.com/CairoAC.png" width="50" height="50" alt="CairoAC"/></a>
+<!-- CONTRIBUTORS-END -->
+
 ## License
 
 MIT
