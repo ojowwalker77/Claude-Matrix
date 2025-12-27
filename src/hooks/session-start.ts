@@ -22,7 +22,7 @@ import { createHash } from 'crypto';
 import { spawnSync } from 'child_process';
 import { getConfig } from '../config/index.js';
 
-const CURRENT_VERSION = '0.5.4';
+const CURRENT_VERSION = '1.0.3';
 const MATRIX_DIR = join(homedir(), '.claude', 'matrix');
 const MARKER_FILE = join(MATRIX_DIR, '.initialized');
 const DB_PATH = join(MATRIX_DIR, 'matrix.db');
@@ -405,25 +405,41 @@ export async function run() {
     const needsInit = !state || state.version !== CURRENT_VERSION || !existsSync(DB_PATH);
 
     if (needsInit) {
-      printToUser('\x1b[36m[Matrix]\x1b[0m Initializing...');
+      const isUpgrade = state && state.version !== CURRENT_VERSION;
+      const isFirstRun = !state;
+
+      if (isUpgrade) {
+        printToUser(`\x1b[36m[Matrix]\x1b[0m Upgrading ${state.version} → ${CURRENT_VERSION}...`);
+      } else if (isFirstRun) {
+        printToUser('\x1b[36m[Matrix]\x1b[0m Initializing...');
+      } else {
+        printToUser('\x1b[36m[Matrix]\x1b[0m Repairing...');
+      }
 
       // Create models directory
       if (!existsSync(MODELS_DIR)) {
         mkdirSync(MODELS_DIR, { recursive: true });
       }
 
-      // Check for existing data to migrate
+      // Check for existing data to migrate from old locations
       const migrated = migrateExistingData();
 
       // Initialize or update database
-      if (!migrated || !existsSync(DB_PATH)) {
+      if (!existsSync(DB_PATH)) {
+        // Fresh install - create new database
         initDatabase();
       } else {
-        // Run schema on migrated DB to add any new tables/indexes
+        // Existing database - run schema migrations
+        // This ensures new tables/columns are added on upgrade
         const db = new Database(DB_PATH);
         db.exec('PRAGMA journal_mode = WAL');
         db.exec('PRAGMA foreign_keys = ON');
         db.exec(SCHEMA);
+        // Update version in database
+        db.run(`
+          INSERT OR REPLACE INTO plugin_meta (key, value, updated_at)
+          VALUES ('version', ?, datetime('now'))
+        `, [CURRENT_VERSION]);
         db.close();
       }
 
@@ -431,7 +447,7 @@ export async function run() {
       const newState: InitState = {
         version: CURRENT_VERSION,
         dbInitialized: true,
-        modelsDownloaded: false,
+        modelsDownloaded: state?.modelsDownloaded || false,
         initializedAt: state?.initializedAt || new Date().toISOString(),
         lastSessionAt: new Date().toISOString(),
       };
