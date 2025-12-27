@@ -47,7 +47,9 @@ Feedback improves rankings over time
 
 ### Code Index
 
-Fast navigation for TypeScript/JavaScript (auto-indexed on session start):
+Multi-language code navigation (auto-indexed on session start):
+
+**Supported Languages**: TypeScript, JavaScript, Python, Go, Rust, Java, C, C++, Ruby, PHP
 
 | Tool | Purpose |
 |------|---------|
@@ -56,6 +58,8 @@ Fast navigation for TypeScript/JavaScript (auto-indexed on session start):
 | `matrix_list_exports` | List exports from file/directory |
 | `matrix_get_imports` | Get imports for a file |
 | `matrix_reindex` | Manually trigger reindexing |
+
+Grammars are downloaded on first use (~1-2MB per language) and cached locally.
 
 ### Warnings
 
@@ -83,7 +87,7 @@ Matrix runs automatically in the background:
 
 | When | What Happens |
 |------|--------------|
-| Session starts | Initialize database, index TypeScript/JavaScript files |
+| Session starts | Initialize database, index code files (10 languages supported) |
 | You send a prompt | Analyze complexity, inject relevant memories, detect code navigation queries |
 | Before `npm install` | Check for CVEs, deprecation, bundle size |
 | Before editing a file | Warn if file has known issues |
@@ -128,6 +132,7 @@ Matrix stores config at `~/.claude/matrix.config`:
 ~/.claude/matrix/
 ├── matrix.db      # SQLite database
 ├── models/        # Embedding model cache (~23MB)
+├── grammars/      # Tree-sitter WASM grammars (downloaded on demand)
 └── .initialized   # Version marker
 ```
 

@@ -2,6 +2,18 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.0.2] - 2025-12-27
+
+### Multi-Language Code Index
+
+- **Tree-sitter Parser**: Replaced TypeScript Compiler API with tree-sitter WASM for multi-language support
+- **10 Languages Supported**: TypeScript, JavaScript, Python, Go, Rust, Java, C, C++, Ruby, PHP
+- **Lazy Grammar Loading**: Grammars downloaded on first use (~1-2MB each), cached in `~/.claude/matrix/grammars/`
+- **Zero Overhead**: No bundled WASM files, grammars fetched from unpkg.com when needed
+- **Project Detection**: Auto-indexes Python (pyproject.toml), Go (go.mod), Rust (Cargo.toml), Java (pom.xml), Ruby (Gemfile), PHP (composer.json), C/C++ (CMakeLists.txt)
+
+---
+
 ## [1.0.1] - 2025-12-27
 
 ### Enhanced Memory System

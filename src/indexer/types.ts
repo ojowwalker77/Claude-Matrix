@@ -14,7 +14,8 @@ export type SymbolKind =
   | 'variable'
   | 'const'
   | 'method'
-  | 'property';
+  | 'property'
+  | 'namespace';
 
 // A symbol extracted from source code
 export interface ExtractedSymbol {

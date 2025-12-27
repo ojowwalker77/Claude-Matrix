@@ -14,7 +14,7 @@
  *   1 = Non-blocking error (show warning, continue)
  */
 
-import { existsSync, mkdirSync, writeFileSync, readFileSync, copyFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, readdirSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir } from 'os';
 import { Database } from 'bun:sqlite';
@@ -22,7 +22,7 @@ import { createHash } from 'crypto';
 import { spawnSync } from 'child_process';
 import { getConfig } from '../config/index.js';
 
-const CURRENT_VERSION = '0.5.4';
+const CURRENT_VERSION = '1.0.2';
 const MATRIX_DIR = join(homedir(), '.claude', 'matrix');
 const MARKER_FILE = join(MATRIX_DIR, '.initialized');
 const DB_PATH = join(MATRIX_DIR, 'matrix.db');
@@ -323,12 +323,67 @@ function findGitRoot(startPath: string): string | null {
 }
 
 /**
- * Check if directory is a TypeScript/JavaScript project
+ * Check if directory is an indexable project
+ * Supports: TypeScript/JavaScript, Python, Go, Rust, Java, C/C++, Ruby, PHP
  */
-function isTypeScriptProject(root: string): boolean {
-  return existsSync(join(root, 'package.json')) ||
-         existsSync(join(root, 'tsconfig.json')) ||
-         existsSync(join(root, 'jsconfig.json'));
+function isIndexableProject(root: string): boolean {
+  // TypeScript/JavaScript
+  if (existsSync(join(root, 'package.json')) ||
+      existsSync(join(root, 'tsconfig.json')) ||
+      existsSync(join(root, 'jsconfig.json'))) {
+    return true;
+  }
+  // Python
+  if (existsSync(join(root, 'pyproject.toml')) ||
+      existsSync(join(root, 'setup.py')) ||
+      existsSync(join(root, 'requirements.txt'))) {
+    return true;
+  }
+  // Go
+  if (existsSync(join(root, 'go.mod'))) {
+    return true;
+  }
+  // Rust
+  if (existsSync(join(root, 'Cargo.toml'))) {
+    return true;
+  }
+  // Java/Maven/Gradle
+  if (existsSync(join(root, 'pom.xml')) ||
+      existsSync(join(root, 'build.gradle')) ||
+      existsSync(join(root, 'build.gradle.kts'))) {
+    return true;
+  }
+  // Ruby
+  if (existsSync(join(root, 'Gemfile'))) {
+    return true;
+  }
+  // PHP
+  if (existsSync(join(root, 'composer.json'))) {
+    return true;
+  }
+  // C/C++ (CMake or Makefile + source files to avoid false positives)
+  if (existsSync(join(root, 'CMakeLists.txt')) ||
+      existsSync(join(root, 'Makefile'))) {
+    // Verify actual C/C++ source files exist to avoid matching non-C/C++ projects
+    try {
+      const files = readdirSync(root);
+      const hasCppSources = files.some(f =>
+        /\.(c|cpp|cc|cxx|h|hpp|hxx)$/i.test(f)
+      );
+      if (hasCppSources) return true;
+      // Also check common src directory
+      const srcDir = join(root, 'src');
+      if (existsSync(srcDir)) {
+        const srcFiles = readdirSync(srcDir);
+        if (srcFiles.some(f => /\.(c|cpp|cc|cxx|h|hpp|hxx)$/i.test(f))) {
+          return true;
+        }
+      }
+    } catch {
+      // If we can't read directories, skip C/C++ detection
+    }
+  }
+  return false;
 }
 
 /**
@@ -444,12 +499,12 @@ export async function run() {
       writeFileSync(MARKER_FILE, JSON.stringify(state, null, 2));
     }
 
-    // Run indexer for TypeScript/JavaScript projects (if enabled)
+    // Run indexer for supported projects (if enabled)
     const config = getConfig();
     if (config.indexing.enabled) {
       const cwd = process.cwd();
       const repoRoot = findGitRoot(cwd) || cwd;
-      if (isTypeScriptProject(repoRoot)) {
+      if (isIndexableProject(repoRoot)) {
         const repoId = generateRepoId(repoRoot);
         await runIndexer(repoRoot, repoId, config.indexing);
       }
