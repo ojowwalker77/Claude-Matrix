@@ -4,6 +4,18 @@
 
 ---
 
+## v1.0.2 — RELEASED
+
+Multi-language code indexing with tree-sitter:
+
+- [x] Tree-sitter WASM parser (replaces TypeScript Compiler API)
+- [x] 10 languages: TypeScript, JavaScript, Python, Go, Rust, Java, C, C++, Ruby, PHP
+- [x] Lazy grammar loading (downloaded on first use, cached locally)
+- [x] Zero bundled overhead (grammars fetched from unpkg.com)
+- [x] Auto-detection for all project types
+
+---
+
 ## v1.0.0 — RELEASED
 
 The first stable release focuses on **Memory + Hooks + Context7**:
