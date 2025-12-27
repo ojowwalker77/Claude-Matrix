@@ -2,6 +2,29 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.0.4] - 2025-12-27
+
+### Repomix Integration
+
+- **New `matrix_repomix` tool**: Pack external repositories into AI-friendly context
+  - GitHub shorthand support (e.g., `langchain-ai/langchain`)
+  - Local path support for local directories
+  - Branch/commit selection
+  - Glob patterns for file filtering
+  - Compression mode (function signatures only)
+  - Automatic caching (1 hour TTL)
+  - Token limiting with intelligent truncation
+
+- **New `/matrix:repomix` slash command**: Quick access to repo packing
+- **Complementary to Context7**: Context7 for docs, Repomix for source code
+
+### Use Cases
+- Analyze how external libraries implement features
+- Study patterns and architecture in open source projects
+- Get full codebase context for detailed questions
+
+---
+
 ## [1.0.1] - 2025-12-27
 
 ### Enhanced Memory System

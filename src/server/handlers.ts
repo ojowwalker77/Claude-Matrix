@@ -23,6 +23,7 @@ import {
   type PackageEcosystem,
 } from '../tools/warn.js';
 import { matrixPrompt, type PromptInput } from '../tools/prompt.js';
+import { packRepository, formatResult, type RepomixOptions } from '../repomix/index.js';
 import type { SymbolKind } from '../indexer/types.js';
 
 export async function handleToolCall(name: string, args: Record<string, unknown>): Promise<string> {
@@ -133,6 +134,20 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         skipClarification: args['skipClarification'] as boolean | undefined,
       });
       return JSON.stringify(result, null, 2);
+    }
+
+    // Repomix Integration
+    case 'matrix_repomix': {
+      const options: RepomixOptions = {
+        target: args['target'] as string,
+        branch: args['branch'] as string | undefined,
+        style: args['style'] as 'xml' | 'markdown' | 'plain' | undefined,
+        include: args['include'] as string | undefined,
+        compress: args['compress'] as boolean | undefined,
+        maxTokens: args['maxTokens'] as number | undefined,
+      };
+      const result = await packRepository(options);
+      return formatResult(result);
     }
 
     // Code Index Tools
