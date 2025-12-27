@@ -77,6 +77,22 @@ Up-to-date library documentation (bundled):
 | `resolve-library-id` | Find library ID for docs |
 | `get-library-docs` | Get current documentation |
 
+### Repomix
+
+Pack external repositories into AI-friendly context:
+
+| Tool | Purpose |
+|------|---------|
+| `matrix_repomix` | Pack a repo for full source context |
+
+**Context7 vs Repomix:**
+- Context7 = "How do I USE this library?" (documentation)
+- Repomix = "How does this library WORK?" (source code)
+
+```
+/matrix:repomix langchain-ai/langchain --include "libs/core/**"
+```
+
 ## Automatic Hooks
 
 Matrix runs automatically in the background:
@@ -101,6 +117,7 @@ Matrix runs automatically in the background:
 | `/matrix:export` | Export database |
 | `/matrix:verify` | Check installation |
 | `/matrix:reindex` | Reindex repository |
+| `/matrix:repomix <target>` | Pack external repo for context |
 
 ## Configuration
 

@@ -22,7 +22,7 @@ import { createHash } from 'crypto';
 import { spawnSync } from 'child_process';
 import { getConfig } from '../config/index.js';
 
-const CURRENT_VERSION = '0.5.4';
+const CURRENT_VERSION = '1.0.4';
 const MATRIX_DIR = join(homedir(), '.claude', 'matrix');
 const MARKER_FILE = join(MATRIX_DIR, '.initialized');
 const DB_PATH = join(MATRIX_DIR, 'matrix.db');
@@ -246,6 +246,23 @@ CREATE INDEX IF NOT EXISTS idx_imports_source ON imports(source_path);
 CREATE INDEX IF NOT EXISTS idx_imports_name ON imports(imported_name);
 CREATE INDEX IF NOT EXISTS idx_symbol_refs_symbol ON symbol_refs(symbol_id);
 CREATE INDEX IF NOT EXISTS idx_symbol_refs_file ON symbol_refs(file_id);
+
+-- ============================================================================
+-- Repomix Cache (Packed Repository Content)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS repomix_cache (
+    id TEXT PRIMARY KEY,
+    target TEXT NOT NULL,
+    options JSON NOT NULL DEFAULT '{}',
+    content TEXT NOT NULL,
+    stats JSON NOT NULL DEFAULT '{}',
+    created_at TEXT DEFAULT (datetime('now')),
+    expires_at TEXT DEFAULT (datetime('now', '+1 hour'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_repomix_target ON repomix_cache(target);
+CREATE INDEX IF NOT EXISTS idx_repomix_expires ON repomix_cache(expires_at);
 `;
 
 /**

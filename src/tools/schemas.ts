@@ -239,6 +239,42 @@ export const TOOLS: Tool[] = [
       required: ['rawPrompt'],
     },
   },
+  // Repomix Integration
+  {
+    name: 'matrix_repomix',
+    description: 'Pack a repository into AI-friendly context. Use to analyze external codebases, study implementations, or get full source code context. Complements Context7 (docs) with actual source code.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target: {
+          type: 'string',
+          description: 'GitHub shorthand (user/repo) or local path',
+        },
+        branch: {
+          type: 'string',
+          description: 'Branch or commit (optional)',
+        },
+        style: {
+          type: 'string',
+          enum: ['xml', 'markdown', 'plain'],
+          description: 'Output format (default: markdown)',
+        },
+        include: {
+          type: 'string',
+          description: 'Glob patterns to include, comma-separated (e.g., "src/**/*.ts,lib/**/*.js")',
+        },
+        compress: {
+          type: 'boolean',
+          description: 'Compress code (function signatures only, removes comments)',
+        },
+        maxTokens: {
+          type: 'number',
+          description: 'Maximum tokens to return (default: 50000)',
+        },
+      },
+      required: ['target'],
+    },
+  },
   // Code Index Tools
   {
     name: 'matrix_find_definition',
