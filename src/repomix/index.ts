@@ -100,8 +100,8 @@ function storeCache(db: Database, cacheKey: string, target: string, stats: Repom
       INSERT OR REPLACE INTO repomix_cache (id, target, options, content, stats, created_at, expires_at)
       VALUES (?, ?, '{}', ?, ?, datetime('now'), datetime('now', '+${CACHE_TTL_HOURS} hour'))
     `, [cacheKey, target, content, JSON.stringify({ ...stats, target })]);
-  } catch (err) {
-    console.error('[Matrix:Repomix] Cache store error:', err);
+  } catch {
+    // Cache table may not exist yet - silently ignore
   }
 }
 
