@@ -15,5 +15,5 @@
     "mcp",
     "learning"
   ],
-  "hooks": "../hooks/hooks.json"
+  "hooks": "./hooks.json"
 }
