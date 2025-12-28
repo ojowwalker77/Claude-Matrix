@@ -1,9 +1,14 @@
 import { getDb } from '../db/index.js';
+import { getSchemaVersion } from '../db/migrate.js';
 import { fingerprintRepo } from '../repo/index.js';
 
 export interface StatusResult {
   status: string;
   database: string;
+  schemaVersion: {
+    current: number;
+    latest: number;
+  };
   currentRepo: {
     name: string;
     languages: string[];
@@ -52,6 +57,7 @@ export function matrixStatus(): StatusResult {
   return {
     status: 'operational',
     database: 'connected',
+    schemaVersion: getSchemaVersion(),
     currentRepo: {
       name: detected.name,
       languages: detected.languages,
