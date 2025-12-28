@@ -3,7 +3,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { cosineSimilarity, EMBEDDING_DIM } from '../embeddings/utils.js';
-import { SCHEMA_SQL } from './schema.js';
+import { runMigrations } from './migrate.js';
 
 let db: Database | null = null;
 
@@ -21,18 +21,14 @@ export function getDb(): Database {
 
   const dbPath = process.env['MATRIX_DB'] || getDefaultDbPath();
 
+  // Run migrations (handles both fresh DB and upgrades)
+  runMigrations();
+
   db = new Database(dbPath, { create: true });
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA foreign_keys = ON');
 
-  initSchema();
-
   return db;
-}
-
-function initSchema(): void {
-  if (!db) throw new Error('Database not initialized');
-  db.exec(SCHEMA_SQL);
 }
 
 export function closeDb(): void {
