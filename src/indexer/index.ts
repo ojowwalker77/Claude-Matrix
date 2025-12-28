@@ -110,6 +110,7 @@ export async function indexRepository(options: IndexerOptions): Promise<IndexRes
       }
 
       const file = filesToProcess[i];
+      if (!file) continue;
       const progress = Math.floor(10 + (i / totalToProcess) * 85);
       onProgress?.(`Indexing: ${file.path}`, progress);
 

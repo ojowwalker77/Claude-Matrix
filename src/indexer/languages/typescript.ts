@@ -20,6 +20,11 @@ export class TypeScriptParser extends LanguageParser {
       this.parser.setLanguage(this.language);
       const tree = this.parser.parse(content);
 
+      if (!tree) {
+        errors.push('Failed to parse file');
+        return { symbols, imports, errors };
+      }
+
       if (tree.rootNode.hasError) {
         errors.push('Parse error detected in file');
       }
@@ -52,6 +57,7 @@ export class TypeScriptParser extends LanguageParser {
           const className = this.getChildByField(node, 'name');
           if (classBody && className) {
             for (const member of classBody.children) {
+              if (!member) continue;
               if (member.type === 'method_definition') {
                 this.handleMethodDefinition(member, symbols, this.getNodeText(className));
               } else if (member.type === 'public_field_definition' || member.type === 'field_definition') {
@@ -82,13 +88,15 @@ export class TypeScriptParser extends LanguageParser {
           // Handle exports - check if it has a declaration child
           const exportedDecl = node.namedChildren.find(
             (c) =>
-              c.type === 'function_declaration' ||
-              c.type === 'class_declaration' ||
-              c.type === 'interface_declaration' ||
-              c.type === 'type_alias_declaration' ||
-              c.type === 'enum_declaration' ||
-              c.type === 'lexical_declaration' ||
-              c.type === 'variable_declaration'
+              c !== null && (
+                c.type === 'function_declaration' ||
+                c.type === 'class_declaration' ||
+                c.type === 'interface_declaration' ||
+                c.type === 'type_alias_declaration' ||
+                c.type === 'enum_declaration' ||
+                c.type === 'lexical_declaration' ||
+                c.type === 'variable_declaration'
+              )
           );
           if (exportedDecl) {
             // Mark as exported - will be handled by the nested declaration
@@ -244,9 +252,10 @@ export class TypeScriptParser extends LanguageParser {
     const exported = this.isExported(node);
     // Check for const keyword in lexical_declaration children
     const isConst = node.type === 'lexical_declaration' &&
-      node.children.some(child => child.type === 'const');
+      node.children.some(child => child !== null && child.type === 'const');
 
     for (const child of node.namedChildren) {
+      if (!child) continue;
       if (child.type === 'variable_declarator') {
         const nameNode = this.getChildByField(child, 'name');
         if (!nameNode || nameNode.type !== 'identifier') continue;
@@ -295,9 +304,9 @@ export class TypeScriptParser extends LanguageParser {
     const line = node.startPosition.row + 1;
 
     // Check if it's a type-only import
-    const isTypeOnly = node.children.some((c) => c.type === 'type');
+    const isTypeOnly = node.children.some((c) => c !== null && c.type === 'type');
 
-    const importClause = node.namedChildren.find((c) => c.type === 'import_clause');
+    const importClause = node.namedChildren.find((c) => c !== null && c.type === 'import_clause');
     if (!importClause) {
       // Side-effect import: import 'foo'
       imports.push(
@@ -311,6 +320,7 @@ export class TypeScriptParser extends LanguageParser {
 
     // Check for default import
     for (const child of importClause.namedChildren) {
+      if (!child) continue;
       if (child.type === 'identifier') {
         // Default import: import Foo from 'foo'
         imports.push(
@@ -321,7 +331,7 @@ export class TypeScriptParser extends LanguageParser {
         );
       } else if (child.type === 'namespace_import') {
         // Namespace import: import * as Foo from 'foo'
-        const nameNode = this.getChildByField(child, 'name') || child.namedChildren[0];
+        const nameNode = this.getChildByField(child, 'name') || child.namedChildren.find(n => n !== null);
         if (nameNode) {
           imports.push(
             this.createImport(this.getNodeText(nameNode), sourcePath, line, {
@@ -333,10 +343,11 @@ export class TypeScriptParser extends LanguageParser {
       } else if (child.type === 'named_imports') {
         // Named imports: import { Foo, Bar as Baz } from 'foo'
         for (const specifier of child.namedChildren) {
+          if (!specifier) continue;
           if (specifier.type === 'import_specifier') {
             const nameNode = this.getChildByField(specifier, 'name');
             const aliasNode = this.getChildByField(specifier, 'alias');
-            const isSpecifierTypeOnly = specifier.children.some((c) => c.type === 'type');
+            const isSpecifierTypeOnly = specifier.children.some((c) => c !== null && c.type === 'type');
 
             if (nameNode) {
               imports.push(
@@ -361,7 +372,7 @@ export class TypeScriptParser extends LanguageParser {
   private isDefaultExport(node: SyntaxNode): boolean {
     const parent = node.parent;
     if (!parent || parent.type !== 'export_statement') return false;
-    return parent.children.some((c) => c.type === 'default');
+    return parent.children.some((c) => c !== null && c.type === 'default');
   }
 
   private getFunctionSignature(node: SyntaxNode): string {

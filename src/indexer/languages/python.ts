@@ -18,6 +18,11 @@ export class PythonParser extends LanguageParser {
       this.parser.setLanguage(this.language);
       const tree = this.parser.parse(content);
 
+      if (!tree) {
+        errors.push('Failed to parse file');
+        return { symbols, imports, errors };
+      }
+
       if (tree.rootNode.hasError) {
         errors.push('Parse error detected in file');
       }
@@ -51,6 +56,7 @@ export class PythonParser extends LanguageParser {
           if (classBody && className) {
             const classScope = this.getNodeText(className);
             for (const child of classBody.namedChildren) {
+              if (!child) continue;
               if (child.type === 'function_definition') {
                 this.handleFunctionDefinition(child, symbols, classScope);
               }
@@ -60,8 +66,8 @@ export class PythonParser extends LanguageParser {
 
         case 'expression_statement':
           // Check for module-level assignments (variables/constants)
-          const expr = node.namedChildren[0];
-          if (expr?.type === 'assignment' && !scope) {
+          const expr = node.namedChildren.find(c => c !== null);
+          if (expr && expr.type === 'assignment' && !scope) {
             this.handleAssignment(expr, symbols);
           }
           break;
@@ -69,7 +75,7 @@ export class PythonParser extends LanguageParser {
         case 'decorated_definition':
           // Handle decorated functions/classes
           const decorated = node.namedChildren.find(
-            (c) => c.type === 'function_definition' || c.type === 'class_definition'
+            (c) => c !== null && (c.type === 'function_definition' || c.type === 'class_definition')
           );
           if (decorated) {
             if (decorated.type === 'function_definition') {
@@ -173,6 +179,7 @@ export class PythonParser extends LanguageParser {
     const line = node.startPosition.row + 1;
 
     for (const child of node.namedChildren) {
+      if (!child) continue;
       if (child.type === 'dotted_name') {
         const name = this.getNodeText(child);
         imports.push(
@@ -204,6 +211,7 @@ export class PythonParser extends LanguageParser {
     const sourcePath = moduleNode ? this.getNodeText(moduleNode) : '';
 
     for (const child of node.namedChildren) {
+      if (!child) continue;
       if (child === moduleNode) continue;
 
       if (child.type === 'dotted_name') {

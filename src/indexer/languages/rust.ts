@@ -18,6 +18,11 @@ export class RustParser extends LanguageParser {
       this.parser.setLanguage(this.language);
       const tree = this.parser.parse(content);
 
+      if (!tree) {
+        errors.push('Failed to parse file');
+        return { symbols, imports, errors };
+      }
+
       if (tree.rootNode.hasError) {
         errors.push('Parse error detected in file');
       }
@@ -122,6 +127,7 @@ export class RustParser extends LanguageParser {
     const bodyNode = this.getChildByType(node, 'field_declaration_list');
     if (bodyNode) {
       for (const field of bodyNode.namedChildren) {
+        if (!field) continue;
         if (field.type === 'field_declaration') {
           const fieldNameNode = this.getChildByField(field, 'name');
           if (fieldNameNode) {
@@ -209,6 +215,7 @@ export class RustParser extends LanguageParser {
 
     if (bodyNode) {
       for (const item of bodyNode.namedChildren) {
+        if (!item) continue;
         if (item.type === 'function_item') {
           const nameNode = this.getChildByField(item, 'name');
           if (nameNode) {
@@ -314,7 +321,7 @@ export class RustParser extends LanguageParser {
 
     // Extract the use path
     const useTree = node.namedChildren.find(
-      (c) => c.type === 'use_wildcard' || c.type === 'use_list' || c.type === 'scoped_identifier' || c.type === 'identifier' || c.type === 'scoped_use_list'
+      (c) => c !== null && (c.type === 'use_wildcard' || c.type === 'use_list' || c.type === 'scoped_identifier' || c.type === 'identifier' || c.type === 'scoped_use_list')
     );
 
     if (!useTree) return;
@@ -359,16 +366,19 @@ export class RustParser extends LanguageParser {
       case 'use_list':
       case 'scoped_use_list':
         // use foo::{bar, baz}
+        const pathField = this.getChildByField(node, 'path');
         const listPath = node.type === 'scoped_use_list'
-          ? this.getNodeText(this.getChildByField(node, 'path') || node)
+          ? this.getNodeText(pathField || node)
           : basePath;
 
         for (const child of node.namedChildren) {
+          if (!child) continue;
           if (child.type === 'use_list') {
             for (const item of child.namedChildren) {
+              if (!item) continue;
               this.extractUsePaths(item, listPath, imports, line);
             }
-          } else if (child.type !== 'scoped_identifier' || this.getChildByField(node, 'path') !== child) {
+          } else if (child.type !== 'scoped_identifier' || pathField !== child) {
             this.extractUsePaths(child, listPath, imports, line);
           }
         }
@@ -421,7 +431,7 @@ export class RustParser extends LanguageParser {
 
   private isPublic(node: SyntaxNode): boolean {
     // Check for pub keyword in visibility modifier
-    const visNode = node.children.find((c) => c.type === 'visibility_modifier');
+    const visNode = node.children.find((c) => c !== null && c.type === 'visibility_modifier');
     return !!visNode;
   }
 

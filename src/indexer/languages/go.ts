@@ -18,6 +18,11 @@ export class GoParser extends LanguageParser {
       this.parser.setLanguage(this.language);
       const tree = this.parser.parse(content);
 
+      if (!tree) {
+        errors.push('Failed to parse file');
+        return { symbols, imports, errors };
+      }
+
       if (tree.rootNode.hasError) {
         errors.push('Parse error detected in file');
       }
@@ -87,7 +92,8 @@ export class GoParser extends LanguageParser {
     let scope: string | undefined;
     if (receiverNode) {
       // Extract type from receiver: (r *ReceiverType) or (r ReceiverType)
-      const typeNode = receiverNode.descendantsOfType('type_identifier')[0];
+      const typeNodes = receiverNode.descendantsOfType('type_identifier');
+      const typeNode = typeNodes[0];
       if (typeNode) {
         scope = this.getNodeText(typeNode);
       }
@@ -106,6 +112,7 @@ export class GoParser extends LanguageParser {
 
   private handleTypeDeclaration(node: SyntaxNode, symbols: ExtractedSymbol[]): void {
     for (const spec of node.namedChildren) {
+      if (!spec) continue;
       if (spec.type === 'type_spec') {
         const nameNode = this.getChildByField(spec, 'name');
         if (!nameNode) continue;
@@ -139,6 +146,7 @@ export class GoParser extends LanguageParser {
     const kind: SymbolKind = isConst ? 'const' : 'variable';
 
     for (const spec of node.namedChildren) {
+      if (!spec) continue;
       if (spec.type === 'var_spec' || spec.type === 'const_spec') {
         // Can have multiple names: var x, y, z int
         // Get all identifiers that are direct children (not in value expressions)
@@ -157,6 +165,7 @@ export class GoParser extends LanguageParser {
             // Multiple identifiers: expression_list or identifier_list
             // Extract all identifier children
             for (const child of nameField.namedChildren) {
+              if (!child) continue;
               if (child.type === 'identifier') {
                 const name = this.getNodeText(child);
                 symbols.push(
@@ -190,8 +199,10 @@ export class GoParser extends LanguageParser {
     const line = node.startPosition.row + 1;
 
     for (const child of node.namedChildren) {
+      if (!child) continue;
       if (child.type === 'import_spec_list') {
         for (const spec of child.namedChildren) {
+          if (!spec) continue;
           if (spec.type === 'import_spec') {
             this.handleImportSpec(spec, imports, line);
           }

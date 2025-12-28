@@ -463,7 +463,7 @@ export async function run() {
       const isUpgrade = state && state.version !== CURRENT_VERSION;
       const isFirstRun = !state;
 
-      if (isUpgrade) {
+      if (isUpgrade && state) {
         printToUser(`\x1b[36m[Matrix]\x1b[0m Upgrading ${state.version} → ${CURRENT_VERSION}...`);
       } else if (isFirstRun) {
         printToUser('\x1b[36m[Matrix]\x1b[0m Initializing...');
@@ -509,7 +509,7 @@ export async function run() {
       writeFileSync(MARKER_FILE, JSON.stringify(newState, null, 2));
 
       printToUser('\x1b[32m[Matrix]\x1b[0m Ready.');
-    } else {
+    } else if (state) {
       // Update last session time
       state.lastSessionAt = new Date().toISOString();
       writeFileSync(MARKER_FILE, JSON.stringify(state, null, 2));

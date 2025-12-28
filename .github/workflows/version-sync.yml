@@ -1,0 +1,95 @@
+name: Version Sync
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'CHANGELOG.md'
+
+jobs:
+  sync-versions:
+    name: Sync Version Files
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from CHANGELOG
+        id: changelog
+        run: |
+          # Get the first version number from CHANGELOG.md (latest release)
+          VERSION=$(grep -oP '(?<=^## \[)[0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md | head -1)
+          if [ -z "$VERSION" ]; then
+            echo "No version found in CHANGELOG.md"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Found version: $VERSION"
+
+      - name: Check current versions
+        id: current
+        run: |
+          PKG_VERSION=$(jq -r '.version' package.json)
+          PLUGIN_VERSION=$(jq -r '.version' plugin.json)
+          MARKET_VERSION=$(jq -r '.version' marketplace.json)
+
+          echo "package=$PKG_VERSION" >> $GITHUB_OUTPUT
+          echo "plugin=$PLUGIN_VERSION" >> $GITHUB_OUTPUT
+          echo "marketplace=$MARKET_VERSION" >> $GITHUB_OUTPUT
+
+          CHANGELOG_VERSION="${{ steps.changelog.outputs.version }}"
+
+          if [ "$PKG_VERSION" = "$CHANGELOG_VERSION" ] && \
+             [ "$PLUGIN_VERSION" = "$CHANGELOG_VERSION" ] && \
+             [ "$MARKET_VERSION" = "$CHANGELOG_VERSION" ]; then
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          else
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update version files
+        if: steps.current.outputs.needs_update == 'true'
+        run: |
+          VERSION="${{ steps.changelog.outputs.version }}"
+
+          # Update package.json
+          jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp
+          mv package.json.tmp package.json
+
+          # Update plugin.json
+          jq --arg v "$VERSION" '.version = $v' plugin.json > plugin.json.tmp
+          mv plugin.json.tmp plugin.json
+
+          # Update marketplace.json
+          jq --arg v "$VERSION" '.version = $v' marketplace.json > marketplace.json.tmp
+          mv marketplace.json.tmp marketplace.json
+
+          echo "Updated all version files to $VERSION"
+
+      - name: Commit changes
+        if: steps.current.outputs.needs_update == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add package.json plugin.json marketplace.json
+          git commit -m "chore: sync versions to ${{ steps.changelog.outputs.version }}"
+          git push
+
+      - name: Comment on PR
+        if: steps.current.outputs.needs_update == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Version files synced to **${{ steps.changelog.outputs.version }}** from CHANGELOG.md`
+            })

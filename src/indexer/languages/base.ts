@@ -55,14 +55,18 @@ export abstract class LanguageParser {
    * Find children by type
    */
   protected getChildrenByType(node: SyntaxNode, type: string): SyntaxNode[] {
-    return node.children.filter(child => child.type === type);
+    return node.children.filter((child): child is SyntaxNode =>
+      child !== null && child.type === type
+    );
   }
 
   /**
    * Find first child by type
    */
   protected getChildByType(node: SyntaxNode, type: string): SyntaxNode | null {
-    return node.children.find(child => child.type === type) || null;
+    return node.children.find((child): child is SyntaxNode =>
+      child !== null && child.type === type
+    ) ?? null;
   }
 
   /**
@@ -101,6 +105,7 @@ export abstract class LanguageParser {
     if (shouldContinue === false) return;
 
     for (const child of node.children) {
+      if (!child) continue;
       this.walkTree(child, visitor, depth + 1);
     }
   }
