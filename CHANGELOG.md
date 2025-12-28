@@ -2,6 +2,39 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.0.6] - 2025-12-28
+
+### Repomix v2 - Query-First, Semantic Search
+
+Complete rewrite of repomix integration to minimize token consumption:
+
+- **Query Required**: Must specify what you're looking for (no more blind full-repo packs)
+- **Two-Phase Flow**:
+  - Phase 1: Index repo via GitHub API (no content fetched), semantic search for relevant files
+  - Phase 2: Pack only confirmed files after user approval
+- **Semantic Search**: Uses Matrix embeddings to find relevant files by path
+- **Smart Exclusions**: Auto-excludes tests, docs, config, node_modules, build outputs
+- **Token Estimates**: Shows estimated tokens BEFORE consuming any
+- **Interactive Confirmation**: Claude prompts user via Bash before packing
+- **24-Hour Cache**: File tree and packed content cached for faster repeated queries
+
+### Token Savings
+
+| Approach | Tokens |
+|----------|--------|
+| Old (full repo) | ~3.2M |
+| New (query-driven) | ~15-30k |
+
+**Typical savings: 95-99% reduction**
+
+### Breaking Changes
+
+- `query` parameter is now **required**
+- Removed `style`, `include`, `compress` parameters (handled internally)
+- New `confirmedFiles` parameter for Phase 2
+
+---
+
 ## [1.0.4] - 2025-12-27
 
 ### Repomix Integration

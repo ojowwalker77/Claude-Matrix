@@ -1,73 +1,115 @@
 ---
-description: Pack external repo for context
+description: Pack external repo for context (query-first, semantic search)
 ---
 
 # Matrix Repomix
 
-Pack a repository into AI-friendly context using Repomix.
+Smart repository packing with semantic search. Minimizes token consumption by finding only relevant files.
 
-## What it does
+## How It Works
 
-- Fetches and flattens a repository into a single context file
-- Works with GitHub repos (user/repo) or local paths
-- Caches results for 1 hour to avoid refetching
-- Token-limited output to fit context windows
+**Two-Phase Flow:**
 
-## When to use
+1. **Index Phase** (no tokens consumed)
+   - Fetches file tree from GitHub API (no content)
+   - Uses semantic search to find relevant files
+   - Returns suggested files with token estimates
+   - Asks for user confirmation
 
-**Complementary to Context7:**
-- Context7 = "How do I USE this library?" (documentation)
-- Repomix = "How does this library WORK?" (source code)
+2. **Pack Phase** (tokens consumed)
+   - Only runs after user confirms
+   - Packs only the confirmed files
+   - Returns focused, relevant code
 
-**Primary use cases:**
-1. Analyze external library implementations
-2. Study patterns and architecture in other codebases
-3. Get full source context for detailed questions
-4. Learn from open source implementations
+## Key Features
+
+- **Query Required**: Must specify what you're looking for
+- **Semantic Search**: Uses embeddings to find relevant files by path
+- **Smart Exclusions**: Auto-excludes tests, docs, config, node_modules
+- **Token Estimates**: Shows estimated tokens BEFORE consuming any
+- **Caching**: 24-hour cache for file trees and packed content
 
 ## Usage
 
 ```
-/matrix:repomix <target> [options]
+/matrix:repomix <target> "<query>"
 ```
 
 **Parameters:**
 - `target` (required): GitHub shorthand (user/repo) or local path
+- `query` (required): What implementation are you looking for?
 - `--branch`: Specific branch or commit
-- `--include`: Glob patterns to filter files (comma-separated)
-- `--compress`: Compress to function signatures only
-- `--style`: Output format (xml, markdown, plain)
+- `--maxFiles`: Max files to suggest (default: 15)
+- `--maxTokens`: Max tokens in output (default: 30000)
 
 ## Examples
 
 ```
-# Pack a GitHub repo
-/matrix:repomix langchain-ai/langchain
+# Find authentication implementation in Next.js
+/matrix:repomix vercel/next.js "authentication middleware"
 
-# Pack specific files from a repo
-/matrix:repomix facebook/react --include "packages/react/**/*.js"
+# Study RAG implementation in LangChain
+/matrix:repomix langchain-ai/langchain "RAG retrieval chain"
 
-# Pack with compression (signatures only)
-/matrix:repomix prisma/prisma --compress
+# Analyze error handling patterns
+/matrix:repomix facebook/react "error boundary implementation"
 
-# Pack a local directory
-/matrix:repomix ./my-project --include "src/**/*.ts"
-
-# Pack a specific branch
-/matrix:repomix vercel/next.js --branch canary
+# Check local project patterns
+/matrix:repomix ./other-project "API route handlers"
 ```
 
-## Output
+## Flow Example
 
-Returns packed repository content with:
-- File tree structure
-- Source code with file paths
-- Token count statistics
-- Truncation notice if output exceeded limits
+```
+User: /matrix:repomix vercel/next.js "app router implementation"
+
+Claude: [Calls matrix_repomix Phase 1]
+
+Tool Response:
+{
+  "phase": "index",
+  "message": "Found 847 code files (~2.1M tokens). Suggesting 12 relevant files (~18k tokens).",
+  "suggestedFiles": [
+    "packages/next/src/server/app-render/app-render.tsx",
+    "packages/next/src/client/components/app-router.tsx",
+    ...
+  ]
+}
+
+Claude: [Uses Bash to ask user]
+$ "Found 12 relevant files (~18k tokens). Pack these? [y/n]"
+$ > y
+
+Claude: [Calls matrix_repomix Phase 2 with confirmedFiles]
+
+Tool Response:
+# Repository: vercel/next.js
+Query: "app router implementation"
+Files: 12 | Tokens: ~18k
+
+[Packed content...]
+```
+
+## Comparison
+
+| Tool | Purpose | Output |
+|------|---------|--------|
+| **Context7** | "How do I USE this?" | Documentation, examples |
+| **Repomix** | "How does this WORK?" | Source code, implementation |
+
+## Token Savings
+
+| Approach | Tokens | Usefulness |
+|----------|--------|------------|
+| Full repo pack | 2.1M | Low (noise) |
+| Directory filter | ~200k | Medium |
+| **Query-driven** | **~18k** | **High** |
+
+Typical savings: **95-99%** reduction in token usage.
 
 ## Tips
 
-- Use `--include` to focus on relevant directories
-- Use `--compress` for large repos to get more files
-- Results are cached for 1 hour
-- For documentation, use Context7 instead (`/context7`)
+1. **Be specific with queries**: "OAuth2 implementation" > "auth"
+2. **Review suggested files**: Remove irrelevant ones before confirming
+3. **Use with Context7**: Get docs first, then source for deep dive
+4. **Cache is your friend**: Second query on same repo is instant

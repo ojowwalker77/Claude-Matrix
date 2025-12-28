@@ -239,10 +239,13 @@ export const TOOLS: Tool[] = [
       required: ['rawPrompt'],
     },
   },
-  // Repomix Integration
+  // Repomix Integration - Query-First, Progressive, Semantic Search
   {
     name: 'matrix_repomix',
-    description: 'Pack a repository into AI-friendly context. Use to analyze external codebases, study implementations, or get full source code context. Complements Context7 (docs) with actual source code.',
+    description: `Smart repository packing with semantic search. TWO-PHASE FLOW:
+Phase 1: Call with target + query → Returns suggested files, asks for user confirmation via Bash prompt.
+Phase 2: Call again with confirmedFiles → Returns packed content.
+ALWAYS requires a query describing what you're looking for. Complements Context7 (docs) with source code.`,
     inputSchema: {
       type: 'object',
       properties: {
@@ -250,29 +253,33 @@ export const TOOLS: Tool[] = [
           type: 'string',
           description: 'GitHub shorthand (user/repo) or local path',
         },
+        query: {
+          type: 'string',
+          description: 'REQUIRED: What implementation are you looking for? (e.g., "authentication flow", "RAG retrieval", "error handling")',
+        },
         branch: {
           type: 'string',
           description: 'Branch or commit (optional)',
         },
-        style: {
-          type: 'string',
-          enum: ['xml', 'markdown', 'plain'],
-          description: 'Output format (default: markdown)',
-        },
-        include: {
-          type: 'string',
-          description: 'Glob patterns to include, comma-separated (e.g., "src/**/*.ts,lib/**/*.js")',
-        },
-        compress: {
-          type: 'boolean',
-          description: 'Compress code (function signatures only, removes comments)',
+        confirmedFiles: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Phase 2: File paths confirmed by user to pack',
         },
         maxTokens: {
           type: 'number',
-          description: 'Maximum tokens to return (default: 50000)',
+          description: 'Maximum tokens to return (default: 30000)',
+        },
+        maxFiles: {
+          type: 'number',
+          description: 'Maximum files to suggest in Phase 1 (default: 15)',
+        },
+        cacheTTLHours: {
+          type: 'number',
+          description: 'Cache duration in hours (default: 24)',
         },
       },
-      required: ['target'],
+      required: ['target', 'query'],
     },
   },
   // Code Index Tools

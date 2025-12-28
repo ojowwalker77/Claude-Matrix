@@ -136,15 +136,16 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
       return JSON.stringify(result, null, 2);
     }
 
-    // Repomix Integration
+    // Repomix Integration - Query-First, Progressive, Semantic Search
     case 'matrix_repomix': {
       const options: RepomixOptions = {
         target: args['target'] as string,
+        query: args['query'] as string,
         branch: args['branch'] as string | undefined,
-        style: args['style'] as 'xml' | 'markdown' | 'plain' | undefined,
-        include: args['include'] as string | undefined,
-        compress: args['compress'] as boolean | undefined,
+        confirmedFiles: args['confirmedFiles'] as string[] | undefined,
         maxTokens: args['maxTokens'] as number | undefined,
+        maxFiles: args['maxFiles'] as number | undefined,
+        cacheTTLHours: args['cacheTTLHours'] as number | undefined,
       };
       const result = await packRepository(options);
       return formatResult(result);
