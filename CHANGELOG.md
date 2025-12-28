@@ -2,6 +2,14 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.0.4] - 2025-12-28
+
+### Fixed
+
+- **Database Migration** - Fixed "no such column: category" error for existing v2 databases (#46)
+  - `getDb()` now calls `runMigrations()` to properly upgrade schema before use
+  - Added `schemaVersion` to `/matrix:status` for easier debugging
+
 ## [1.0.3] - 2025-12-27
 
 ### Fixes
