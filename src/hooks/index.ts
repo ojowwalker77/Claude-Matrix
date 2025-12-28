@@ -218,7 +218,7 @@ export function parsePackageCommand(command: string): { packages: string[]; ecos
         .map(p => {
           // Handle scoped packages and version specifiers
           // e.g., "@scope/package@1.0.0" -> "@scope/package"
-          return p.replace(/@[\d\.\^~>=<]+.*$/, '');
+          return p.replace(/@[\d.^~>=<]+.*$/, '');
         })
         .filter(p => p.length > 0);
 

@@ -10,7 +10,6 @@ import type {
   ExtractedSymbol,
   ExtractedImport,
   RepoFileRow,
-  SymbolRow,
   ImportRow,
   DefinitionResult,
   ExportResult,

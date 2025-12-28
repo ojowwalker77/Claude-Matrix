@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'fs';
-import { join, basename, dirname } from 'path';
+import { join, basename } from 'path';
 import { spawnSync } from 'child_process';
 
 export interface DetectedRepo {
@@ -75,7 +75,7 @@ function getRepoName(root: string): string {
   if (result.status === 0 && result.stdout) {
     const url = result.stdout.trim();
     // Extract repo name from URL
-    const match = url.match(/\/([^\/]+?)(\.git)?$/);
+    const match = url.match(/\/([^/]+?)(\.git)?$/);
     if (match?.[1]) return match[1];
   }
 
@@ -217,7 +217,7 @@ function parsePyproject(root: string): Partial<DetectedRepo> {
       // Extract dependencies from pyproject
       const depsMatch = content.match(/dependencies\s*=\s*\[([\s\S]*?)\]/);
       if (depsMatch?.[1]) {
-        const depMatches = depsMatch[1].matchAll(/"([^">=<\[]+)/g);
+        const depMatches = depsMatch[1].matchAll(/"([^">=<[]+)/g);
         for (const match of depMatches) {
           if (match[1]) deps.push(match[1].trim());
         }

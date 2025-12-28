@@ -44,8 +44,8 @@ const DEFAULT_EXCLUDES = [
   'out',             // Various build outputs
 ];
 
-// Default file patterns to exclude
-const DEFAULT_EXCLUDE_PATTERNS = [
+// Default file patterns to exclude (reserved for future use)
+const _DEFAULT_EXCLUDE_PATTERNS = [
   '*.min.js',
   '*.bundle.js',
   '*.d.ts',           // skip declaration files (generated)

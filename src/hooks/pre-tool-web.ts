@@ -16,8 +16,6 @@ import {
   outputJson,
   outputText,
   hooksEnabled,
-  getCachedResponse,
-  setCachedResponse,
   type PreToolUseInput,
   type HookOutput,
 } from './index.js';

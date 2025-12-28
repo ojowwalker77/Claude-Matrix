@@ -24,6 +24,7 @@ import {
 } from '../tools/warn.js';
 import { matrixPrompt, type PromptInput } from '../tools/prompt.js';
 import type { SymbolKind } from '../indexer/types.js';
+import { packRepository, formatResult } from '../repomix/index.js';
 
 export async function handleToolCall(name: string, args: Record<string, unknown>): Promise<string> {
   // Ensure DB is initialized
@@ -177,6 +178,20 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         full: args['full'] as boolean | undefined,
       });
       return JSON.stringify(result, null, 2);
+    }
+
+    // Repomix Integration
+    case 'matrix_repomix': {
+      const result = await packRepository({
+        target: args['target'] as string,
+        query: args['query'] as string,
+        branch: args['branch'] as string | undefined,
+        confirmedFiles: args['confirmedFiles'] as string[] | undefined,
+        maxTokens: args['maxTokens'] as number | undefined,
+        maxFiles: args['maxFiles'] as number | undefined,
+        cacheTTLHours: args['cacheTTLHours'] as number | undefined,
+      });
+      return formatResult(result);
     }
 
     default:

@@ -25,7 +25,7 @@ function normalizeErrorMessage(msg: string): string {
   return msg
     .replace(/\d+/g, 'N')                           // numbers -> N
     .replace(/['"`].*?['"`]/g, 'STR')               // string literals
-    .replace(/\/[\w\-\.\/]+/g, 'PATH')              // file paths
+    .replace(/\/[\w\-./]+/g, 'PATH')              // file paths
     .replace(/0x[a-fA-F0-9]+/g, 'HEX')              // hex addresses
     .replace(/\s+/g, ' ')                            // normalize whitespace
     .trim()

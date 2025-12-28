@@ -9,7 +9,7 @@
 import { readFile } from 'fs/promises';
 import { scanRepository } from './scanner.js';
 import { parseFile } from './parser.js';
-import { computeDiff, hasChanges, getDiffSummary, getChangedFileCount } from './diff.js';
+import { computeDiff, hasChanges, getDiffSummary } from './diff.js';
 import {
   getIndexedFiles,
   upsertFile,

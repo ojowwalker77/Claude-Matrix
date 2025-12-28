@@ -11,7 +11,6 @@ import { matrixRecall } from './recall.js';
 import { searchFailures } from './failure.js';
 import { estimateComplexity } from '../hooks/complexity.js';
 import {
-  SHORTCUTS,
   detectShortcut,
   analyzeAmbiguity,
   loadClaudeMdContext,
@@ -19,7 +18,6 @@ import {
   generateAssumptions,
   calculateConfidence,
   type Assumption,
-  type AmbiguityResult,
 } from '../hooks/prompt-utils.js';
 
 export interface PromptInput {

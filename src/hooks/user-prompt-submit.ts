@@ -26,7 +26,7 @@ import { estimateComplexity } from './complexity.js';
 import { matrixRecall } from '../tools/recall.js';
 import { searchFailures } from '../tools/failure.js';
 import { printToUser, renderMemoryBox, renderErrorBox, renderBox } from './ui.js';
-import { analyzePromptSilent, type SilentAnalysisResult } from './prompt-utils.js';
+import { analyzePromptSilent } from './prompt-utils.js';
 import {
   matrixFindDefinition,
   matrixSearchSymbols,

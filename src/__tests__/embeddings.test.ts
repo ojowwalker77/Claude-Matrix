@@ -25,6 +25,7 @@ describe('cosineSimilarity', () => {
     const a = new Float32Array([1, 0]);
     const b = new Float32Array([1, 1]);
     const normalized = 1 / Math.sqrt(2);
+    // oxlint-disable-next-line oxc/erasing-op -- intentional: shows dot product formula a·b = a1*b1 + a2*b2
     const expected = 1 * normalized + 0 * normalized; // ≈ 0.707
     expect(cosineSimilarity(a, b)).toBeCloseTo(expected, 3);
   });
