@@ -61,7 +61,7 @@ export async function run() {
       let name = packageName;
       let version: string | null = null;
 
-      const versionMatch = packageName.match(/^(.+)@([\d\.]+.*)$/);
+      const versionMatch = packageName.match(/^(.+)@([\d.]+.*)$/);
       if (versionMatch) {
         name = versionMatch[1]!;
         version = versionMatch[2]!;

@@ -4,7 +4,7 @@
  * Extracts symbols and imports from Python files using tree-sitter.
  */
 
-import type { Parser, Language, Node as SyntaxNode } from 'web-tree-sitter';
+import type { Node as SyntaxNode } from 'web-tree-sitter';
 import { LanguageParser } from './base.js';
 import type { ParseResult, ExtractedSymbol, ExtractedImport, SymbolKind } from '../types.js';
 

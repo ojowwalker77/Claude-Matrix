@@ -32,6 +32,7 @@ export function renderBox(title: string, lines: string[], width = 44): string {
 
   const content = lines.map(line => {
     // Calculate visible length (without ANSI codes)
+    // oxlint-disable-next-line eslint/no-control-regex -- intentional: stripping ANSI escape sequences
     const visibleLen = line.replace(/\x1b\[[0-9;]*m/g, '').length;
     const padding = Math.max(0, width - 2 - visibleLen);
     return `${DIM}│${RESET} ${line}${' '.repeat(padding)}${DIM}│${RESET}`;

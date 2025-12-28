@@ -36,8 +36,8 @@ jobs:
         id: current
         run: |
           PKG_VERSION=$(jq -r '.version' package.json)
-          PLUGIN_VERSION=$(jq -r '.version' plugin.json)
-          MARKET_VERSION=$(jq -r '.version' marketplace.json)
+          PLUGIN_VERSION=$(jq -r '.version' .claude-plugin/plugin.json)
+          MARKET_VERSION=$(jq -r '.version' .claude-plugin/marketplace.json)
 
           echo "package=$PKG_VERSION" >> $GITHUB_OUTPUT
           echo "plugin=$PLUGIN_VERSION" >> $GITHUB_OUTPUT
@@ -63,12 +63,12 @@ jobs:
           mv package.json.tmp package.json
 
           # Update plugin.json
-          jq --arg v "$VERSION" '.version = $v' plugin.json > plugin.json.tmp
-          mv plugin.json.tmp plugin.json
+          jq --arg v "$VERSION" '.version = $v' .claude-plugin/plugin.json > .claude-plugin/plugin.json.tmp
+          mv .claude-plugin/plugin.json.tmp .claude-plugin/plugin.json
 
           # Update marketplace.json
-          jq --arg v "$VERSION" '.version = $v' marketplace.json > marketplace.json.tmp
-          mv marketplace.json.tmp marketplace.json
+          jq --arg v "$VERSION" '.version = $v' .claude-plugin/marketplace.json > .claude-plugin/marketplace.json.tmp
+          mv .claude-plugin/marketplace.json.tmp .claude-plugin/marketplace.json
 
           echo "Updated all version files to $VERSION"
 
@@ -78,7 +78,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add package.json plugin.json marketplace.json
+          git add package.json .claude-plugin/plugin.json .claude-plugin/marketplace.json
           git commit -m "chore: sync versions to ${{ steps.changelog.outputs.version }}"
           git push
 

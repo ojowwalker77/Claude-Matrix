@@ -10,7 +10,7 @@ function normalizeErrorMessage(msg: string): string {
   return msg
     .replace(/\d+/g, 'N')
     .replace(/['"`].*?['"`]/g, 'STR')
-    .replace(/\/[\w\-\.\/]+/g, 'PATH')
+    .replace(/\/[\w\-./]+/g, 'PATH')
     .replace(/0x[a-fA-F0-9]+/g, 'HEX')
     .replace(/\s+/g, ' ')
     .trim()

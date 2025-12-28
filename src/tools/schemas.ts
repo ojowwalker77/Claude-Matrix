@@ -329,4 +329,44 @@ export const TOOLS: Tool[] = [
       },
     },
   },
+  // Repomix Integration
+  {
+    name: 'matrix_repomix',
+    description: 'Pack external repositories for context. Two-phase flow: Phase 1 (no files) returns suggested files based on query. Phase 2 (with confirmedFiles) packs those files. Minimizes token consumption by letting you confirm before packing.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target: {
+          type: 'string',
+          description: 'GitHub shorthand (owner/repo) or local path',
+        },
+        query: {
+          type: 'string',
+          description: 'What implementation are you looking for? Used for semantic search.',
+        },
+        branch: {
+          type: 'string',
+          description: 'Git branch (default: HEAD/main)',
+        },
+        confirmedFiles: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Files to pack (from Phase 1 suggestions). Omit for Phase 1 index.',
+        },
+        maxTokens: {
+          type: 'number',
+          description: 'Maximum tokens for packed output (default: 30000)',
+        },
+        maxFiles: {
+          type: 'number',
+          description: 'Maximum files to suggest in Phase 1 (default: 15)',
+        },
+        cacheTTLHours: {
+          type: 'number',
+          description: 'Cache TTL in hours (default: 24)',
+        },
+      },
+      required: ['target', 'query'],
+    },
+  },
 ];

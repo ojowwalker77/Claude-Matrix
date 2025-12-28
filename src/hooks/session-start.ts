@@ -15,7 +15,7 @@
  */
 
 import { existsSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, readdirSync } from 'fs';
-import { join, basename } from 'path';
+import { join } from 'path';
 import { homedir } from 'os';
 import { Database } from 'bun:sqlite';
 import { createHash } from 'crypto';
@@ -246,6 +246,23 @@ CREATE INDEX IF NOT EXISTS idx_imports_source ON imports(source_path);
 CREATE INDEX IF NOT EXISTS idx_imports_name ON imports(imported_name);
 CREATE INDEX IF NOT EXISTS idx_symbol_refs_symbol ON symbol_refs(symbol_id);
 CREATE INDEX IF NOT EXISTS idx_symbol_refs_file ON symbol_refs(file_id);
+
+-- ============================================================================
+-- Repomix Cache (External Repository Context)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS repomix_cache (
+    id TEXT PRIMARY KEY,
+    target TEXT NOT NULL,
+    options TEXT,
+    content TEXT NOT NULL,
+    stats TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_repomix_cache_target ON repomix_cache(target);
+CREATE INDEX IF NOT EXISTS idx_repomix_cache_expires ON repomix_cache(expires_at);
 `;
 
 /**
@@ -477,7 +494,7 @@ export async function run() {
       }
 
       // Check for existing data to migrate from old locations
-      const migrated = migrateExistingData();
+      migrateExistingData();
 
       // Initialize or update database
       if (!existsSync(DB_PATH)) {

@@ -2,6 +2,18 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.0.6] - 2025-12-28
+
+### Added
+
+- **Repomix Integration** - Pack external repositories with minimal token consumption
+  - Two-phase flow: Index (no tokens) → Confirm → Pack (tokens)
+  - Query-first semantic search using Matrix embeddings
+  - Token estimates shown BEFORE consumption
+  - Smart exclusions (tests, docs, configs, node_modules)
+  - New `matrix_repomix` tool with GitHub shorthand support
+  - 24h cache for index, configurable TTL for pack results
+
 ## [1.0.5] - 2025-12-28
 
 ### Fixed

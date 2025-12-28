@@ -4,9 +4,9 @@
  * Extracts symbols and imports from Rust files using tree-sitter.
  */
 
-import type { Parser, Language, Node as SyntaxNode } from 'web-tree-sitter';
+import type { Node as SyntaxNode } from 'web-tree-sitter';
 import { LanguageParser } from './base.js';
-import type { ParseResult, ExtractedSymbol, ExtractedImport, SymbolKind } from '../types.js';
+import type { ParseResult, ExtractedSymbol, ExtractedImport } from '../types.js';
 
 export class RustParser extends LanguageParser {
   parse(filePath: string, content: string): ParseResult {
