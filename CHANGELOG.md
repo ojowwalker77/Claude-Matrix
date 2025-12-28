@@ -27,34 +27,32 @@ Complete rewrite of repomix integration to minimize token consumption:
 
 **Typical savings: 95-99% reduction**
 
-### Breaking Changes
-
-- `query` parameter is now **required**
-- Removed `style`, `include`, `compress` parameters (handled internally)
-- New `confirmedFiles` parameter for Phase 2
-
 ---
 
-## [1.0.4] - 2025-12-27
+## [1.0.5] - 2025-12-28
 
-### Repomix Integration
+### Fixed
 
-- **New `matrix_repomix` tool**: Pack external repositories into AI-friendly context
-  - GitHub shorthand support (e.g., `langchain-ai/langchain`)
-  - Local path support for local directories
-  - Branch/commit selection
-  - Glob patterns for file filtering
-  - Compression mode (function signatures only)
-  - Automatic caching (1 hour TTL)
-  - Token limiting with intelligent truncation
+- **Database Migration** - Fixed "no such column: category" error for existing v2 databases (#46)
+  - `getDb()` now calls `runMigrations()` to properly upgrade schema before use
+  - Added `schemaVersion` to `/matrix:status` for easier debugging
 
-- **New `/matrix:repomix` slash command**: Quick access to repo packing
-- **Complementary to Context7**: Context7 for docs, Repomix for source code
+## [1.0.3] - 2025-12-27
 
-### Use Cases
-- Analyze how external libraries implement features
-- Study patterns and architecture in open source projects
-- Get full codebase context for detailed questions
+### Fixes
+
+- **Verify Command**: Fixed hooks detection - hooks are plugin-scoped via `hooks/hooks.json`, not settings.json
+- **Auto-Migration**: Schema migrations now run automatically on version upgrade
+- **Plugin Manifest**: Added `hooks` field reference to plugin.json
+## [1.0.2] - 2025-12-27
+
+### Multi-Language Code Index
+
+- **Tree-sitter Parser**: Replaced TypeScript Compiler API with tree-sitter WASM for multi-language support
+- **10 Languages Supported**: TypeScript, JavaScript, Python, Go, Rust, Java, C, C++, Ruby, PHP
+- **Lazy Grammar Loading**: Grammars downloaded on first use (~1-2MB each), cached in `~/.claude/matrix/grammars/`
+- **Zero Overhead**: No bundled WASM files, grammars fetched from unpkg.com when needed
+- **Project Detection**: Auto-indexes Python (pyproject.toml), Go (go.mod), Rust (Cargo.toml), Java (pom.xml), Ruby (Gemfile), PHP (composer.json), C/C++ (CMakeLists.txt)
 
 ---
 
