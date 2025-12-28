@@ -2,6 +2,9 @@ name: Release Plugin
 
 on:
   push:
+    branches: [main]
+    paths:
+      - 'CHANGELOG.md'
     tags:
       - 'v*'
   workflow_dispatch:
@@ -14,7 +17,58 @@ permissions:
   contents: write
 
 jobs:
+  check-release:
+    name: Check & Create Tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION=$(jq -r '.version' package.json)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Check if release exists
+        id: check
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if gh release view "v$VERSION" &>/dev/null; then
+            echo "Release v$VERSION already exists, skipping"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Release v$VERSION does not exist, proceeding"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create tag if needed
+        if: steps.check.outputs.should_release == 'true' && !startsWith(github.ref, 'refs/tags/')
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build:
+    needs: check-release
+    if: needs.check-release.outputs.should_release == 'true'
     strategy:
       matrix:
         include:
@@ -64,7 +118,8 @@ jobs:
           path: bin/${{ matrix.artifact }}
 
   package:
-    needs: build
+    needs: [check-release, build]
+    if: needs.check-release.outputs.should_release == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -103,11 +158,18 @@ jobs:
       - name: Get version
         id: version
         run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-          fi
+          echo "version=${{ needs.check-release.outputs.version }}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog
+        id: changelog
+        run: |
+          VERSION="${{ needs.check-release.outputs.version }}"
+          # Extract changelog section for this version
+          CHANGELOG=$(awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+          # Write to file for multiline content
+          echo "$CHANGELOG" > /tmp/changelog.md
+          echo "Changelog for v$VERSION:"
+          cat /tmp/changelog.md
 
       - name: Create plugin archive
         run: |
@@ -136,25 +198,7 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: Matrix Plugin v${{ steps.version.outputs.version }}
-          body: |
-            ## Claude Matrix Plugin v${{ steps.version.outputs.version }}
-
-            ### Installation
-            ```
-            /plugin install matrix@ojowwalker77
-            ```
-
-            ### Manual Installation
-            Download `matrix-plugin-${{ steps.version.outputs.version }}.tar.gz` and extract to your Claude Code plugins directory.
-
-            ### Platforms
-            - macOS ARM64 (Apple Silicon)
-            - macOS x64 (Intel)
-            - Linux x64
-            - Linux ARM64
-
-            ### Changes
-            See [CHANGELOG.md](https://github.com/ojowwalker77/Claude-Matrix/blob/main/CHANGELOG.md) for details.
+          body_path: /tmp/changelog.md
           files: |
             dist/matrix-plugin-${{ steps.version.outputs.version }}.tar.gz
             dist/matrix-plugin-${{ steps.version.outputs.version }}.zip

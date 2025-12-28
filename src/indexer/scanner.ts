@@ -1,16 +1,17 @@
 /**
  * File Scanner
  *
- * Discovers TypeScript/JavaScript files in a repository.
+ * Discovers source code files in a repository across multiple languages.
  * Uses Bun.Glob for fast file discovery with pattern exclusions.
  */
 
-import { join, relative } from 'path';
+import { join } from 'path';
 import { stat } from 'fs/promises';
 import type { ScannedFile } from './types.js';
+import { getSupportedExtensions } from './languages/index.js';
 
-// File extensions to index
-const EXTENSIONS = ['ts', 'tsx', 'js', 'jsx', 'mjs', 'mts', 'cts', 'cjs'];
+// File extensions to index - dynamically loaded from language registry
+const EXTENSIONS = getSupportedExtensions();
 
 // Default directories to exclude
 const DEFAULT_EXCLUDES = [
@@ -27,6 +28,20 @@ const DEFAULT_EXCLUDES = [
   'vendor',
   '.turbo',
   '.vercel',
+  // Language-specific build directories
+  'target',          // Rust
+  'bin',             // Go binaries
+  'pkg',             // Go packages
+  '.bundle',         // Ruby
+  'venv',            // Python virtual env
+  '.venv',
+  'env',
+  '.tox',            // Python tox
+  '.mypy_cache',     // Python mypy
+  '.pytest_cache',   // Python pytest
+  'Pods',            // iOS/CocoaPods
+  'obj',             // .NET
+  'out',             // Various build outputs
 ];
 
 // Default file patterns to exclude
@@ -38,6 +53,13 @@ const DEFAULT_EXCLUDE_PATTERNS = [
   '*.spec.ts',
   '*.test.tsx',
   '*.spec.tsx',
+  '*.pyc',            // Python bytecode
+  '*.pyo',
+  '*.class',          // Java bytecode
+  '*.o',              // Object files
+  '*.a',              // Archives
+  '*.so',             // Shared objects
+  '*.dylib',          // macOS dynamic libs
 ];
 
 export interface ScanOptions {
@@ -48,7 +70,7 @@ export interface ScanOptions {
 }
 
 /**
- * Scan a repository for TypeScript/JavaScript files
+ * Scan a repository for source code files across all supported languages
  */
 export async function scanRepository(options: ScanOptions): Promise<ScannedFile[]> {
   const {
@@ -106,7 +128,10 @@ export async function scanRepository(options: ScanOptions): Promise<ScannedFile[
     const shouldExclude = allExcludes.some(excludePattern => {
       // Handle glob patterns
       if (excludePattern.includes('*')) {
-        // Convert glob to regex
+        // Convert glob to regex using placeholder approach
+        // Note: This is a simplified glob conversion that handles common cases.
+        // The placeholder pattern is extremely unlikely in real file paths.
+        // For more robust glob matching, consider using minimatch library.
         const regex = excludePattern
           .replace(/\./g, '\\.')
           .replace(/\*\*/g, '___DOUBLESTAR___')

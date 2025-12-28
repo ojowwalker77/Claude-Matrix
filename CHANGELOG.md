@@ -4,9 +4,7 @@ All notable changes to Claude Matrix are documented here.
 
 ## [1.0.6] - 2025-12-28
 
-### Repomix v2 - Query-First, Semantic Search
-
-Complete rewrite of repomix integration to minimize token consumption:
+### Repomix
 
 - **Query Required**: Must specify what you're looking for (no more blind full-repo packs)
 - **Two-Phase Flow**:
@@ -17,15 +15,6 @@ Complete rewrite of repomix integration to minimize token consumption:
 - **Token Estimates**: Shows estimated tokens BEFORE consuming any
 - **Interactive Confirmation**: Claude prompts user via Bash before packing
 - **24-Hour Cache**: File tree and packed content cached for faster repeated queries
-
-### Token Savings
-
-| Approach | Tokens |
-|----------|--------|
-| Old (full repo) | ~3.2M |
-| New (query-driven) | ~15-30k |
-
-**Typical savings: 95-99% reduction**
 
 ---
 
