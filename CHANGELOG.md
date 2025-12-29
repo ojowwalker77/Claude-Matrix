@@ -2,6 +2,27 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.0.7] - 2025-12-28
+
+### Optimizations
+
+- **Haiku Sub-Agent Delegation** - 8 low-complexity tools marked as delegable
+  - `_meta.delegable: true` for: matrix_status, matrix_index_status, matrix_reindex, matrix_reward, matrix_warn_check, matrix_warn_add, matrix_warn_remove, matrix_warn_list
+  - Enables routing simple CRUD operations to Haiku for cost savings
+
+- **MCP Annotations** - Official hints added to all 17 tools
+  - `readOnlyHint: true` for 10 query-only tools
+  - `idempotentHint: true` for 6 safe-to-retry tools
+  - `destructiveHint: true` for matrix_warn_remove
+  - `openWorldHint: true` for matrix_repomix (GitHub API)
+
+- **Compact JSON Output** - 10-15% token reduction on all tool responses
+  - Switched from pretty-printed to compact JSON in handlers
+
+- **Safe Description Trims** - Removed redundancy, kept guidance
+  - Trimmed obvious/redundant text from tool descriptions
+  - Preserved "Use when...", examples, and enum explanations
+
 ## [1.0.6] - 2025-12-28
 
 ### Added
