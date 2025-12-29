@@ -202,7 +202,20 @@ Test locally:
 claude --plugin-dir /path/to/Claude-Matrix
 ```
 
-## Fork & Self-Host
+## Contributing
+
+Want to contribute? Check [CONTRIBUTING.md](CONTRIBUTING.md) first.
+
+**What we don't accept:**
+- Windows compatibility (can't test it)
+- Features without a clear win
+- High bloat for marginal gains
+
+**Core principle:** Increase the chance and speed for Claude Code to deliver the **First Satisfying Answer** - not first-whatever-slop.
+
+Submit issues and PRs using our [templates](.github/ISSUE_TEMPLATE/).
+
+## Fork
 
 Don't agree with how Matrix works? Fork it and make it yours:
 
@@ -217,6 +230,7 @@ The [reference-for-llms.md](docs/reference-for-llms.md) contains everything Clau
 
 - [Changelog](CHANGELOG.md)
 - [Roadmap](ROADMAP.md)
+- [Contributing](CONTRIBUTING.md)
 - [LLM Reference](docs/reference-for-llms.md)
 - [Issues](https://github.com/ojowwalker77/Claude-Matrix/issues)
 
