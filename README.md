@@ -130,7 +130,6 @@ Matrix runs automatically in the background:
 ### Token Optimization
 
 - **Compact JSON** - All tool outputs use compact JSON (~10-15% token savings)
-- **Safe description trims** - Removed redundancy, preserved guidance
 
 ### MCP Annotations
 
@@ -201,10 +200,22 @@ Test locally:
 claude --plugin-dir /path/to/Claude-Matrix
 ```
 
+## Fork & Self-Host
+
+Don't agree with how Matrix works? Fork it and make it yours:
+
+```
+Ask Claude: "Fork Claude Matrix using docs/reference-for-llms.md
+             and customize it for my workflow"
+```
+
+The [reference-for-llms.md](docs/reference-for-llms.md) contains everything Claude needs to understand, customize, and help you self-host your own version through your own plugin marketplace.
+
 ## Links
 
 - [Changelog](CHANGELOG.md)
 - [Roadmap](ROADMAP.md)
+- [LLM Reference](docs/reference-for-llms.md)
 - [Issues](https://github.com/ojowwalker77/Claude-Matrix/issues)
 
 ## License
