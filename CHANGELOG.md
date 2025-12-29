@@ -2,6 +2,16 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.0.8] - 2025-12-29
+
+### Optimizations
+
+- **Expanded Haiku Delegation** - 13 tools now delegable (up from 8)
+  - Added: `matrix_recall`, `matrix_find_definition`, `matrix_search_symbols`, `matrix_list_exports`, `matrix_get_imports`
+  - These are read-only data extraction tools - Haiku passes params, server does the work
+  - **MCP Server Instructions** - Delegation list now surfaced to LLM via official MCP mechanism
+  - Non-delegable (require Opus reasoning): `matrix_store`, `matrix_failure`, `matrix_prompt`, `matrix_repomix`
+
 ## [1.0.7] - 2025-12-28
 
 ### Optimizations

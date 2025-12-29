@@ -17,6 +17,7 @@ export const TOOLS: Tool[] = [
       },
       required: ['query'],
     },
+    _meta: { delegable: true },
   },
   {
     name: 'matrix_store',
@@ -278,6 +279,7 @@ export const TOOLS: Tool[] = [
       },
       required: ['symbol'],
     },
+    _meta: { delegable: true },
   },
   {
     name: 'matrix_list_exports',
@@ -292,6 +294,7 @@ export const TOOLS: Tool[] = [
         },
       },
     },
+    _meta: { delegable: true },
   },
   {
     name: 'matrix_search_symbols',
@@ -311,6 +314,7 @@ export const TOOLS: Tool[] = [
       },
       required: ['query'],
     },
+    _meta: { delegable: true },
   },
   {
     name: 'matrix_get_imports',
@@ -326,6 +330,7 @@ export const TOOLS: Tool[] = [
       },
       required: ['file'],
     },
+    _meta: { delegable: true },
   },
   {
     name: 'matrix_index_status',
