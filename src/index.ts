@@ -13,7 +13,14 @@ import { handleToolCall } from './server/index.js';
 async function main(): Promise<void> {
   const server = new Server(
     { name: 'matrix', version: '0.2.0' },
-    { capabilities: { tools: {} } }
+    {
+      capabilities: { tools: {} },
+      instructions: `For cost optimization, delegate these read-only/simple tools to Haiku sub-agents via Task(model="haiku"):
+- matrix_recall, matrix_reward, matrix_status
+- matrix_warn_check, matrix_warn_add, matrix_warn_remove, matrix_warn_list
+- matrix_find_definition, matrix_search_symbols, matrix_list_exports, matrix_get_imports
+- matrix_index_status, matrix_reindex`,
+    }
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({

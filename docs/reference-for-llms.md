@@ -115,11 +115,19 @@ Claude-Matrix/
 
 ### Delegable Tools (for Haiku)
 
-These 8 tools are marked with `_meta.delegable: true` for sub-agent routing:
+These 13 tools are marked with `_meta.delegable: true` for sub-agent routing:
 ```
-matrix_status, matrix_index_status, matrix_reindex, matrix_reward
+matrix_recall, matrix_reward, matrix_status
 matrix_warn_check, matrix_warn_add, matrix_warn_remove, matrix_warn_list
+matrix_find_definition, matrix_search_symbols, matrix_list_exports, matrix_get_imports
+matrix_index_status, matrix_reindex
 ```
+
+**Not delegable** (require Opus reasoning):
+- `matrix_store` - needs judgment on what to store
+- `matrix_failure` - needs root cause analysis
+- `matrix_prompt` - meta-analysis of prompts
+- `matrix_repomix` - complex two-phase flow
 
 ---
 

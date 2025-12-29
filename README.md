@@ -144,14 +144,16 @@ All 17 tools include official MCP hints for smarter handling:
 
 ### Haiku Delegation
 
-8 simple tools marked as `delegable` for sub-agent routing:
+13 tools marked as `delegable` for sub-agent routing via MCP server instructions:
 
 ```
-matrix_status, matrix_index_status, matrix_reindex, matrix_reward
+matrix_recall, matrix_reward, matrix_status
 matrix_warn_check, matrix_warn_add, matrix_warn_remove, matrix_warn_list
+matrix_find_definition, matrix_search_symbols, matrix_list_exports, matrix_get_imports
+matrix_index_status, matrix_reindex
 ```
 
-These are simple CRUD operations that don't need Opus/Sonnet reasoning.
+These are read-only/simple operations - the model just passes parameters, server does the work. Non-delegable tools (`matrix_store`, `matrix_failure`, `matrix_prompt`, `matrix_repomix`) require Opus reasoning.
 
 ## Configuration
 
