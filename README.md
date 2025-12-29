@@ -23,6 +23,14 @@
 
 Requires [Bun](https://bun.sh) v1.0+ and [Claude Code](https://claude.ai/code) v2.0+.
 
+## How to Update
+
+Navigate to `/plugin` → **Marketplaces** tab → Select **Update marketplace**:
+
+<img width="1792" alt="Plugin marketplace update" src="https://github.com/user-attachments/assets/26caecf8-b859-4bb1-9880-298fd756a401" />
+
+> **Note:** The update mechanism in Claude Code has [known quirks](https://github.com/anthropics/claude-code/issues/11856). Updates may not take effect immediately—sometimes requiring a restart, cache invalidation ([#14061](https://github.com/anthropics/claude-code/issues/14061)), or multiple attempts. This is a Claude Code limitation, not Matrix.
+
 ## MCP Tools
 
 ### Memory
@@ -154,6 +162,10 @@ matrix_index_status, matrix_reindex
 ```
 
 These are read-only/simple operations - the model just passes parameters, server does the work. Non-delegable tools (`matrix_store`, `matrix_failure`, `matrix_prompt`, `matrix_repomix`) require Opus reasoning.
+
+**Example:** Haiku 4.5 sub-agent executing `matrix_recall`:
+
+<img width="919" alt="Haiku subagent delegation example" src="https://github.com/user-attachments/assets/f119550f-1be5-47d7-ad70-b896759ce237" />
 
 ## Configuration
 
