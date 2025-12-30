@@ -2,6 +2,14 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.0.10] - 2025-12-30
+
+### Fixed
+
+- **repoPath parameter not passed through** - Handler was ignoring `repoPath` on all 6 index tools
+  - `matrix_reindex`, `matrix_find_definition`, `matrix_search_symbols`, `matrix_list_exports`, `matrix_get_imports`, `matrix_index_status` now correctly pass `repoPath` to underlying functions
+  - Without this fix, MCP server always used its own cwd (plugin cache dir) instead of user's project
+
 ## [1.0.9] - 2025-12-30
 
 ### Added

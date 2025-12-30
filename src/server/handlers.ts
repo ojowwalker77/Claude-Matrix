@@ -142,6 +142,7 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         symbol: args['symbol'] as string,
         kind: args['kind'] as SymbolKind | undefined,
         file: args['file'] as string | undefined,
+        repoPath: args['repoPath'] as string | undefined,
       });
       return JSON.stringify(result);
     }
@@ -149,6 +150,7 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
     case 'matrix_list_exports': {
       const result = matrixListExports({
         path: args['path'] as string | undefined,
+        repoPath: args['repoPath'] as string | undefined,
       });
       return JSON.stringify(result);
     }
@@ -157,6 +159,7 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
       const result = matrixSearchSymbols({
         query: args['query'] as string,
         limit: args['limit'] as number | undefined,
+        repoPath: args['repoPath'] as string | undefined,
       });
       return JSON.stringify(result);
     }
@@ -164,18 +167,22 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
     case 'matrix_get_imports': {
       const result = matrixGetImports({
         file: args['file'] as string,
+        repoPath: args['repoPath'] as string | undefined,
       });
       return JSON.stringify(result);
     }
 
     case 'matrix_index_status': {
-      const result = matrixIndexStatus();
+      const result = matrixIndexStatus({
+        repoPath: args['repoPath'] as string | undefined,
+      });
       return JSON.stringify(result);
     }
 
     case 'matrix_reindex': {
       const result = await matrixReindex({
         full: args['full'] as boolean | undefined,
+        repoPath: args['repoPath'] as string | undefined,
       });
       return JSON.stringify(result);
     }
