@@ -2,6 +2,22 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.0.9] - 2025-12-30
+
+### Added
+
+- **Path-Based Indexing** - Index any repository from any location
+  - New `repoPath` parameter on all 6 index tools (`matrix_reindex`, `matrix_find_definition`, `matrix_search_symbols`, `matrix_list_exports`, `matrix_get_imports`, `matrix_index_status`)
+  - Supports absolute paths, relative paths (auto-resolved), and defaults to cwd
+  - Extended project detection: TypeScript/JavaScript, Python, Go, Rust
+
+### Improved
+
+- **Enhanced MCP Instructions** - Better tool usage guidance for Claude
+  - Prefer Matrix index tools over grep/bash for code searches
+  - Prefer Context7 over WebFetch/WebSearch for library docs
+  - Subagent instructions: Tell agents to use index tools and Context7
+
 ## [1.0.8] - 2025-12-29
 
 ### Optimizations

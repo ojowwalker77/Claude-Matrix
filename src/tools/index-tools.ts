@@ -11,7 +11,7 @@
 import { createHash } from 'crypto';
 import { spawnSync } from 'child_process';
 import { existsSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import {
   findDefinitions,
   findExports,
@@ -45,16 +45,47 @@ function generateRepoId(root: string): string {
 }
 
 /**
- * Get current repo info from cwd
+ * Check if directory is an indexable project
  */
-function getCurrentRepoInfo(): { root: string; id: string } | null {
-  const cwd = process.cwd();
-  const root = findGitRoot(cwd) || cwd;
+function isIndexableProject(root: string): boolean {
+  // TypeScript/JavaScript
+  if (existsSync(join(root, 'package.json')) ||
+      existsSync(join(root, 'tsconfig.json')) ||
+      existsSync(join(root, 'jsconfig.json'))) {
+    return true;
+  }
+  // Python
+  if (existsSync(join(root, 'pyproject.toml')) ||
+      existsSync(join(root, 'setup.py')) ||
+      existsSync(join(root, 'requirements.txt'))) {
+    return true;
+  }
+  // Go
+  if (existsSync(join(root, 'go.mod'))) {
+    return true;
+  }
+  // Rust
+  if (existsSync(join(root, 'Cargo.toml'))) {
+    return true;
+  }
+  return false;
+}
 
-  // Check if it's a TS/JS project
-  if (!existsSync(join(root, 'package.json')) &&
-      !existsSync(join(root, 'tsconfig.json')) &&
-      !existsSync(join(root, 'jsconfig.json'))) {
+/**
+ * Get repo info from a path (defaults to cwd)
+ */
+function getRepoInfo(targetPath?: string): { root: string; id: string } | null {
+  // Resolve relative paths to absolute
+  const basePath = targetPath ? resolve(targetPath) : process.cwd();
+
+  // Verify path exists
+  if (!existsSync(basePath)) {
+    return null;
+  }
+
+  const root = findGitRoot(basePath) || basePath;
+
+  if (!isIndexableProject(root)) {
     return null;
   }
 
@@ -69,19 +100,27 @@ export interface FindDefinitionInput {
   symbol: string;
   kind?: SymbolKind;
   file?: string;
+  repoPath?: string;
 }
 
 export interface ListExportsInput {
   path?: string;
+  repoPath?: string;
 }
 
 export interface SearchSymbolsInput {
   query: string;
   limit?: number;
+  repoPath?: string;
 }
 
 export interface GetImportsInput {
   file: string;
+  repoPath?: string;
+}
+
+export interface IndexStatusInput {
+  repoPath?: string;
 }
 
 // Tool output types
@@ -113,7 +152,7 @@ export interface SearchSymbolsResult {
  * Find where a symbol is defined
  */
 export function matrixFindDefinition(input: FindDefinitionInput): FindDefinitionResult {
-  const repo = getCurrentRepoInfo();
+  const repo = getRepoInfo(input.repoPath);
   if (!repo) {
     return {
       found: false,
@@ -145,7 +184,7 @@ export function matrixFindDefinition(input: FindDefinitionInput): FindDefinition
  * List all exports from a file or directory
  */
 export function matrixListExports(input: ListExportsInput): ListExportsResult {
-  const repo = getCurrentRepoInfo();
+  const repo = getRepoInfo(input.repoPath);
   if (!repo) {
     return {
       found: false,
@@ -171,10 +210,10 @@ export function matrixListExports(input: ListExportsInput): ListExportsResult {
 }
 
 /**
- * Get index status for current repository
+ * Get index status for a repository
  */
-export function matrixIndexStatus(): IndexStatusResult {
-  const repo = getCurrentRepoInfo();
+export function matrixIndexStatus(input: IndexStatusInput = {}): IndexStatusResult {
+  const repo = getRepoInfo(input.repoPath);
   if (!repo) {
     return {
       indexed: false,
@@ -202,7 +241,7 @@ export function matrixIndexStatus(): IndexStatusResult {
  * Search symbols by partial name match
  */
 export function matrixSearchSymbols(input: SearchSymbolsInput): SearchSymbolsResult {
-  const repo = getCurrentRepoInfo();
+  const repo = getRepoInfo(input.repoPath);
   if (!repo) {
     return {
       found: false,
@@ -229,7 +268,7 @@ export function matrixSearchSymbols(input: SearchSymbolsInput): SearchSymbolsRes
  * Get imports for a specific file
  */
 export function matrixGetImports(input: GetImportsInput) {
-  const repo = getCurrentRepoInfo();
+  const repo = getRepoInfo(input.repoPath);
   if (!repo) {
     return {
       found: false,
@@ -255,6 +294,7 @@ export function matrixGetImports(input: GetImportsInput) {
 // Reindex input types
 export interface ReindexInput {
   full?: boolean;  // Force full reindex (ignore incremental)
+  repoPath?: string;  // Path to repository (defaults to cwd)
 }
 
 export interface ReindexResult {
@@ -272,7 +312,7 @@ export interface ReindexResult {
  * Manually trigger repository reindexing
  */
 export async function matrixReindex(input: ReindexInput = {}): Promise<ReindexResult> {
-  const repo = getCurrentRepoInfo();
+  const repo = getRepoInfo(input.repoPath);
   if (!repo) {
     return {
       success: false,

@@ -276,6 +276,10 @@ export const TOOLS: Tool[] = [
           type: 'string',
           description: 'Optional: limit search to a specific file path',
         },
+        repoPath: {
+          type: 'string',
+          description: 'Optional: path to repository to search (defaults to current directory)',
+        },
       },
       required: ['symbol'],
     },
@@ -291,6 +295,10 @@ export const TOOLS: Tool[] = [
         path: {
           type: 'string',
           description: 'File or directory path to list exports from (e.g., "src/utils" or "src/index.ts")',
+        },
+        repoPath: {
+          type: 'string',
+          description: 'Optional: path to repository to search (defaults to current directory)',
         },
       },
     },
@@ -311,6 +319,10 @@ export const TOOLS: Tool[] = [
           type: 'number',
           description: 'Max results (default: 20)',
         },
+        repoPath: {
+          type: 'string',
+          description: 'Optional: path to repository to search (defaults to current directory)',
+        },
       },
       required: ['query'],
     },
@@ -327,6 +339,10 @@ export const TOOLS: Tool[] = [
           type: 'string',
           description: 'File path to get imports from',
         },
+        repoPath: {
+          type: 'string',
+          description: 'Optional: path to repository (defaults to current directory)',
+        },
       },
       required: ['file'],
     },
@@ -334,11 +350,16 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'matrix_index_status',
-    description: 'Get code index status for this repository.',
+    description: 'Get code index status for a repository.',
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: 'object',
-      properties: {},
+      properties: {
+        repoPath: {
+          type: 'string',
+          description: 'Optional: path to repository (defaults to current directory)',
+        },
+      },
     },
     _meta: { delegable: true },
   },
@@ -352,6 +373,10 @@ export const TOOLS: Tool[] = [
         full: {
           type: 'boolean',
           description: 'Force full reindex, ignoring incremental mode (default: false)',
+        },
+        repoPath: {
+          type: 'string',
+          description: 'Optional: path to repository to index (defaults to current directory)',
         },
       },
     },
