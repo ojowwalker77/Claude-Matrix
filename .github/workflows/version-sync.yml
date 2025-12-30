@@ -38,16 +38,19 @@ jobs:
           PKG_VERSION=$(jq -r '.version' package.json)
           PLUGIN_VERSION=$(jq -r '.version' .claude-plugin/plugin.json)
           MARKET_VERSION=$(jq -r '.version' .claude-plugin/marketplace.json)
+          MARKET_PLUGIN_VERSION=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
 
           echo "package=$PKG_VERSION" >> $GITHUB_OUTPUT
           echo "plugin=$PLUGIN_VERSION" >> $GITHUB_OUTPUT
           echo "marketplace=$MARKET_VERSION" >> $GITHUB_OUTPUT
+          echo "marketplace_plugin=$MARKET_PLUGIN_VERSION" >> $GITHUB_OUTPUT
 
           CHANGELOG_VERSION="${{ steps.changelog.outputs.version }}"
 
           if [ "$PKG_VERSION" = "$CHANGELOG_VERSION" ] && \
              [ "$PLUGIN_VERSION" = "$CHANGELOG_VERSION" ] && \
-             [ "$MARKET_VERSION" = "$CHANGELOG_VERSION" ]; then
+             [ "$MARKET_VERSION" = "$CHANGELOG_VERSION" ] && \
+             [ "$MARKET_PLUGIN_VERSION" = "$CHANGELOG_VERSION" ]; then
             echo "needs_update=false" >> $GITHUB_OUTPUT
           else
             echo "needs_update=true" >> $GITHUB_OUTPUT
@@ -66,8 +69,8 @@ jobs:
           jq --arg v "$VERSION" '.version = $v' .claude-plugin/plugin.json > .claude-plugin/plugin.json.tmp
           mv .claude-plugin/plugin.json.tmp .claude-plugin/plugin.json
 
-          # Update marketplace.json
-          jq --arg v "$VERSION" '.version = $v' .claude-plugin/marketplace.json > .claude-plugin/marketplace.json.tmp
+          # Update marketplace.json (both top-level and plugins[0].version)
+          jq --arg v "$VERSION" '.version = $v | .plugins[0].version = $v' .claude-plugin/marketplace.json > .claude-plugin/marketplace.json.tmp
           mv .claude-plugin/marketplace.json.tmp .claude-plugin/marketplace.json
 
           echo "Updated all version files to $VERSION"

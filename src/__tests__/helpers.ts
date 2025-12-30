@@ -1,18 +1,12 @@
 import { Database } from 'bun:sqlite';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const schemaPath = join(__dirname, '../db/schema.sql');
+import { SCHEMA_SQL } from '../db/schema.js';
 
 let testDb: Database | null = null;
 
 export function createTestDb(): Database {
   const db = new Database(':memory:');
   db.exec('PRAGMA foreign_keys = ON');
-  const schema = readFileSync(schemaPath, 'utf-8');
-  db.exec(schema);
+  db.exec(SCHEMA_SQL);
   testDb = db;
   return db;
 }

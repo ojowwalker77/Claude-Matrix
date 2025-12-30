@@ -75,32 +75,38 @@ function detectProjectLanguage(root: string): LanguageDetection {
     return { language: 'Rust', supported: true, markers: ['Cargo.toml'] };
   }
 
-  // Unsupported languages (detected but not yet supported)
-  if (existsSync(join(root, '*.csproj')) ||
-      existsSync(join(root, '*.sln')) ||
-      existsSync(join(root, 'global.json'))) {
-    return { language: 'C#', supported: false, markers: ['.csproj', '.sln'] };
-  }
+  // Newly supported languages (v1.1.0)
   if (existsSync(join(root, 'pom.xml')) ||
       existsSync(join(root, 'build.gradle')) ||
       existsSync(join(root, 'build.gradle.kts'))) {
-    return { language: 'Java/Kotlin', supported: false, markers: ['pom.xml', 'build.gradle'] };
+    return { language: 'Java/Kotlin', supported: true, markers: ['pom.xml', 'build.gradle'] };
   }
+  if (existsSync(join(root, 'Package.swift')) ||
+      existsSync(join(root, '*.xcodeproj')) ||
+      existsSync(join(root, '*.xcworkspace'))) {
+    return { language: 'Swift', supported: true, markers: ['Package.swift', '.xcodeproj'] };
+  }
+  // C# detection - global.json is the most reliable indicator
+  if (existsSync(join(root, 'global.json'))) {
+    return { language: 'C#', supported: true, markers: ['global.json', '.csproj', '.sln'] };
+  }
+
+  // Newly supported in v1.1.0 (continued)
   if (existsSync(join(root, 'Gemfile'))) {
-    return { language: 'Ruby', supported: false, markers: ['Gemfile'] };
+    return { language: 'Ruby', supported: true, markers: ['Gemfile'] };
   }
   if (existsSync(join(root, 'composer.json'))) {
-    return { language: 'PHP', supported: false, markers: ['composer.json'] };
-  }
-  if (existsSync(join(root, 'Package.swift'))) {
-    return { language: 'Swift', supported: false, markers: ['Package.swift'] };
+    return { language: 'PHP', supported: true, markers: ['composer.json'] };
   }
   if (existsSync(join(root, 'CMakeLists.txt')) ||
       existsSync(join(root, 'Makefile'))) {
-    return { language: 'C/C++', supported: false, markers: ['CMakeLists.txt', 'Makefile'] };
+    return { language: 'C/C++', supported: true, markers: ['CMakeLists.txt', 'Makefile'] };
   }
   if (existsSync(join(root, 'mix.exs'))) {
-    return { language: 'Elixir', supported: false, markers: ['mix.exs'] };
+    return { language: 'Elixir', supported: true, markers: ['mix.exs'] };
+  }
+  if (existsSync(join(root, 'build.zig'))) {
+    return { language: 'Zig', supported: true, markers: ['build.zig'] };
   }
   if (existsSync(join(root, 'deno.json')) ||
       existsSync(join(root, 'deno.jsonc'))) {
@@ -108,9 +114,6 @@ function detectProjectLanguage(root: string): LanguageDetection {
   }
   if (existsSync(join(root, 'pubspec.yaml'))) {
     return { language: 'Dart/Flutter', supported: false, markers: ['pubspec.yaml'] };
-  }
-  if (existsSync(join(root, 'build.zig'))) {
-    return { language: 'Zig', supported: false, markers: ['build.zig'] };
   }
   if (existsSync(join(root, 'Makefile.PL')) ||
       existsSync(join(root, 'cpanfile'))) {
@@ -172,11 +175,11 @@ function getNotIndexableMessage(root: string): string {
   const detection = detectProjectLanguage(root);
 
   if (detection.language && !detection.supported) {
-    return `Detected ${detection.language} project - indexing coming soon! Currently supported: TypeScript/JavaScript, Python, Go, Rust`;
+    return `Detected ${detection.language} project - indexing coming soon! Currently supported: TypeScript/JavaScript, Python, Go, Rust, Java, Kotlin, Swift, C#, Ruby, PHP, C/C++, Elixir, Zig`;
   }
 
   if (!detection.language) {
-    return 'No recognized project found. Supported: TypeScript/JavaScript, Python, Go, Rust';
+    return 'No recognized project found. Supported: TypeScript/JavaScript, Python, Go, Rust, Java, Kotlin, Swift, C#, Ruby, PHP, C/C++, Elixir, Zig';
   }
 
   return 'Not in an indexable repository';
