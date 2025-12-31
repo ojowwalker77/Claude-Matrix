@@ -2,6 +2,13 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.1.0] - 2025-12-30
+
+### Added
+
+- **10 New Languages** - Java, Kotlin, Swift, C#, Ruby, PHP, C, C++, Elixir, Zig
+- **15 Languages Total** - Full symbol indexing across all major ecosystems
+
 ## [1.0.10] - 2025-12-30
 
 ### Fixed

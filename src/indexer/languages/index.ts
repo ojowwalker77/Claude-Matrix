@@ -95,6 +95,36 @@ export const SUPPORTED_LANGUAGES: LanguageConfig[] = [
     extensions: ['php'],
     wasmFile: 'tree-sitter-php.wasm',
   },
+  {
+    id: 'csharp',
+    name: 'C#',
+    extensions: ['cs', 'csx'],
+    wasmFile: 'tree-sitter-c-sharp.wasm',
+  },
+  {
+    id: 'kotlin',
+    name: 'Kotlin',
+    extensions: ['kt', 'kts'],
+    wasmFile: 'tree-sitter-kotlin.wasm',
+  },
+  {
+    id: 'swift',
+    name: 'Swift',
+    extensions: ['swift'],
+    wasmFile: 'tree-sitter-swift.wasm',
+  },
+  {
+    id: 'elixir',
+    name: 'Elixir',
+    extensions: ['ex', 'exs'],
+    wasmFile: 'tree-sitter-elixir.wasm',
+  },
+  {
+    id: 'zig',
+    name: 'Zig',
+    extensions: ['zig'],
+    wasmFile: 'tree-sitter-zig.wasm',
+  },
 ];
 
 // Build extension lookup map

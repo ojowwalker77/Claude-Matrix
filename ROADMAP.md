@@ -6,21 +6,19 @@
 
 ## In Progress
 
-### v1.1.0 — Extended Language Support
+### v1.2.0 — Extended Language Support (Phase 3)
 
-Currently supported: **TypeScript, JavaScript, Python, Go, Rust** (5 languages)
+Currently supported: **15 languages** — TypeScript, JavaScript, Python, Go, Rust, Java, Kotlin, Swift, C#, Ruby, PHP, C, C++, Elixir, Zig
 
-#### Phase 1: High-Priority Languages
+#### Phase 3: Additional Languages
 | Language | Tree-sitter Grammar | Status |
 |----------|---------------------|--------|
-| C# | [tree-sitter-c-sharp](https://github.com/tree-sitter/tree-sitter-c-sharp) | 🔜 Next |
-| Java | [tree-sitter-java](https://github.com/tree-sitter/tree-sitter-java) | 🔜 Next |
-| Kotlin | [tree-sitter-kotlin](https://github.com/fwcd/tree-sitter-kotlin) | 🔜 Next |
-| Swift | [tree-sitter-swift](https://github.com/alex-pinkus/tree-sitter-swift) | 🔜 Next |
-| Ruby | [tree-sitter-ruby](https://github.com/tree-sitter/tree-sitter-ruby) | Planned |
-| PHP | [tree-sitter-php](https://github.com/tree-sitter/tree-sitter-php) | Planned |
-| Elixir | [tree-sitter-elixir](https://github.com/elixir-lang/tree-sitter-elixir) | Planned |
-| Zig | [tree-sitter-zig](https://github.com/tree-sitter-grammars/tree-sitter-zig) | Planned |
+| Dart | [tree-sitter-dart](https://github.com/UserNobworried/tree-sitter-dart) | 🔜 Next |
+| Scala | [tree-sitter-scala](https://github.com/tree-sitter/tree-sitter-scala) | Planned |
+| Haskell | [tree-sitter-haskell](https://github.com/tree-sitter/tree-sitter-haskell) | Planned |
+| Lua | [tree-sitter-lua](https://github.com/tree-sitter-grammars/tree-sitter-lua) | Planned |
+| R | [tree-sitter-r](https://github.com/r-lib/tree-sitter-r) | Planned |
+| Julia | [tree-sitter-julia](https://github.com/tree-sitter/tree-sitter-julia) | Planned |
 
 > **Note**: Grammars sourced from [tree-sitter wiki](https://github.com/tree-sitter/tree-sitter/wiki/List-of-parsers) and [tree-sitter-grammars](https://github.com/tree-sitter-grammars) org.
 
@@ -66,6 +64,20 @@ Share solutions across machines:
 ---
 
 ## Completed
+
+### v1.1.0 — Extended Language Support (Phase 1 & 2)
+
+- [x] Java parser with classes, interfaces, enums, methods, fields, annotations, records
+- [x] C# parser with classes, structs, interfaces, enums, methods, properties, delegates, records, namespaces
+- [x] Kotlin parser with classes, objects, interfaces, functions, properties, type aliases
+- [x] Swift parser with classes, structs, protocols, enums, functions, properties, extensions, actors
+- [x] Ruby parser with classes, modules, methods, constants, variables
+- [x] PHP parser with classes, interfaces, traits, enums, functions, methods, properties, namespaces
+- [x] C parser with functions, structs, unions, enums, typedefs, variables
+- [x] C++ parser with classes, structs, enums, functions, methods, namespaces, templates
+- [x] Elixir parser with modules, functions, macros, structs, protocols
+- [x] Zig parser with functions, structs, enums, unions, constants, tests
+- [x] Updated project detection for all 15 language types
 
 ### v1.0.9 — Path-Based Indexing & Smart Language Detection
 

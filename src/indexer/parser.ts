@@ -16,6 +16,16 @@ import { TypeScriptParser } from './languages/typescript.js';
 import { PythonParser } from './languages/python.js';
 import { GoParser } from './languages/go.js';
 import { RustParser } from './languages/rust.js';
+import { JavaParser } from './languages/java.js';
+import { CSharpParser } from './languages/csharp.js';
+import { KotlinParser } from './languages/kotlin.js';
+import { SwiftParser } from './languages/swift.js';
+import { RubyParser } from './languages/ruby.js';
+import { PHPParser } from './languages/php.js';
+import { CParser } from './languages/c.js';
+import { CppParser } from './languages/cpp.js';
+import { ElixirParser } from './languages/elixir.js';
+import { ZigParser } from './languages/zig.js';
 import type { LanguageParser } from './languages/base.js';
 
 // Parser cache by language ID
@@ -54,12 +64,45 @@ async function getParserForLanguage(config: LanguageConfig): Promise<LanguagePar
         langParser = new RustParser(parser, language);
         break;
 
-      // TODO: Add more languages as parsers are implemented
-      // case 'java':
-      // case 'c':
-      // case 'cpp':
-      // case 'ruby':
-      // case 'php':
+      case 'java':
+        langParser = new JavaParser(parser, language);
+        break;
+
+      case 'csharp':
+        langParser = new CSharpParser(parser, language);
+        break;
+
+      case 'kotlin':
+        langParser = new KotlinParser(parser, language);
+        break;
+
+      case 'swift':
+        langParser = new SwiftParser(parser, language);
+        break;
+
+      case 'ruby':
+        langParser = new RubyParser(parser, language);
+        break;
+
+      case 'php':
+        langParser = new PHPParser(parser, language);
+        break;
+
+      case 'c':
+        langParser = new CParser(parser, language);
+        break;
+
+      case 'cpp':
+        langParser = new CppParser(parser, language);
+        break;
+
+      case 'elixir':
+        langParser = new ElixirParser(parser, language);
+        break;
+
+      case 'zig':
+        langParser = new ZigParser(parser, language);
+        break;
 
       default:
         return null;

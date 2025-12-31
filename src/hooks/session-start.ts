@@ -21,6 +21,7 @@ import { Database } from 'bun:sqlite';
 import { createHash } from 'crypto';
 import { spawnSync } from 'child_process';
 import { getConfig } from '../config/index.js';
+import { runMigrations } from '../db/migrate.js';
 
 const CURRENT_VERSION = '1.0.3';
 const MATRIX_DIR = join(homedir(), '.claude', 'matrix');
@@ -36,234 +37,7 @@ interface InitState {
   lastSessionAt: string;
 }
 
-// Embedded schema - same as schema.sql
-const SCHEMA = `
--- Claude Matrix - Tooling System Schema
-
--- Repositórios conhecidos
-CREATE TABLE IF NOT EXISTS repos (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    path TEXT,
-    languages JSON NOT NULL DEFAULT '[]',
-    frameworks JSON NOT NULL DEFAULT '[]',
-    dependencies JSON NOT NULL DEFAULT '[]',
-    patterns JSON NOT NULL DEFAULT '[]',
-    test_framework TEXT,
-    fingerprint_embedding BLOB,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-);
-
--- Soluções aprendidas
-CREATE TABLE IF NOT EXISTS solutions (
-    id TEXT PRIMARY KEY,
-    repo_id TEXT REFERENCES repos(id),
-    problem TEXT NOT NULL,
-    problem_embedding BLOB NOT NULL,
-    solution TEXT NOT NULL,
-    scope TEXT NOT NULL CHECK(scope IN ('global', 'stack', 'repo')),
-    context JSON NOT NULL DEFAULT '{}',
-    tags JSON DEFAULT '[]',
-    score REAL DEFAULT 0.5,
-    uses INTEGER DEFAULT 0,
-    successes INTEGER DEFAULT 0,
-    partial_successes INTEGER DEFAULT 0,
-    failures INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now')),
-    last_used_at TEXT
-);
-
--- Falhas registradas
-CREATE TABLE IF NOT EXISTS failures (
-    id TEXT PRIMARY KEY,
-    repo_id TEXT REFERENCES repos(id),
-    error_type TEXT NOT NULL CHECK(error_type IN ('runtime', 'build', 'test', 'type', 'other')),
-    error_message TEXT NOT NULL,
-    error_signature TEXT NOT NULL,
-    error_embedding BLOB NOT NULL,
-    stack_trace TEXT,
-    files_involved JSON DEFAULT '[]',
-    recent_changes TEXT,
-    root_cause TEXT,
-    fix_applied TEXT,
-    prevention TEXT,
-    occurrences INTEGER DEFAULT 1,
-    created_at TEXT DEFAULT (datetime('now')),
-    resolved_at TEXT
-);
-
--- Histórico de uso
-CREATE TABLE IF NOT EXISTS usage_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    solution_id TEXT REFERENCES solutions(id),
-    repo_id TEXT REFERENCES repos(id),
-    outcome TEXT CHECK(outcome IN ('success', 'partial', 'failure', 'skipped')),
-    notes TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
-);
-
--- Indexes for core tables
-CREATE INDEX IF NOT EXISTS idx_solutions_repo ON solutions(repo_id);
-CREATE INDEX IF NOT EXISTS idx_solutions_scope ON solutions(scope);
-CREATE INDEX IF NOT EXISTS idx_solutions_score ON solutions(score DESC);
-CREATE INDEX IF NOT EXISTS idx_solutions_scope_score ON solutions(scope, score DESC);
-CREATE INDEX IF NOT EXISTS idx_solutions_created ON solutions(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_failures_repo ON failures(repo_id);
-CREATE INDEX IF NOT EXISTS idx_failures_signature ON failures(error_signature);
-CREATE INDEX IF NOT EXISTS idx_failures_type ON failures(error_type);
-CREATE INDEX IF NOT EXISTS idx_usage_solution ON usage_log(solution_id);
-CREATE INDEX IF NOT EXISTS idx_usage_created ON usage_log(created_at DESC);
-
--- Hooks Integration Tables
-CREATE TABLE IF NOT EXISTS warnings (
-    id TEXT PRIMARY KEY,
-    type TEXT NOT NULL CHECK(type IN ('file', 'package')),
-    target TEXT NOT NULL,
-    ecosystem TEXT,
-    reason TEXT NOT NULL,
-    severity TEXT DEFAULT 'warn' CHECK(severity IN ('info', 'warn', 'block')),
-    repo_id TEXT REFERENCES repos(id),
-    created_at TEXT DEFAULT (datetime('now')),
-    UNIQUE(type, target, ecosystem, repo_id)
-);
-
-CREATE TABLE IF NOT EXISTS dependency_installs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    package_name TEXT NOT NULL,
-    package_version TEXT,
-    ecosystem TEXT NOT NULL CHECK(ecosystem IN ('npm', 'pip', 'cargo', 'go')),
-    repo_id TEXT REFERENCES repos(id),
-    command TEXT NOT NULL,
-    session_id TEXT,
-    cve_cache JSON,
-    size_bytes INTEGER,
-    deprecated INTEGER DEFAULT 0,
-    installed_at TEXT DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS session_summaries (
-    id TEXT PRIMARY KEY,
-    session_id TEXT NOT NULL,
-    repo_id TEXT REFERENCES repos(id),
-    summary TEXT,
-    complexity INTEGER,
-    stored_solution_id TEXT REFERENCES solutions(id),
-    user_decision TEXT CHECK(user_decision IN ('stored', 'skipped', 'edited')),
-    created_at TEXT DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS api_cache (
-    cache_key TEXT PRIMARY KEY,
-    response JSON NOT NULL,
-    created_at TEXT DEFAULT (datetime('now'))
-);
-
--- Plugin metadata
-CREATE TABLE IF NOT EXISTS plugin_meta (
-    key TEXT PRIMARY KEY,
-    value TEXT,
-    updated_at TEXT DEFAULT (datetime('now'))
-);
-
--- Indexes for hooks tables
-CREATE INDEX IF NOT EXISTS idx_warnings_type_target ON warnings(type, target);
-CREATE INDEX IF NOT EXISTS idx_warnings_repo ON warnings(repo_id);
-CREATE INDEX IF NOT EXISTS idx_dep_installs_package ON dependency_installs(package_name);
-CREATE INDEX IF NOT EXISTS idx_dep_installs_session ON dependency_installs(session_id);
-CREATE INDEX IF NOT EXISTS idx_dep_installs_repo ON dependency_installs(repo_id);
-CREATE INDEX IF NOT EXISTS idx_session_summaries_session ON session_summaries(session_id);
-CREATE INDEX IF NOT EXISTS idx_api_cache_created ON api_cache(created_at);
-
--- ============================================================================
--- Code Indexer Tables (Repository Symbol Index)
--- ============================================================================
-
--- Track indexed files and their state
-CREATE TABLE IF NOT EXISTS repo_files (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    repo_id TEXT NOT NULL,
-    file_path TEXT NOT NULL,
-    mtime INTEGER NOT NULL,
-    hash TEXT,
-    indexed_at TEXT DEFAULT (datetime('now')),
-    UNIQUE(repo_id, file_path)
-);
-
--- Symbol index (functions, classes, variables, types)
-CREATE TABLE IF NOT EXISTS symbols (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    repo_id TEXT NOT NULL,
-    file_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    kind TEXT NOT NULL,
-    line INTEGER NOT NULL,
-    column INTEGER NOT NULL,
-    end_line INTEGER,
-    exported INTEGER DEFAULT 0,
-    is_default INTEGER DEFAULT 0,
-    scope TEXT,
-    signature TEXT,
-    FOREIGN KEY (file_id) REFERENCES repo_files(id) ON DELETE CASCADE
-);
-
--- Import statements in files
-CREATE TABLE IF NOT EXISTS imports (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    file_id INTEGER NOT NULL,
-    imported_name TEXT NOT NULL,
-    local_name TEXT,
-    source_path TEXT NOT NULL,
-    is_default INTEGER DEFAULT 0,
-    is_namespace INTEGER DEFAULT 0,
-    is_type INTEGER DEFAULT 0,
-    line INTEGER NOT NULL,
-    FOREIGN KEY (file_id) REFERENCES repo_files(id) ON DELETE CASCADE
-);
-
--- References (where symbols are used)
-CREATE TABLE IF NOT EXISTS symbol_refs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    symbol_id INTEGER NOT NULL,
-    file_id INTEGER NOT NULL,
-    line INTEGER NOT NULL,
-    column INTEGER NOT NULL,
-    FOREIGN KEY (symbol_id) REFERENCES symbols(id) ON DELETE CASCADE,
-    FOREIGN KEY (file_id) REFERENCES repo_files(id) ON DELETE CASCADE
-);
-
--- Indexes for fast queries
-CREATE INDEX IF NOT EXISTS idx_repo_files_repo ON repo_files(repo_id);
-CREATE INDEX IF NOT EXISTS idx_repo_files_path ON repo_files(repo_id, file_path);
-CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(name);
-CREATE INDEX IF NOT EXISTS idx_symbols_repo ON symbols(repo_id);
-CREATE INDEX IF NOT EXISTS idx_symbols_file ON symbols(file_id);
-CREATE INDEX IF NOT EXISTS idx_symbols_kind ON symbols(kind);
-CREATE INDEX IF NOT EXISTS idx_symbols_exported ON symbols(exported);
-CREATE INDEX IF NOT EXISTS idx_imports_file ON imports(file_id);
-CREATE INDEX IF NOT EXISTS idx_imports_source ON imports(source_path);
-CREATE INDEX IF NOT EXISTS idx_imports_name ON imports(imported_name);
-CREATE INDEX IF NOT EXISTS idx_symbol_refs_symbol ON symbol_refs(symbol_id);
-CREATE INDEX IF NOT EXISTS idx_symbol_refs_file ON symbol_refs(file_id);
-
--- ============================================================================
--- Repomix Cache (External Repository Context)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS repomix_cache (
-    id TEXT PRIMARY KEY,
-    target TEXT NOT NULL,
-    options TEXT,
-    content TEXT NOT NULL,
-    stats TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    expires_at TEXT NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_repomix_cache_target ON repomix_cache(target);
-CREATE INDEX IF NOT EXISTS idx_repomix_cache_expires ON repomix_cache(expires_at);
-`;
+// Schema is imported from ../db/schema.ts - single source of truth
 
 /**
  * Check for existing database installations and migrate if needed
@@ -291,15 +65,17 @@ function migrateExistingData(): boolean {
 }
 
 /**
- * Initialize the database with schema
+ * Initialize or migrate the database
+ * Uses runMigrations() which handles both fresh DBs and upgrades safely
  */
 function initDatabase(): void {
-  const db = new Database(DB_PATH, { create: true });
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec(SCHEMA);
+  // runMigrations handles schema versioning properly:
+  // - Fresh DB: runs full schema
+  // - Existing DB: runs only needed migrations (avoids ALTER TABLE errors)
+  runMigrations();
 
-  // Record plugin installation source
+  // Record plugin installation source and version
+  const db = new Database(DB_PATH);
   db.run(`
     INSERT OR REPLACE INTO plugin_meta (key, value, updated_at)
     VALUES ('install_source', 'plugin', datetime('now'))
@@ -308,7 +84,6 @@ function initDatabase(): void {
     INSERT OR REPLACE INTO plugin_meta (key, value, updated_at)
     VALUES ('version', ?, datetime('now'))
   `, [CURRENT_VERSION]);
-
   db.close();
 }
 
@@ -341,7 +116,8 @@ function findGitRoot(startPath: string): string | null {
 
 /**
  * Check if directory is an indexable project
- * Supports: TypeScript/JavaScript, Python, Go, Rust, Java, C/C++, Ruby, PHP
+ * Supports 15 languages: TypeScript/JavaScript, Python, Go, Rust, Java, Kotlin,
+ * Swift, C#, Ruby, PHP, C, C++, Elixir, Zig
  */
 function isIndexableProject(root: string): boolean {
   // TypeScript/JavaScript
@@ -364,10 +140,18 @@ function isIndexableProject(root: string): boolean {
   if (existsSync(join(root, 'Cargo.toml'))) {
     return true;
   }
-  // Java/Maven/Gradle
+  // Java/Kotlin (Maven/Gradle)
   if (existsSync(join(root, 'pom.xml')) ||
       existsSync(join(root, 'build.gradle')) ||
       existsSync(join(root, 'build.gradle.kts'))) {
+    return true;
+  }
+  // Swift
+  if (existsSync(join(root, 'Package.swift'))) {
+    return true;
+  }
+  // C# (.NET)
+  if (existsSync(join(root, 'global.json'))) {
     return true;
   }
   // Ruby
@@ -376,6 +160,14 @@ function isIndexableProject(root: string): boolean {
   }
   // PHP
   if (existsSync(join(root, 'composer.json'))) {
+    return true;
+  }
+  // Elixir
+  if (existsSync(join(root, 'mix.exs'))) {
+    return true;
+  }
+  // Zig
+  if (existsSync(join(root, 'build.zig'))) {
     return true;
   }
   // C/C++ (CMake or Makefile + source files to avoid false positives)
@@ -497,23 +289,8 @@ export async function run() {
       migrateExistingData();
 
       // Initialize or update database
-      if (!existsSync(DB_PATH)) {
-        // Fresh install - create new database
-        initDatabase();
-      } else {
-        // Existing database - run schema migrations
-        // This ensures new tables/columns are added on upgrade
-        const db = new Database(DB_PATH);
-        db.exec('PRAGMA journal_mode = WAL');
-        db.exec('PRAGMA foreign_keys = ON');
-        db.exec(SCHEMA);
-        // Update version in database
-        db.run(`
-          INSERT OR REPLACE INTO plugin_meta (key, value, updated_at)
-          VALUES ('version', ?, datetime('now'))
-        `, [CURRENT_VERSION]);
-        db.close();
-      }
+      // runMigrations() safely handles both fresh and existing databases
+      initDatabase();
 
       // Write marker file
       const newState: InitState = {
