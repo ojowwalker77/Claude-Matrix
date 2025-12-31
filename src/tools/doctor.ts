@@ -238,7 +238,7 @@ function checkIndex(): DiagnosticCheck {
     return {
       name: 'Code Index',
       status: 'pass',
-      message: status.symbolCount + ' symbols in ' + status.fileCount + ' files',
+      message: (status.status?.symbolCount ?? 0) + ' symbols in ' + (status.status?.filesIndexed ?? 0) + ' files',
       autoFixable: false,
     };
   } catch (err) {

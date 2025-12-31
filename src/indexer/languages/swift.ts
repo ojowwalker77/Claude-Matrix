@@ -193,7 +193,7 @@ export class SwiftParser extends LanguageParser {
     const modifiers = this.getModifiers(node);
     const exported = !modifiers.includes('private') && !modifiers.includes('fileprivate');
     const isLet = node.children.some((c) => c && this.getNodeText(c) === 'let');
-    const isStatic = modifiers.includes('static') || modifiers.includes('class');
+    const _isStatic = modifiers.includes('static') || modifiers.includes('class');
     const scope = this.getParentTypeName(node);
 
     // Top-level let are 'const', var are 'variable', members are 'property'

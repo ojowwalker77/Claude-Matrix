@@ -301,7 +301,7 @@ export class CppParser extends LanguageParser {
     exported: boolean
   ): void {
     const isConst = this.hasTypeQualifier(node, 'const');
-    const isStatic = this.hasStorageClass(node, 'static');
+    const _isStatic = this.hasStorageClass(node, 'static');
     const isConstexpr = this.hasSpecifier(node, 'constexpr');
 
     for (const child of node.namedChildren) {

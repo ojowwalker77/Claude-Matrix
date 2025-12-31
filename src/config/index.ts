@@ -334,9 +334,6 @@ function deepMergeAny(target: unknown, source: unknown): unknown {
       }
     }
   }
-  if (source.toolSearch) {
-    result.toolSearch = { ...result.toolSearch, ...source.toolSearch };
-  }
 
   return result;
 }
@@ -355,6 +352,13 @@ export function getConfig(): MatrixConfig {
     } catch {
       // Invalid config, use defaults
     }
+  } else {
+    // Create config file with defaults if it doesn't exist
+    const dir = dirname(CONFIG_PATH);
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+    writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2));
   }
   cachedConfig = deepMerge(DEFAULT_CONFIG, userConfig);
   return cachedConfig;

@@ -6,7 +6,7 @@
 
 import type { Node as SyntaxNode } from 'web-tree-sitter';
 import { LanguageParser } from './base.js';
-import type { ParseResult, ExtractedSymbol, ExtractedImport, SymbolKind } from '../types.js';
+import type { ParseResult, ExtractedSymbol, ExtractedImport } from '../types.js';
 
 export class RubyParser extends LanguageParser {
   parse(filePath: string, content: string): ParseResult {
@@ -181,7 +181,7 @@ export class RubyParser extends LanguageParser {
   private extractClassMembers(
     body: SyntaxNode,
     symbols: ExtractedSymbol[],
-    parentName: string
+    _parentName: string
   ): void {
     for (const child of body.namedChildren) {
       if (!child) continue;
@@ -221,7 +221,7 @@ export class RubyParser extends LanguageParser {
     });
   }
 
-  private handleRequire(node: SyntaxNode, imports: ExtractedImport[], methodName: string): void {
+  private handleRequire(node: SyntaxNode, imports: ExtractedImport[], _methodName: string): void {
     const line = node.startPosition.row + 1;
     const argsNode = this.getChildByField(node, 'arguments');
     if (!argsNode) return;
@@ -286,7 +286,7 @@ export class RubyParser extends LanguageParser {
     return false;
   }
 
-  private hasAttrAccessor(node: SyntaxNode, varName: string): boolean {
+  private hasAttrAccessor(_node: SyntaxNode, _varName: string): boolean {
     // Simplified check - would need more context for accurate detection
     return true;
   }

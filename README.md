@@ -4,15 +4,36 @@
 
 > Not an official Anthropic tool.
 
+<p align="center">
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="Contributing"></a>
+  <a href="docs/reference-for-llms.md"><img src="https://img.shields.io/badge/LLM-reference-blue.svg" alt="LLM Reference"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT License"></a>
+</p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/e8e0f547-87ae-4a4e-94fb-681e834915fe" alt="Matrix Star" width="200" />
+</p>
+
 ## Features
 
 - **Memory** - Solutions persist across sessions with semantic search
-- **Code Index** - Fast navigation for 10 languages (TS, JS, Python, Go, Rust, etc.)
+- **Code Index** - Fast navigation for 15 languages (TS, JS, Python, Go, Rust, Java, C, C++, etc.)
 - **Repomix** - Pack external repos for context with token-efficient two-phase flow
 - **Warnings** - Track problematic files and packages
-- **Hooks** - Automatic context injection, package auditing, library docs
+- **Hooks** - Auto-approve tools, sensitive file detection, session analysis, package auditing
 - **Context7** - Up-to-date documentation for 100+ libraries
+- **Doctor** - Comprehensive diagnostics with auto-fix
 - **Optimized** - Compact JSON, Haiku-delegable tools, MCP annotations
+
+## What's New in v1.2
+
+- **Auto-Approve Hooks** - Read-only tools approved automatically (configurable)
+- **Sensitive File Detection** - Warns on `.env`, `.pem`, `secrets/`, etc.
+- **Session Analysis** - Extracts insights before context compaction
+- **`/matrix:doctor`** - Diagnose and auto-fix common issues
+- **Config Moved** - Now at `~/.claude/matrix/matrix.config` (auto-migrated)
+
+See [CHANGELOG.md](CHANGELOG.md) for full details.
 
 ## Install
 
@@ -59,7 +80,7 @@ Feedback improves rankings over time
 
 Multi-language code navigation (auto-indexed on session start):
 
-**Supported Languages**: TypeScript, JavaScript, Python, Go, Rust, Java, C, C++, Ruby, PHP
+**Supported Languages**: TypeScript, JavaScript, Python, Go, Rust, Java, Kotlin, Swift, C#, Ruby, PHP, C, C++, Elixir, Zig
 
 | Tool | Purpose |
 |------|---------|
@@ -105,7 +126,13 @@ Up-to-date library documentation (bundled):
 | Tool | Purpose |
 |------|---------|
 | `resolve-library-id` | Find library ID for docs |
-| `get-library-docs` | Get current documentation |
+| `query-docs` | Get current documentation |
+
+### Diagnostics
+
+| Tool | Purpose |
+|------|---------|
+| `matrix_doctor` | Run diagnostics and auto-fix issues |
 
 ## Automatic Hooks
 
@@ -113,11 +140,14 @@ Matrix runs automatically in the background:
 
 | When | What Happens |
 |------|--------------|
-| Session starts | Initialize database, index code files (10 languages supported) |
-| You send a prompt | Analyze complexity, inject relevant memories, detect code navigation queries |
+| Session starts | Initialize database, index code files (15 languages) |
+| Permission requested | Auto-approve read-only tools (configurable) |
+| You send a prompt | Analyze complexity, inject relevant memories |
+| Before reading a file | Warn if sensitive (`.env`, keys, secrets) |
 | Before `npm install` | Check for CVEs, deprecation, bundle size |
 | Before editing a file | Warn if file has known issues |
 | Before web fetch | Intercept library docs → use Context7 instead |
+| Before context compaction | Analyze session, save insights |
 | Session ends | Offer to save significant solutions |
 
 ## Slash Commands
@@ -132,6 +162,7 @@ Matrix runs automatically in the background:
 | `/matrix:verify` | Check installation |
 | `/matrix:reindex` | Reindex repository |
 | `/matrix:repomix` | Pack external repo for context |
+| `/matrix:doctor` | Run diagnostics and auto-fix |
 
 ## Performance
 
@@ -141,11 +172,11 @@ Matrix runs automatically in the background:
 
 ### MCP Annotations
 
-All 17 tools include official MCP hints for smarter handling:
+All 18 tools include official MCP hints for smarter handling:
 
 | Annotation | Tools | Meaning |
 |------------|-------|---------|
-| `readOnlyHint` | 10 | No side effects, just queries |
+| `readOnlyHint` | 11 | No side effects, just queries |
 | `idempotentHint` | 6 | Safe to retry on failure |
 | `destructiveHint` | 1 | Deletes data (warn_remove) |
 | `openWorldHint` | 1 | External API (repomix) |
@@ -161,7 +192,7 @@ matrix_find_definition, matrix_search_symbols, matrix_list_exports, matrix_get_i
 matrix_index_status, matrix_reindex
 ```
 
-These are read-only/simple operations - the model just passes parameters, server does the work. Non-delegable tools (`matrix_store`, `matrix_failure`, `matrix_prompt`, `matrix_repomix`) require Opus reasoning.
+These are read-only/simple operations - the model just passes parameters, server does the work. Non-delegable tools (`matrix_store`, `matrix_failure`, `matrix_prompt`, `matrix_repomix`, `matrix_doctor`) require Opus reasoning.
 
 **Example:** Haiku 4.5 sub-agent executing `matrix_recall`:
 
@@ -169,7 +200,7 @@ These are read-only/simple operations - the model just passes parameters, server
 
 ## Configuration
 
-Matrix stores config at `~/.claude/matrix.config`:
+Matrix creates config at `~/.claude/matrix/matrix.config` on first run:
 
 ```json
 {
@@ -182,7 +213,23 @@ Matrix stores config at `~/.claude/matrix.config`:
   },
   "hooks": {
     "enabled": true,
-    "complexityThreshold": 5
+    "permissions": {
+      "autoApproveReadOnly": true,
+      "autoApprove": {
+        "coreRead": true,
+        "web": true,
+        "matrixRead": true,
+        "context7": true
+      }
+    },
+    "sensitiveFiles": {
+      "enabled": true,
+      "behavior": "ask"
+    },
+    "preCompact": {
+      "enabled": true,
+      "behavior": "suggest"
+    }
   }
 }
 ```
@@ -191,10 +238,12 @@ Matrix stores config at `~/.claude/matrix.config`:
 
 ```
 ~/.claude/matrix/
-├── matrix.db      # SQLite database
-├── models/        # Embedding model cache (~23MB)
-├── grammars/      # Tree-sitter WASM grammars (downloaded on demand)
-└── .initialized   # Version marker
+├── matrix.db           # SQLite database
+├── matrix.config       # Configuration file
+├── models/             # Embedding model cache (~23MB)
+├── grammars/           # Tree-sitter WASM grammars (downloaded on demand)
+├── session-analysis.jsonl  # PreCompact logs
+└── .initialized        # Version marker
 ```
 
 All data stays local. No external API calls for memory. Package auditing uses public APIs (OSV.dev, npm, Bundlephobia).

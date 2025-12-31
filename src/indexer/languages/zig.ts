@@ -112,7 +112,7 @@ export class ZigParser extends LanguageParser {
 
   private handleContainerDecl(node: SyntaxNode, symbols: ExtractedSymbol[]): void {
     // Standalone container declaration (struct, enum, union)
-    const containerType = this.getContainerType(node);
+    const _containerType = this.getContainerType(node);
     const scope = this.getParentContainerName(node);
 
     // Container declarations without a name are handled via VarDecl

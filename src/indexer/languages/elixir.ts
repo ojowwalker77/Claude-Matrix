@@ -6,7 +6,7 @@
 
 import type { Node as SyntaxNode } from 'web-tree-sitter';
 import { LanguageParser } from './base.js';
-import type { ParseResult, ExtractedSymbol, ExtractedImport, SymbolKind } from '../types.js';
+import type { ParseResult, ExtractedSymbol, ExtractedImport } from '../types.js';
 
 export class ElixirParser extends LanguageParser {
   parse(filePath: string, content: string): ParseResult {
@@ -268,7 +268,7 @@ export class ElixirParser extends LanguageParser {
   private extractModuleMembers(
     body: SyntaxNode,
     symbols: ExtractedSymbol[],
-    parentName?: string
+    _parentName?: string
   ): void {
     this.walkTree(body, (node) => {
       if (node.type === 'call') {

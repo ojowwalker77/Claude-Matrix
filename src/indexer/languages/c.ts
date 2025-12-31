@@ -6,7 +6,7 @@
 
 import type { Node as SyntaxNode } from 'web-tree-sitter';
 import { LanguageParser } from './base.js';
-import type { ParseResult, ExtractedSymbol, ExtractedImport, SymbolKind } from '../types.js';
+import type { ParseResult, ExtractedSymbol, ExtractedImport } from '../types.js';
 
 export class CParser extends LanguageParser {
   parse(filePath: string, content: string): ParseResult {
@@ -295,7 +295,7 @@ export class CParser extends LanguageParser {
     const parts = path.split('/');
     const name = (parts[parts.length - 1] ?? '').replace(/\.[hc]$/, '');
 
-    const isSystem = pathNode.type === 'system_lib_string';
+    const _isSystem = pathNode.type === 'system_lib_string';
 
     imports.push(
       this.createImport(name, path, line, {
