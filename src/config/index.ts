@@ -47,6 +47,11 @@ export interface MatrixConfig {
     timeout: number;
     includeTests: boolean;
   };
+  toolSearch: {
+    enabled: boolean;
+    preferMatrixIndex: boolean;
+    preferContext7: boolean;
+  };
 }
 
 function getDownloadsDirectory(): string {
@@ -95,6 +100,11 @@ export const DEFAULT_CONFIG: MatrixConfig = {
     timeout: 60,
     includeTests: false,
   },
+  toolSearch: {
+    enabled: true,
+    preferMatrixIndex: true,
+    preferContext7: true,
+  },
 };
 
 let cachedConfig: MatrixConfig | null = null;
@@ -125,6 +135,9 @@ function deepMerge(target: MatrixConfig, source: Partial<MatrixConfig>): MatrixC
   }
   if (source.indexing) {
     result.indexing = { ...result.indexing, ...source.indexing };
+  }
+  if (source.toolSearch) {
+    result.toolSearch = { ...result.toolSearch, ...source.toolSearch };
   }
 
   return result;

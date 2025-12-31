@@ -1,36 +1,31 @@
-// Tool input types
-export interface RecallInput {
-  query: string;
-  limit?: number;
-  minScore?: number;
-  scopeFilter?: 'all' | 'repo' | 'stack' | 'global';
-}
+/**
+ * Tool Types
+ *
+ * Re-exports from validation.ts for backward compatibility.
+ * New code should import directly from validation.ts.
+ */
 
-export interface StoreInput {
-  problem: string;
-  solution: string;
-  scope: 'global' | 'stack' | 'repo';
-  tags?: string[];
-  filesAffected?: string[];
-}
+// Re-export input types from validation (source of truth)
+export type {
+  RecallInput,
+  StoreInput,
+  RewardInput,
+  FailureInput,
+  WarnCheckInput,
+  WarnAddInput,
+  WarnRemoveInput,
+  WarnListInput,
+  PromptInput,
+  FindDefinitionInput,
+  ListExportsInput,
+  SearchSymbolsInput,
+  GetImportsInput,
+  IndexStatusInput,
+  ReindexInput,
+  RepomixInput,
+} from '../tools/validation.js';
 
-export interface RewardInput {
-  solutionId: string;
-  outcome: 'success' | 'partial' | 'failure';
-  notes?: string;
-}
-
-export interface FailureInput {
-  errorType: 'runtime' | 'build' | 'test' | 'type' | 'other';
-  errorMessage: string;
-  stackTrace?: string;
-  rootCause: string;
-  fixApplied: string;
-  prevention?: string;
-  filesInvolved?: string[];
-}
-
-// Tool output types
+// Tool output types (kept here as they're not part of validation)
 export interface SolutionMatch {
   id: string;
   problem: string;
