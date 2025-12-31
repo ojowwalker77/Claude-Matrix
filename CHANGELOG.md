@@ -2,6 +2,13 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.1.1] - 2025-12-31
+
+### Added
+
+- **TypeBox Validation** - Runtime input validation with `@sinclair/typebox`
+- **Tool Search Config** - `toolSearch.enabled`, `preferMatrixIndex`, `preferContext7` options
+
 ## [1.1.0] - 2025-12-30
 
 ### Added
