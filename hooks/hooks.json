@@ -22,7 +22,49 @@
         ]
       }
     ],
+    "PermissionRequest": [
+      {
+        "matcher": "Read|Glob|Grep|WebFetch|WebSearch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh permission-request",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__plugin_matrix_matrix__matrix_recall|mcp__plugin_matrix_matrix__matrix_status|mcp__plugin_matrix_matrix__matrix_warn_check|mcp__plugin_matrix_matrix__matrix_warn_list|mcp__plugin_matrix_matrix__matrix_find_definition|mcp__plugin_matrix_matrix__matrix_search_symbols|mcp__plugin_matrix_matrix__matrix_list_exports|mcp__plugin_matrix_matrix__matrix_get_imports|mcp__plugin_matrix_matrix__matrix_index_status|mcp__plugin_matrix_matrix__matrix_reindex|mcp__plugin_matrix_matrix__matrix_repomix|mcp__plugin_matrix_matrix__matrix_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh permission-request",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__plugin_matrix_context7__resolve-library-id|mcp__plugin_matrix_context7__query-docs",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh permission-request",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh pre-tool-read",
+            "timeout": 10
+          }
+        ]
+      },
       {
         "matcher": "Bash",
         "hooks": [
@@ -62,6 +104,17 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh post-tool-bash",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh pre-compact",
+            "timeout": 30
           }
         ]
       }

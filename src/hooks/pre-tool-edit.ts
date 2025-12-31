@@ -19,7 +19,6 @@ import {
   type HookOutput,
 } from './index.js';
 import { matrixWarnCheck } from '../tools/warn.js';
-import { printToUser, renderFileWarningBox, renderErrorBox } from './ui.js';
 
 export async function run() {
   try {
@@ -49,14 +48,6 @@ export async function run() {
 
     // Check if any warnings are blocking
     const blockingWarnings = result.warnings.filter(w => w.severity === 'block');
-    const warnWarnings = result.warnings.filter(w => w.severity === 'warn');
-
-    // Determine highest severity
-    const severity = blockingWarnings.length > 0 ? 'block' : warnWarnings.length > 0 ? 'warn' : 'info';
-
-    // Display warning box to user
-    const box = renderFileWarningBox(filePath, result.warnings.length, severity);
-    printToUser(box);
 
     if (blockingWarnings.length > 0) {
       // Blocking warning - ask user
@@ -79,8 +70,7 @@ export async function run() {
     process.exit(0);
   } catch (err) {
     // Log error but don't block
-    const errorBox = renderErrorBox('Warning', err instanceof Error ? err.message : 'Unknown error');
-    printToUser(errorBox);
+    console.error(`[Matrix] Edit hook error: ${err instanceof Error ? err.message : err}`);
     process.exit(1);
   }
 }

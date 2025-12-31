@@ -1,49 +1,22 @@
 ---
 name: Feature Request
-about: Propose a feature that helps Claude deliver better answers faster
+about: Suggest a new feature for Matrix plugin
 title: '[FEATURE] '
 labels: enhancement
 assignees: ''
 ---
 
-## The Win
-
-**How does this help Claude deliver the First Satisfying Answer faster?**
-
-<!-- Be specific. "It would be nice" is not a win. -->
-
-## Current Behavior
-
-<!-- What happens now without this feature? -->
+## Problem Statement
+<!-- What problem does this feature solve? -->
 
 ## Proposed Solution
-
-<!-- What should happen? -->
-
-## Estimated Complexity
-
-<!-- Low / Medium / High - be honest -->
-
-- [ ] Adds new dependencies
-- [ ] Adds new MCP tools
-- [ ] Modifies existing tools
-- [ ] Adds new hooks
-- [ ] Changes database schema
-- [ ] Other: ___
-
-## Bloat/Win Assessment
-
-<!--
-Remember: Greater bloat = Greater win required
-
-Is this worth it? A 500-line feature for a 5% improvement is probably not.
-A 10-line change for a 20% improvement definitely is.
--->
+<!-- How should this feature work? -->
 
 ## Alternatives Considered
+<!-- Any alternative solutions you've considered -->
 
-<!-- What else could solve this? Why is your proposal better? -->
+## Use Case
+<!-- Describe a real scenario where this would be useful -->
 
 ## Additional Context
-
-<!-- Screenshots, logs, examples, etc. -->
+<!-- Any other relevant information, mockups, or examples -->

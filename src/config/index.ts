@@ -2,8 +2,126 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
 import { homedir } from 'os';
 
-// Config file location (outside repo, won't be overwritten on updates)
-const CONFIG_PATH = join(homedir(), '.claude', 'matrix.config');
+// Config file location (next to db in ~/.claude/matrix/)
+const CONFIG_PATH = join(homedir(), '.claude', 'matrix', 'matrix.config');
+
+// ═══════════════════════════════════════════════════════════════
+// Permission Request Hook Config
+// ═══════════════════════════════════════════════════════════════
+export interface PermissionsConfig {
+  autoApproveReadOnly: boolean;
+  autoApprove: {
+    coreRead: boolean;      // Read, Glob, Grep
+    web: boolean;           // WebFetch, WebSearch
+    matrixRead: boolean;    // matrix_recall, status, find_definition, etc.
+    context7: boolean;      // resolve-library-id, query-docs
+  };
+  neverAutoApprove: string[];
+  additionalAutoApprove: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PreCompact Hook Config
+// ═══════════════════════════════════════════════════════════════
+export interface PreCompactConfig {
+  enabled: boolean;
+  behavior: 'suggest' | 'auto-save' | 'disabled';
+  autoSaveThreshold: number;
+  logToFile: boolean;
+  showNotification: boolean;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Sensitive Files Hook Config
+// ═══════════════════════════════════════════════════════════════
+export interface SensitiveFilesConfig {
+  enabled: boolean;
+  behavior: 'warn' | 'block' | 'ask' | 'disabled';
+  patterns: {
+    envFiles: boolean;
+    keysAndCerts: boolean;
+    secretDirs: boolean;
+    configFiles: boolean;
+    passwordFiles: boolean;
+    cloudCredentials: boolean;
+  };
+  customPatterns: string[];
+  allowList: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Stop Hook Config
+// ═══════════════════════════════════════════════════════════════
+export interface StopHookConfig {
+  enabled: boolean;
+  suggestStore: {
+    enabled: boolean;
+    minComplexity: number;
+    minToolUses: number;
+    minMessages: number;
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Package Auditor Hook Config
+// ═══════════════════════════════════════════════════════════════
+export interface PackageAuditorConfig {
+  enabled: boolean;
+  behavior: 'warn' | 'block' | 'ask' | 'disabled';
+  checks: {
+    cve: boolean;
+    deprecated: boolean;
+    bundleSize: boolean;
+    localWarnings: boolean;
+  };
+  blockOnCriticalCVE: boolean;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Cursed Files Hook Config
+// ═══════════════════════════════════════════════════════════════
+export interface CursedFilesConfig {
+  enabled: boolean;
+  behavior: 'warn' | 'block' | 'ask';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Prompt Analysis Hook Config
+// ═══════════════════════════════════════════════════════════════
+export interface PromptAnalysisConfig {
+  enabled: boolean;
+  shortcuts: { enabled: boolean };
+  codeNavigation: { enabled: boolean };
+  memoryInjection: {
+    enabled: boolean;
+    maxSolutions: number;
+    maxFailures: number;
+    minScore: number;
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Combined Hooks Config
+// ═══════════════════════════════════════════════════════════════
+export interface HooksConfig {
+  // Legacy flat config (backward compat)
+  enabled: boolean;
+  complexityThreshold: number;
+  enableApiCache: boolean;
+  cacheTtlHours: number;
+  auditorTimeout: number;
+  skipDeprecationWarnings: boolean;
+  sizeWarningThreshold: number;
+
+  // New nested configs
+  permissions: PermissionsConfig;
+  preCompact: PreCompactConfig;
+  sensitiveFiles: SensitiveFilesConfig;
+  stop: StopHookConfig;
+  packageAuditor: PackageAuditorConfig;
+  cursedFiles: CursedFilesConfig;
+  promptAnalysis: PromptAnalysisConfig;
+}
 
 export interface MatrixConfig {
   search: {
@@ -31,15 +149,7 @@ export interface MatrixConfig {
     highThreshold: number;
     midThreshold: number;
   };
-  hooks: {
-    enabled: boolean;
-    complexityThreshold: number;
-    enableApiCache: boolean;
-    cacheTtlHours: number;
-    auditorTimeout: number;
-    skipDeprecationWarnings: boolean;
-    sizeWarningThreshold: number;
-  };
+  hooks: HooksConfig;
   indexing: {
     enabled: boolean;
     excludePatterns: string[];
@@ -85,6 +195,7 @@ export const DEFAULT_CONFIG: MatrixConfig = {
     midThreshold: 0.4,
   },
   hooks: {
+    // Legacy flat config (backward compat)
     enabled: true,
     complexityThreshold: 5,
     enableApiCache: false,
@@ -92,6 +203,87 @@ export const DEFAULT_CONFIG: MatrixConfig = {
     auditorTimeout: 30,
     skipDeprecationWarnings: false,
     sizeWarningThreshold: 500000,
+
+    // ─── Permissions (PermissionRequest hook) ───
+    permissions: {
+      autoApproveReadOnly: true,
+      autoApprove: {
+        coreRead: true,      // Read, Glob, Grep
+        web: true,           // WebFetch, WebSearch
+        matrixRead: true,    // matrix_recall, status, find_definition, etc.
+        context7: true,      // resolve-library-id, query-docs
+      },
+      neverAutoApprove: ['matrix_store', 'matrix_warn_add', 'matrix_warn_remove', 'matrix_failure'],
+      additionalAutoApprove: [],
+    },
+
+    // ─── PreCompact hook ───
+    preCompact: {
+      enabled: true,
+      behavior: 'suggest' as const,
+      autoSaveThreshold: 6,
+      logToFile: true,
+      showNotification: false,
+    },
+
+    // ─── Sensitive Files (PreToolUse:Read hook) ───
+    sensitiveFiles: {
+      enabled: true,
+      behavior: 'ask' as const,
+      patterns: {
+        envFiles: true,
+        keysAndCerts: true,
+        secretDirs: true,
+        configFiles: true,
+        passwordFiles: true,
+        cloudCredentials: true,
+      },
+      customPatterns: [],
+      allowList: ['.env.example', '.env.template', '.env.sample'],
+    },
+
+    // ─── Stop hook ───
+    stop: {
+      enabled: true,
+      suggestStore: {
+        enabled: true,
+        minComplexity: 5,
+        minToolUses: 3,
+        minMessages: 5,
+      },
+    },
+
+    // ─── Package Auditor (PreToolUse:Bash hook) ───
+    packageAuditor: {
+      enabled: true,
+      behavior: 'ask' as const,
+      checks: {
+        cve: true,
+        deprecated: true,
+        bundleSize: true,
+        localWarnings: true,
+      },
+      blockOnCriticalCVE: true,
+    },
+
+    // ─── Cursed Files (PreToolUse:Edit hook) ───
+    cursedFiles: {
+      enabled: true,
+      behavior: 'ask' as const,
+    },
+
+    // ─── Prompt Analysis (UserPromptSubmit hook) ───
+    promptAnalysis: {
+      enabled: true,
+      shortcuts: { enabled: true },
+      codeNavigation: { enabled: true },
+      memoryInjection: {
+        enabled: true,
+        maxSolutions: 3,
+        maxFailures: 2,
+        minScore: 0.35,
+      },
+    },
   },
   indexing: {
     enabled: true,
@@ -109,38 +301,45 @@ export const DEFAULT_CONFIG: MatrixConfig = {
 
 let cachedConfig: MatrixConfig | null = null;
 
-function deepMerge(target: MatrixConfig, source: Partial<MatrixConfig>): MatrixConfig {
-  const result = JSON.parse(JSON.stringify(target)) as MatrixConfig;
+/**
+ * Recursive deep merge for nested objects.
+ * Arrays are replaced, not merged. Undefined values are skipped.
+ */
+function deepMergeAny(target: unknown, source: unknown): unknown {
+  // Not both objects? Return source (or target if source undefined)
+  if (
+    typeof target !== 'object' || target === null ||
+    typeof source !== 'object' || source === null ||
+    Array.isArray(target) || Array.isArray(source)
+  ) {
+    return source !== undefined ? source : target;
+  }
 
-  if (source.search) {
-    result.search = { ...result.search, ...source.search };
-  }
-  if (source.merge) {
-    result.merge = { ...result.merge, ...source.merge };
-  }
-  if (source.list) {
-    result.list = { ...result.list, ...source.list };
-  }
-  if (source.export) {
-    result.export = { ...result.export, ...source.export };
-  }
-  if (source.display) {
-    result.display = { ...result.display, ...source.display };
-  }
-  if (source.scoring) {
-    result.scoring = { ...result.scoring, ...source.scoring };
-  }
-  if (source.hooks) {
-    result.hooks = { ...result.hooks, ...source.hooks };
-  }
-  if (source.indexing) {
-    result.indexing = { ...result.indexing, ...source.indexing };
-  }
-  if (source.toolSearch) {
-    result.toolSearch = { ...result.toolSearch, ...source.toolSearch };
+  const result = { ...(target as Record<string, unknown>) };
+  const src = source as Record<string, unknown>;
+
+  for (const key of Object.keys(src)) {
+    if (src[key] !== undefined) {
+      const targetVal = result[key];
+      const sourceVal = src[key];
+
+      // Both are non-array objects? Recurse
+      if (
+        typeof targetVal === 'object' && targetVal !== null && !Array.isArray(targetVal) &&
+        typeof sourceVal === 'object' && sourceVal !== null && !Array.isArray(sourceVal)
+      ) {
+        result[key] = deepMergeAny(targetVal, sourceVal);
+      } else {
+        result[key] = sourceVal;
+      }
+    }
   }
 
   return result;
+}
+
+function deepMerge(target: MatrixConfig, source: Partial<MatrixConfig>): MatrixConfig {
+  return deepMergeAny(target, source) as MatrixConfig;
 }
 
 export function getConfig(): MatrixConfig {

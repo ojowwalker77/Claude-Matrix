@@ -28,7 +28,6 @@ import {
   type Ecosystem,
 } from './index.js';
 import { matrixWarnCheck } from '../tools/warn.js';
-import { printToUser, renderAuditorBox, renderErrorBox } from './ui.js';
 
 interface AuditIssue {
   type: 'cve' | 'deprecated' | 'size' | 'warning';
@@ -255,22 +254,9 @@ export async function run() {
       parsed.packages.map(pkg => auditPackage(pkg, parsed.ecosystem))
     );
 
-    // Collect all issues
+    // Collect critical issues
     const allIssues = audits.flatMap(a => a.issues);
     const criticalIssues = allIssues.filter(i => i.severity === 'critical');
-    const warnIssues = allIssues.filter(i => i.severity === 'warn');
-
-    // Count issues by severity
-    const infoIssues = allIssues.filter(i => i.severity === 'info');
-
-    // Display audit box to user
-    const box = renderAuditorBox(
-      parsed.packages,
-      criticalIssues.length,
-      warnIssues.length,
-      infoIssues.length
-    );
-    printToUser(box);
 
     if (criticalIssues.length > 0) {
       // Critical issues - ask user
@@ -294,8 +280,7 @@ export async function run() {
     process.exit(0);
   } catch (err) {
     // Log error but don't block
-    const errorBox = renderErrorBox('Auditor', err instanceof Error ? err.message : 'Unknown error');
-    printToUser(errorBox);
+    console.error(`[Matrix] Auditor hook error: ${err instanceof Error ? err.message : err}`);
     process.exit(1);
   }
 }

@@ -5,6 +5,7 @@ import {
   matrixReward,
   matrixFailure,
   matrixStatus,
+  matrixDoctor,
   searchFailures,
   matrixFindDefinition,
   matrixListExports,
@@ -41,6 +42,7 @@ import {
   type IndexStatusInput,
   type ReindexInput,
   type RepomixInput,
+  type DoctorInput,
 } from '../tools/validation.js';
 
 export async function handleToolCall(name: string, args: Record<string, unknown>): Promise<string> {
@@ -159,6 +161,13 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         const input = validate<RepomixInput>(validators.repomix, args);
         const result = await packRepository(input);
         return formatResult(result);
+      }
+
+      // Diagnostics
+      case 'matrix_doctor': {
+        const input = validate<DoctorInput>(validators.doctor, args);
+        const result = await matrixDoctor(input);
+        return JSON.stringify(result);
       }
 
       default:

@@ -24,6 +24,7 @@ import {
   IndexStatusInputSchema,
   ReindexInputSchema,
   RepomixInputSchema,
+  DoctorInputSchema,
 } from './validation.js';
 
 // TypeBox schemas ARE JSON Schema - we just need to cast them for MCP's type system
@@ -154,5 +155,12 @@ export const TOOLS: Tool[] = [
     description: 'Pack external repositories for context. Two-phase flow: Phase 1 (no files) returns suggested files based on query. Phase 2 (with confirmedFiles) packs those files. Minimizes token consumption by letting you confirm before packing.',
     annotations: { readOnlyHint: true, openWorldHint: true },
     inputSchema: toInputSchema(RepomixInputSchema),
+  },
+  // Diagnostics
+  {
+    name: 'matrix_doctor',
+    description: 'Run diagnostics and auto-fix Matrix plugin issues. Checks database, config, hooks, and index health. If issues cannot be auto-fixed, provides GitHub issue template.',
+    annotations: { readOnlyHint: false, idempotentHint: true },
+    inputSchema: toInputSchema(DoctorInputSchema),
   },
 ];

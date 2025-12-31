@@ -2,6 +2,46 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.2.0] - 2025-12-31
+
+### Added
+
+- **PermissionRequest Hook** - Auto-approve read-only tools without permission dialogs
+  - Core read: `Read`, `Glob`, `Grep`
+  - Web: `WebFetch`, `WebSearch`
+  - Matrix read: `matrix_recall`, `matrix_status`, `matrix_find_definition`, etc.
+  - Context7: `resolve-library-id`, `query-docs`
+  - Configurable via `hooks.permissions` in config
+
+- **PreToolUse:Read Hook** - Sensitive file detection with full security scan
+  - Warns on: `.env`, `.pem`, `.key`, `id_rsa`, `secrets/`, `.aws/credentials`, etc.
+  - Configurable behavior: `warn`, `block`, `ask`, or `disabled`
+  - Custom patterns and allowlist support
+
+- **PreCompact Hook** - Session analysis before context compaction
+  - Analyzes complexity, extracts tags, summarizes session
+  - Logs to `~/.claude/matrix/session-analysis.jsonl`
+  - Suggests saving insights via `matrix_store`
+
+- **matrix_doctor Tool** - Comprehensive diagnostics and auto-fix
+  - Checks: directory, database, config, hooks, code index, repo detection
+  - Auto-fixes: creates dirs, runs migrations, resets config, rebuilds index
+  - **Data-safe**: NEVER auto-fixes corrupted databases (preserves user data)
+  - New `/matrix:doctor` skill
+
+### Changed
+
+- **Config Location** - Moved from `~/.claude/matrix.config` to `~/.claude/matrix/matrix.config`
+  - Now located next to database for easy access
+  - Automatic migration from old location
+
+- **Config Structure** - New nested configuration for hooks
+  - `hooks.permissions` - Permission auto-approve settings
+  - `hooks.sensitiveFiles` - File security patterns
+  - `hooks.preCompact` - Session analysis settings
+  - `hooks.stop` - Session completion settings
+  - Backward compatible with flat config (user settings never overwritten)
+
 ## [1.1.1] - 2025-12-31
 
 ### Added

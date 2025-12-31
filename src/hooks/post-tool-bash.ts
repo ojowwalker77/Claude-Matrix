@@ -18,7 +18,6 @@ import {
 } from './index.js';
 import { getDb } from '../db/client.js';
 import { fingerprintRepo, getOrCreateRepo } from '../repo/index.js';
-import { printToUser, renderDependencyBox, renderErrorBox } from './ui.js';
 
 export async function run() {
   try {
@@ -81,15 +80,10 @@ export async function run() {
       );
     }
 
-    // Display logged packages box to user
-    const box = renderDependencyBox(parsed.packages, parsed.ecosystem);
-    printToUser(box);
-
     process.exit(0);
   } catch (err) {
     // Log error but don't block
-    const errorBox = renderErrorBox('Logger', err instanceof Error ? err.message : 'Unknown error');
-    printToUser(errorBox);
+    console.error(`[Matrix] Logger hook error: ${err instanceof Error ? err.message : err}`);
     process.exit(1);
   }
 }

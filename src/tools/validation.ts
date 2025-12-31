@@ -225,6 +225,10 @@ export const RepomixInputSchema = Type.Object({
   cacheTTLHours: Type.Optional(Type.Number({ description: 'Cache TTL in hours (default: 24)' })),
 });
 
+export const DoctorInputSchema = Type.Object({
+  autoFix: Type.Optional(Type.Boolean({ description: 'Automatically attempt to fix issues (default: true)' })),
+});
+
 // ============================================================================
 // Type Exports (inferred from schemas)
 // ============================================================================
@@ -246,6 +250,7 @@ export type GetImportsInput = Static<typeof GetImportsInputSchema>;
 export type IndexStatusInput = Static<typeof IndexStatusInputSchema>;
 export type ReindexInput = Static<typeof ReindexInputSchema>;
 export type RepomixInput = Static<typeof RepomixInputSchema>;
+export type DoctorInput = Static<typeof DoctorInputSchema>;
 
 // ============================================================================
 // Compiled Validators
@@ -269,6 +274,7 @@ export const validators = {
   indexStatus: TypeCompiler.Compile(IndexStatusInputSchema),
   reindex: TypeCompiler.Compile(ReindexInputSchema),
   repomix: TypeCompiler.Compile(RepomixInputSchema),
+  doctor: TypeCompiler.Compile(DoctorInputSchema),
 } as const;
 
 // ============================================================================
