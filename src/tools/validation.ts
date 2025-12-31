@@ -98,12 +98,8 @@ export const RecallInputSchema = Type.Object({
     maximum: 1,
     description: 'Minimum similarity score 0-1 (default: 0.3)',
   })),
-  scopeFilter: Type.Optional(Type.Union([ScopeFilterEnum], {
-    description: 'Filter by solution scope (default: all)',
-  })),
-  categoryFilter: Type.Optional(Type.Union([CategoryEnum], {
-    description: 'Filter by category',
-  })),
+  scopeFilter: Type.Optional(ScopeFilterEnum),
+  categoryFilter: Type.Optional(CategoryEnum),
   maxComplexity: Type.Optional(Type.Number({
     minimum: 1,
     maximum: 10,
