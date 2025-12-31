@@ -19,7 +19,6 @@ import {
   type PreToolUseInput,
   type HookOutput,
 } from './index.js';
-import { printToUser, renderBox } from './ui.js';
 
 // Patterns that indicate a documentation lookup
 const DOC_PATTERNS = [
@@ -218,14 +217,6 @@ export async function run() {
     // Extract the topic they're searching for
     const topic = extractTopic(searchText, libraries);
     const libraryList = libraries.join(', ');
-
-    // Show info to user
-    const box = renderBox('Context7', [
-      `Detected: ${libraryList} documentation`,
-      `Topic: ${topic}`,
-      'Routing to Context7 for accurate docs',
-    ]);
-    printToUser(box);
 
     // Output context to Claude explaining what to do
     outputText(`[Context7 Intercept]

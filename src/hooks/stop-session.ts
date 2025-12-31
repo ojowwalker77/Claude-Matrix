@@ -20,8 +20,8 @@ import {
 } from './index.js';
 import { getDb } from '../db/client.js';
 import { fingerprintRepo, getOrCreateRepo } from '../repo/index.js';
+import { getConfig } from '../config/index.js';
 import { randomUUID } from 'crypto';
-import { printToUser, renderSessionBox, renderErrorBox } from './ui.js';
 
 interface TranscriptMessage {
   role: 'user' | 'assistant';
@@ -65,9 +65,12 @@ const TAG_PATTERNS = [
 ];
 
 /**
- * Analyze session transcript
+ * Analyze session transcript using config thresholds
  */
 async function analyzeSession(transcriptPath: string): Promise<SessionAnalysis | null> {
+  const config = getConfig();
+  const { suggestStore } = config.hooks.stop;
+
   try {
     const content = await Bun.file(transcriptPath).text();
     const transcript: TranscriptMessage[] = JSON.parse(content);
@@ -84,13 +87,13 @@ async function analyzeSession(transcriptPath: string): Promise<SessionAnalysis |
     // Calculate total content length
     const totalLength = assistantMessages.reduce((len, m) => len + m.content.length, 0);
 
-    // Skip if session is too short
-    if (assistantMessages.length < 3 || totalLength < 1000) {
+    // Skip if session is too short (use config thresholds)
+    if (assistantMessages.length < suggestStore.minMessages || totalLength < 1000) {
       return null;
     }
 
-    // Skip if no significant tool use (just conversation)
-    if (toolUseCount < 2) {
+    // Skip if no significant tool use (use config threshold)
+    if (toolUseCount < suggestStore.minToolUses) {
       return null;
     }
 
@@ -109,8 +112,8 @@ async function analyzeSession(transcriptPath: string): Promise<SessionAnalysis |
     // Cap at 10
     complexity = Math.min(10, Math.max(1, complexity));
 
-    // Only suggest storage for medium+ complexity
-    if (complexity < 5) {
+    // Only suggest storage if above complexity threshold (use config)
+    if (complexity < suggestStore.minComplexity) {
       return null;
     }
 
@@ -171,6 +174,12 @@ export async function run() {
       process.exit(0);
     }
 
+    // Check if stop hook is enabled
+    const config = getConfig();
+    if (!config.hooks.stop.enabled || !config.hooks.stop.suggestStore.enabled) {
+      process.exit(0);
+    }
+
     // Read input from stdin
     const input = await readStdin<StopInput>();
 
@@ -193,14 +202,6 @@ export async function run() {
 
     // Store session summary
     await storeSessionSummary(input.session_id, analysis, repoId);
-
-    // Display session analysis box to user
-    const box = renderSessionBox(
-      analysis.complexity,
-      analysis.messageCount,
-      analysis.toolUseCount
-    );
-    printToUser(box);
 
     // Prepare prompt for user
     const tagsStr = analysis.suggestedTags.length > 0
@@ -232,8 +233,7 @@ This will help Matrix recall relevant context in future similar tasks.`,
     process.exit(0);
   } catch (err) {
     // Log error but don't block
-    const errorBox = renderErrorBox('Session', err instanceof Error ? err.message : 'Unknown error');
-    printToUser(errorBox);
+    console.error(`[Matrix] Stop hook error: ${err instanceof Error ? err.message : err}`);
     process.exit(1);
   }
 }

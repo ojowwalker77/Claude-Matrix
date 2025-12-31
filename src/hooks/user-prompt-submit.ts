@@ -25,7 +25,6 @@ import {
 import { estimateComplexity } from './complexity.js';
 import { matrixRecall } from '../tools/recall.js';
 import { searchFailures } from '../tools/failure.js';
-import { printToUser, renderMemoryBox, renderErrorBox, renderBox } from './ui.js';
 import { analyzePromptSilent } from './prompt-utils.js';
 import {
   matrixFindDefinition,
@@ -239,22 +238,7 @@ export async function run() {
     // Handle execute shortcuts (yolo, ship it, just do it)
     // Skip complexity check and memory injection, let Claude proceed fast
     if (promptAnalysis.shortcut?.action === 'execute') {
-      const box = renderBox('Prompt Agent', [
-        `Shortcut: "${promptAnalysis.shortcut.trigger}"`,
-        'Skipping checks, proceeding with best judgment',
-      ]);
-      printToUser(box);
       process.exit(0);
-    }
-
-    // Low confidence warning (non-blocking)
-    if (promptAnalysis.confidence < 50 && promptAnalysis.ambiguity) {
-      const warningBox = renderBox('Prompt Agent', [
-        `Confidence: ${promptAnalysis.confidence}%`,
-        `Ambiguity: ${promptAnalysis.ambiguity.question}`,
-        'Tip: Be more specific for better results',
-      ]);
-      printToUser(warningBox);
     }
 
     // ============================================
@@ -264,12 +248,6 @@ export async function run() {
     const codeNavQuery = detectCodeNavQuery(input.prompt);
     if (codeNavQuery) {
       codeIndexContext = queryCodeIndex(codeNavQuery);
-      if (codeIndexContext) {
-        const box = renderBox('Code Index', [
-          `Found: ${codeNavQuery.symbol}`,
-        ]);
-        printToUser(box);
-      }
     }
 
     // ============================================
@@ -290,9 +268,6 @@ export async function run() {
       if (lowComplexityContext.length > 0) {
         outputText(lowComplexityContext.join('\n\n'));
       }
-
-      const box = renderMemoryBox(complexity.score, 0, 0, true, threshold);
-      printToUser(box);
       process.exit(0);
     }
 
@@ -340,20 +315,11 @@ export async function run() {
       outputText(contextParts.join('\n\n'));
     }
 
-    // Render and display box to user
-    const box = renderMemoryBox(
-      complexity.score,
-      recallResult.solutions.length,
-      failures.length
-    );
-    printToUser(box);
-
     process.exit(0);
   } catch (err) {
     // Log error but don't block
-    const errorBox = renderErrorBox('Memory', err instanceof Error ? err.message : 'Unknown error');
-    printToUser(errorBox);
-    process.exit(1); // Non-blocking error
+    console.error(`[Matrix] Prompt hook error: ${err instanceof Error ? err.message : err}`);
+    process.exit(1);
   }
 }
 

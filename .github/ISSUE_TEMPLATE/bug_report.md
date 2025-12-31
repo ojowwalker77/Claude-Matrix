@@ -1,42 +1,42 @@
 ---
 name: Bug Report
-about: Report something that's broken
+about: Report a bug in Matrix plugin
 title: '[BUG] '
 labels: bug
 assignees: ''
 ---
 
 ## Description
-
-<!-- What's broken? -->
+<!-- A clear description of the bug -->
 
 ## Steps to Reproduce
-
 1.
 2.
 3.
 
 ## Expected Behavior
-
-<!-- What should happen? -->
+<!-- What should have happened -->
 
 ## Actual Behavior
-
-<!-- What happens instead? -->
+<!-- What actually happened -->
 
 ## Environment
+- **OS**: <!-- e.g., macOS 14.5, Ubuntu 22.04 -->
+- **Claude Code Version**: <!-- Run: claude --version -->
+- **Matrix Version**: <!-- From /matrix:verify -->
+- **Node/Bun Version**: <!-- Run: bun --version -->
 
-- **OS**: <!-- macOS / Linux -->
-- **Bun version**: <!-- bun --version -->
-- **Claude Code version**: <!-- claude --version -->
-- **Matrix version**: <!-- from /matrix:stats or package.json -->
-
-## Logs / Error Messages
-
+## Diagnostic Output
+<!-- Paste output from /matrix:doctor -->
 ```
-<!-- Paste any error messages or logs here -->
+<paste matrix_doctor output here>
+```
+
+## Error Messages
+<!-- Any error messages from terminal or Claude Code -->
+```
+<paste errors here>
 ```
 
 ## Additional Context
-
-<!-- Screenshots, etc. -->
+<!-- Any other relevant information -->

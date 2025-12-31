@@ -44,16 +44,52 @@ export interface StopInput extends HookInput {
 }
 
 /**
+ * PermissionRequest decision structure
+ */
+export interface PermissionDecision {
+  behavior: 'allow' | 'deny';
+  updatedInput?: Record<string, unknown>;
+  message?: string;      // Only for deny
+  interrupt?: boolean;   // Only for deny
+}
+
+/**
  * Hook output for controlling behavior
  */
 export interface HookOutput {
   hookSpecificOutput?: {
     hookEventName?: string;
+    // PreToolUse / UserPromptSubmit
     permissionDecision?: 'allow' | 'deny' | 'ask';
     permissionDecisionReason?: string;
+    // PermissionRequest
+    decision?: PermissionDecision;
+    // PostToolUse / UserPromptSubmit
+    additionalContext?: string;
   };
   decision?: 'continue' | 'block';
   reason?: string;
+  continue?: boolean;
+  stopReason?: string;
+  suppressOutput?: boolean;
+  systemMessage?: string;
+}
+
+/**
+ * PermissionRequest hook input
+ */
+export interface PermissionRequestInput extends HookInput {
+  tool_name: string;
+  tool_input: Record<string, unknown>;
+  tool_use_id: string;
+}
+
+/**
+ * PreCompact hook input
+ */
+export interface PreCompactInput extends HookInput {
+  trigger: 'manual' | 'auto';
+  custom_instructions: string;
 }
 
 /**
@@ -84,24 +120,6 @@ export function outputText(text: string): void {
  */
 export function log(message: string): void {
   console.error(message);
-}
-
-/**
- * Log directly to user's TTY, bypassing stdout/stderr capture.
- * This ensures the user sees the message regardless of how Claude Code
- * handles hook output streams.
- */
-export function logToUser(message: string): void {
-  try {
-    // Write directly to TTY to ensure user sees it
-    const tty = Bun.file('/dev/tty');
-    const writer = tty.writer();
-    writer.write(message + '\n');
-    writer.flush();
-  } catch {
-    // Fallback to stderr if TTY not available
-    console.error(message);
-  }
 }
 
 /** @deprecated Use log() instead */
