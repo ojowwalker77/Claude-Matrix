@@ -334,6 +334,9 @@ function deepMergeAny(target: unknown, source: unknown): unknown {
       }
     }
   }
+  if (source.toolSearch) {
+    result.toolSearch = { ...result.toolSearch, ...source.toolSearch };
+  }
 
   return result;
 }
