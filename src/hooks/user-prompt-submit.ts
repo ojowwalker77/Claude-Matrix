@@ -275,9 +275,9 @@ export async function run() {
     // STEP 4: Search Matrix memory
     // ============================================
     const recallResult = await matrixRecall({
-      query: input.prompt.slice(0, 1000), // Limit query length
+      query: input.prompt.slice(0, 500), // Shorter query = less compute
       limit: 3,
-      minScore: 0.35,
+      minScore: 0.55, // Higher threshold = fewer irrelevant injections
     });
 
     // Also search for related failures
