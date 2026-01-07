@@ -39,8 +39,15 @@ export async function run() {
     try {
       if (typeof response === 'string') {
         parsed = JSON.parse(response);
-      } else if (response && typeof response === 'object' && 'text' in response) {
-        parsed = JSON.parse(response.text as string);
+      } else if (response && typeof response === 'object') {
+        // MCP tool responses have content field
+        if ('content' in response) {
+          parsed = typeof response.content === 'string'
+            ? JSON.parse(response.content)
+            : response.content as Record<string, unknown>;
+        } else if ('text' in response) {
+          parsed = JSON.parse(response.text as string);
+        }
       }
     } catch {
       // Can't parse response, skip suggestions
