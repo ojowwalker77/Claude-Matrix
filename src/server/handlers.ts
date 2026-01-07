@@ -45,6 +45,117 @@ import {
   type DoctorInput,
 } from '../tools/validation.js';
 
+/**
+ * Generate intelligent hints for recall results
+ */
+function buildRecallHints(
+  solutions: Array<{
+    similarity: number;
+    successRate: number;
+    supersededBy?: string;
+    antiPatterns?: string[];
+    prerequisites?: string[];
+    complexity?: number;
+    category?: string;
+  }>,
+  hasFailures: boolean
+): string[] {
+  const hints: string[] = [];
+
+  if (solutions.length === 0) {
+    hints.push('No matches. After solving: matrix_store with tags for future recall.');
+    return hints;
+  }
+
+  const top = solutions[0];
+  if (!top) return hints;
+
+  // Quality warnings
+  if (top.successRate < 0.5) {
+    hints.push(`Top solution has ${Math.round(top.successRate * 100)}% success rate - verify before using.`);
+  }
+
+  if (top.supersededBy) {
+    hints.push(`Solution superseded by ${top.supersededBy} - consider using newer version.`);
+  }
+
+  // Actionable guidance
+  if (top.antiPatterns && top.antiPatterns.length > 0) {
+    hints.push(`Avoid: ${top.antiPatterns.slice(0, 2).join(', ')}`);
+  }
+
+  if (top.prerequisites && top.prerequisites.length > 0) {
+    hints.push(`Prerequisites: ${top.prerequisites.slice(0, 2).join(', ')}`);
+  }
+
+  if (top.complexity && top.complexity >= 7) {
+    hints.push('High complexity solution - consider breaking into steps.');
+  }
+
+  // Workflow reminder
+  if (top.similarity > 0.8) {
+    hints.push('Strong match. Use matrix_reward(outcome:"success"|"partial"|"failure") after implementing.');
+  } else {
+    hints.push('Partial match. Adapt solution, then matrix_reward to improve future rankings.');
+  }
+
+  // Failure awareness
+  if (hasFailures) {
+    hints.push('Related errors found above - review to avoid repeating mistakes.');
+  }
+
+  return hints.slice(0, 3); // Max 3 hints
+}
+
+/**
+ * Generate intelligent hints for store results
+ */
+function buildStoreHints(input: StoreInput): string[] {
+  const hints: string[] = [];
+
+  // Missing enrichment suggestions
+  if (!input.antiPatterns || input.antiPatterns.length === 0) {
+    hints.push('Tip: Add antiPatterns to warn against common mistakes.');
+  }
+
+  if (!input.prerequisites || input.prerequisites.length === 0) {
+    hints.push('Tip: Add prerequisites to specify when this solution applies.');
+  }
+
+  if (!input.tags || input.tags.length === 0) {
+    hints.push('Tip: Add tags for better discoverability in future recalls.');
+  }
+
+  if (!input.codeBlocks || input.codeBlocks.length === 0) {
+    hints.push('Tip: Add codeBlocks with working examples for quick reference.');
+  }
+
+  if (hints.length === 0) {
+    hints.push('Well-documented solution stored. It will rank higher in future recalls.');
+  }
+
+  return hints.slice(0, 2);
+}
+
+/**
+ * Generate intelligent hints for failure results
+ */
+function buildFailureHints(input: FailureInput): string[] {
+  const hints: string[] = [];
+
+  if (!input.prevention) {
+    hints.push('Tip: Add prevention field to help avoid this error in the future.');
+  }
+
+  if (!input.stackTrace) {
+    hints.push('Tip: Include stackTrace for better error matching.');
+  }
+
+  hints.push('This error will be surfaced in future matrix_recall results for similar problems.');
+
+  return hints.slice(0, 2);
+}
+
 export async function handleToolCall(name: string, args: Record<string, unknown>): Promise<string> {
   // Ensure DB is initialized
   getDb();
@@ -61,13 +172,17 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         return JSON.stringify({
           ...result,
           relatedFailures: relatedFailures.length > 0 ? relatedFailures : undefined,
+          _hints: buildRecallHints(result.solutions, relatedFailures.length > 0),
         });
       }
 
       case 'matrix_store': {
         const input = validate<StoreInput>(validators.store, args);
         const result = await matrixStore(input);
-        return JSON.stringify(result);
+        return JSON.stringify({
+          ...result,
+          _hints: buildStoreHints(input),
+        });
       }
 
       case 'matrix_reward': {
@@ -79,7 +194,10 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
       case 'matrix_failure': {
         const input = validate<FailureInput>(validators.failure, args);
         const result = await matrixFailure(input);
-        return JSON.stringify(result);
+        return JSON.stringify({
+          ...result,
+          _hints: buildFailureHints(input),
+        });
       }
 
       case 'matrix_status': {

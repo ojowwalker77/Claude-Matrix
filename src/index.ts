@@ -67,6 +67,23 @@ Delegate read-only tools to Haiku sub-agents via Task(model="haiku"):
 - matrix_find_definition, matrix_search_symbols, matrix_list_exports, matrix_get_imports
 - matrix_index_status, matrix_reindex`);
 
+  // When to Use Matrix Tools (always included)
+  sections.push(`## When to Use Matrix Tools
+
+BEFORE implementing:
+- matrix_recall: Check if similar problem was solved before
+- matrix_warn_check: Check if touching a cursed file/package
+
+AFTER implementing:
+- matrix_store: Save reusable solutions (not one-offs)
+- matrix_reward: Rate a recalled solution that helped
+- matrix_failure: Record errors you fixed (prevents recurrence)
+
+DON'T USE for:
+- Simple questions (what is X, where is Y)
+- Trivial fixes (typos, renames, one-liners)
+- User errors (wrong command, typos in input)`);
+
   return sections.join('\n\n');
 }
 

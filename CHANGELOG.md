@@ -2,6 +2,18 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.2.1] - 2025-01-07
+
+### Added
+
+- **PostToolUse:Matrix Hook** - Contextual hints after matrix tool calls
+- **Hints in Responses** - `_hints` field with actionable suggestions for recall/store/failure
+- **Matrix Usage Guide** - "When to Use Matrix Tools" added to system prompt
+
+### Changed
+
+- **Recall Tuning** - Higher threshold (0.55) and shorter queries for less noise
+
 ## [1.2.0] - 2025-12-31
 
 ### Added

@@ -106,6 +106,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "mcp__plugin_matrix_matrix__matrix_recall|mcp__plugin_matrix_matrix__matrix_store|mcp__plugin_matrix_matrix__matrix_failure|mcp__plugin_matrix_matrix__matrix_reward",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh post-tool-matrix",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PreCompact": [
