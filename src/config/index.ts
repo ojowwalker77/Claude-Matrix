@@ -161,6 +161,8 @@ export interface MatrixConfig {
     enabled: boolean;
     preferMatrixIndex: boolean;
     preferContext7: boolean;
+    /** Log when tools are shown/hidden due to project context */
+    verbose: boolean;
   };
 }
 
@@ -296,6 +298,7 @@ export const DEFAULT_CONFIG: MatrixConfig = {
     enabled: true,
     preferMatrixIndex: true,
     preferContext7: true,
+    verbose: false,
   },
 };
 

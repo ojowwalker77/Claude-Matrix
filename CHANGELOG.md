@@ -2,6 +2,27 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [1.3.0] - 2025-01-07
+
+### Added
+
+- **Dynamic Tool Visibility** - MCP `list_changed` notifications for smarter tool display
+  - Tools are now shown/hidden based on project context
+  - Index tools (`matrix_find_definition`, `matrix_search_symbols`, etc.) only appear for indexable projects
+  - Core memory and warning tools always visible
+  - New `toolSearch.verbose` config option to log tool visibility changes
+
+- **Tool Categories & Metadata** - Tools now have category and visibility metadata
+  - Categories: `core`, `warn`, `index`, `index-mgmt`, `utility`
+  - Visibility rules: `always`, `indexable`
+
+### Changed
+
+- **Tool Registry** - New `ToolRegistry` class manages tool availability
+  - Detects project type on MCP server startup
+  - Supports 12 project types: TypeScript/JS, Python, Go, Rust, Java, Swift, C#, Ruby, PHP, Elixir, Zig, C/C++
+  - Emits `list_changed` notification when context changes
+
 ## [1.2.1] - 2025-01-07
 
 ### Added
