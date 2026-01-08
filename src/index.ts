@@ -7,9 +7,9 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { closeDb } from './db/index.js';
-import { TOOLS } from './tools/index.js';
 import { handleToolCall } from './server/index.js';
 import { getConfig } from './config/index.js';
+import { toolRegistry } from './tools/registry.js';
 
 function buildInstructions(): string {
   const config = getConfig();
@@ -93,13 +93,34 @@ async function main(): Promise<void> {
   const server = new Server(
     { name: 'matrix', version: '0.2.0' },
     {
-      capabilities: { tools: {} },
+      capabilities: {
+        tools: {
+          // Enable list_changed notifications for dynamic tool visibility
+          listChanged: true,
+        },
+      },
       instructions,
     }
   );
 
+  // Initialize tool registry with current working directory
+  // This detects project type and determines initial tool visibility
+  toolRegistry.initialize(process.cwd());
+
+  // Register callback to emit list_changed when tools change
+  toolRegistry.onContextChange((_context, toolsChanged) => {
+    if (toolsChanged) {
+      // Notify client that the tool list has changed
+      server.sendToolListChanged().catch((err) => {
+        // Log but don't crash - client may not support notifications
+        console.error('[Matrix] Failed to send tool list changed notification:', err);
+      });
+    }
+  });
+
+  // Return dynamically filtered tools based on project context
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: TOOLS,
+    tools: toolRegistry.getAvailableTools(),
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
