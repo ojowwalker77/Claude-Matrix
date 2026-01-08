@@ -10,10 +10,9 @@
  */
 
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { existsSync } from 'fs';
-import { join } from 'path';
 import { TOOLS, type ToolCategory, type VisibilityRule } from './schemas.js';
 import { getConfig } from '../config/index.js';
+import { detectProjectTypes } from '../utils/project-detection.js';
 
 /**
  * Project context for tool visibility decisions
@@ -42,36 +41,6 @@ interface MatrixTool extends Tool {
   };
 }
 
-/**
- * Project type detection patterns
- */
-const PROJECT_PATTERNS: Array<{ files: string[]; type: string }> = [
-  // JavaScript/TypeScript
-  { files: ['package.json', 'tsconfig.json', 'jsconfig.json'], type: 'typescript' },
-  // Python
-  { files: ['pyproject.toml', 'setup.py', 'requirements.txt', 'Pipfile'], type: 'python' },
-  // Go
-  { files: ['go.mod'], type: 'go' },
-  // Rust
-  { files: ['Cargo.toml'], type: 'rust' },
-  // Java/Kotlin
-  { files: ['pom.xml', 'build.gradle', 'build.gradle.kts'], type: 'java' },
-  // Swift
-  { files: ['Package.swift'], type: 'swift' },
-  // C#
-  { files: ['*.csproj', '*.sln', 'global.json'], type: 'csharp' },
-  // Ruby
-  { files: ['Gemfile'], type: 'ruby' },
-  // PHP
-  { files: ['composer.json'], type: 'php' },
-  // Elixir
-  { files: ['mix.exs'], type: 'elixir' },
-  // Zig
-  { files: ['build.zig'], type: 'zig' },
-  // C/C++
-  { files: ['CMakeLists.txt', 'Makefile', 'configure.ac'], type: 'cpp' },
-];
-
 class ToolRegistry {
   private context: ProjectContext = {
     cwd: process.cwd(),
@@ -94,32 +63,17 @@ class ToolRegistry {
    * Detect project context from working directory
    */
   detectProjectContext(cwd: string): ProjectContext {
-    const detectedTypes: string[] = [];
+    const detection = detectProjectTypes(cwd);
+    const detectedTypes = detection.types
+      .filter(t => t.supported)
+      .map(t => t.type);
 
-    for (const pattern of PROJECT_PATTERNS) {
-      for (const file of pattern.files) {
-        // Handle glob patterns (simplified - just check exact match)
-        if (file.includes('*')) {
-          // Skip glob patterns for now - they're rare and we'd need glob lib
-          continue;
-        }
-        if (existsSync(join(cwd, file))) {
-          if (!detectedTypes.includes(pattern.type)) {
-            detectedTypes.push(pattern.type);
-          }
-          break;
-        }
-      }
-    }
-
-    const newContext: ProjectContext = {
+    return {
       cwd,
-      isIndexable: detectedTypes.length > 0,
+      isIndexable: detection.isIndexable,
       detectedTypes,
       indexReady: false, // Will be updated after indexing
     };
-
-    return newContext;
   }
 
   /**
