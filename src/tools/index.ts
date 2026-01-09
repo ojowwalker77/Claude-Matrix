@@ -7,6 +7,7 @@ export { matrixPrompt } from './prompt.js';
 export { matrixDoctor } from './doctor.js';
 export {
   matrixFindDefinition,
+  matrixFindCallers,
   matrixListExports,
   matrixSearchSymbols,
   matrixGetImports,

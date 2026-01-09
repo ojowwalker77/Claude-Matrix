@@ -150,31 +150,24 @@ export const FailureInputSchema = Type.Object({
 
 export const StatusInputSchema = Type.Object({});
 
-export const WarnCheckInputSchema = Type.Object({
-  type: WarningTypeEnum,
-  target: Type.String({ description: 'File path or package name to check' }),
-  ecosystem: Type.Optional(EcosystemEnum),
-});
+// v2.0 Unified Warn Schema
+const WarnActionEnum = Type.Union([
+  Type.Literal('check'),
+  Type.Literal('add'),
+  Type.Literal('remove'),
+  Type.Literal('list'),
+]);
 
-export const WarnAddInputSchema = Type.Object({
-  type: WarningTypeEnum,
-  target: Type.String({ description: 'File path (supports glob patterns like src/legacy/*) or package name' }),
-  reason: Type.String({ description: 'Why this file/package is problematic' }),
+export const WarnInputSchema = Type.Object({
+  action: WarnActionEnum,
+  type: Type.Optional(WarningTypeEnum),
+  target: Type.Optional(Type.String({ description: 'File path (supports glob patterns) or package name' })),
+  reason: Type.Optional(Type.String({ description: 'Why this file/package is problematic (required for add action)' })),
   severity: Type.Optional(SeverityEnum),
   ecosystem: Type.Optional(EcosystemEnum),
-  repoSpecific: Type.Optional(Type.Boolean({ description: 'If true, warning only applies to current repository' })),
-});
-
-export const WarnRemoveInputSchema = Type.Object({
-  id: Type.Optional(Type.String({ description: 'Warning ID to remove' })),
-  type: Type.Optional(WarningTypeEnum),
-  target: Type.Optional(Type.String({ description: 'File path or package name (use with type)' })),
-  ecosystem: Type.Optional(EcosystemEnum),
-});
-
-export const WarnListInputSchema = Type.Object({
-  type: Type.Optional(WarningTypeEnum),
-  repoOnly: Type.Optional(Type.Boolean({ description: 'If true, only show warnings specific to current repository' })),
+  id: Type.Optional(Type.String({ description: 'Warning ID (for remove action)' })),
+  repoOnly: Type.Optional(Type.Boolean({ description: 'If true, only show warnings specific to current repository (for list action)' })),
+  repoSpecific: Type.Optional(Type.Boolean({ description: 'If true, warning only applies to current repository (for add action)' })),
 });
 
 export const PromptInputSchema = Type.Object({
@@ -187,6 +180,12 @@ export const FindDefinitionInputSchema = Type.Object({
   symbol: Type.String({ description: 'The symbol name to find (e.g., "handleRequest", "UserService")' }),
   kind: Type.Optional(SymbolKindEnum),
   file: Type.Optional(Type.String({ description: 'Optional: limit search to a specific file path' })),
+  repoPath: Type.Optional(Type.String({ description: 'Optional: path to repository to search (defaults to current directory)' })),
+});
+
+export const FindCallersInputSchema = Type.Object({
+  symbol: Type.String({ description: 'The symbol name to find callers of (e.g., "handleRequest", "UserService")' }),
+  file: Type.Optional(Type.String({ description: 'Optional: file where the symbol is defined' })),
   repoPath: Type.Optional(Type.String({ description: 'Optional: path to repository to search (defaults to current directory)' })),
 });
 
@@ -229,6 +228,32 @@ export const DoctorInputSchema = Type.Object({
   autoFix: Type.Optional(Type.Boolean({ description: 'Automatically attempt to fix issues (default: true)' })),
 });
 
+// v2.0 Skill Factory Schemas
+export const SkillCandidatesInputSchema = Type.Object({
+  minScore: Type.Optional(Type.Number({
+    minimum: 0,
+    maximum: 1,
+    description: 'Minimum success rate threshold (default: 0.7)',
+  })),
+  minUses: Type.Optional(Type.Number({
+    minimum: 1,
+    description: 'Minimum number of uses (default: 3)',
+  })),
+  limit: Type.Optional(Type.Number({
+    minimum: 1,
+    maximum: 50,
+    description: 'Maximum candidates to return (default: 10)',
+  })),
+  excludePromoted: Type.Optional(Type.Boolean({
+    description: 'Exclude already promoted solutions (default: true)',
+  })),
+});
+
+export const LinkSkillInputSchema = Type.Object({
+  solutionId: Type.String({ description: 'ID of the solution to link' }),
+  skillPath: Type.String({ description: 'Path to the skill file (e.g., ~/.claude/skills/my-skill.md)' }),
+});
+
 // ============================================================================
 // Type Exports (inferred from schemas)
 // ============================================================================
@@ -238,12 +263,10 @@ export type StoreInput = Static<typeof StoreInputSchema>;
 export type RewardInput = Static<typeof RewardInputSchema>;
 export type FailureInput = Static<typeof FailureInputSchema>;
 export type StatusInput = Static<typeof StatusInputSchema>;
-export type WarnCheckInput = Static<typeof WarnCheckInputSchema>;
-export type WarnAddInput = Static<typeof WarnAddInputSchema>;
-export type WarnRemoveInput = Static<typeof WarnRemoveInputSchema>;
-export type WarnListInput = Static<typeof WarnListInputSchema>;
+export type WarnInput = Static<typeof WarnInputSchema>;
 export type PromptInput = Static<typeof PromptInputSchema>;
 export type FindDefinitionInput = Static<typeof FindDefinitionInputSchema>;
+export type FindCallersInput = Static<typeof FindCallersInputSchema>;
 export type ListExportsInput = Static<typeof ListExportsInputSchema>;
 export type SearchSymbolsInput = Static<typeof SearchSymbolsInputSchema>;
 export type GetImportsInput = Static<typeof GetImportsInputSchema>;
@@ -251,6 +274,8 @@ export type IndexStatusInput = Static<typeof IndexStatusInputSchema>;
 export type ReindexInput = Static<typeof ReindexInputSchema>;
 export type RepomixInput = Static<typeof RepomixInputSchema>;
 export type DoctorInput = Static<typeof DoctorInputSchema>;
+export type SkillCandidatesInput = Static<typeof SkillCandidatesInputSchema>;
+export type LinkSkillInput = Static<typeof LinkSkillInputSchema>;
 
 // ============================================================================
 // Compiled Validators
@@ -262,12 +287,10 @@ export const validators = {
   reward: TypeCompiler.Compile(RewardInputSchema),
   failure: TypeCompiler.Compile(FailureInputSchema),
   status: TypeCompiler.Compile(StatusInputSchema),
-  warnCheck: TypeCompiler.Compile(WarnCheckInputSchema),
-  warnAdd: TypeCompiler.Compile(WarnAddInputSchema),
-  warnRemove: TypeCompiler.Compile(WarnRemoveInputSchema),
-  warnList: TypeCompiler.Compile(WarnListInputSchema),
+  warn: TypeCompiler.Compile(WarnInputSchema),
   prompt: TypeCompiler.Compile(PromptInputSchema),
   findDefinition: TypeCompiler.Compile(FindDefinitionInputSchema),
+  findCallers: TypeCompiler.Compile(FindCallersInputSchema),
   listExports: TypeCompiler.Compile(ListExportsInputSchema),
   searchSymbols: TypeCompiler.Compile(SearchSymbolsInputSchema),
   getImports: TypeCompiler.Compile(GetImportsInputSchema),
@@ -275,6 +298,8 @@ export const validators = {
   reindex: TypeCompiler.Compile(ReindexInputSchema),
   repomix: TypeCompiler.Compile(RepomixInputSchema),
   doctor: TypeCompiler.Compile(DoctorInputSchema),
+  skillCandidates: TypeCompiler.Compile(SkillCandidatesInputSchema),
+  linkSkill: TypeCompiler.Compile(LinkSkillInputSchema),
 } as const;
 
 // ============================================================================

@@ -386,6 +386,120 @@ export function getFileImports(repoId: string, filePath: string): ExtractedImpor
 }
 
 /**
+ * Find callers of a symbol (files that import and potentially use it)
+ *
+ * Strategy:
+ * 1. Find where the symbol is defined
+ * 2. Find all files that import from that file
+ * 3. Return import information as potential callers
+ */
+export function findCallers(
+  repoId: string,
+  symbolName: string,
+  symbolFile?: string
+): Array<{
+  file: string;
+  line: number;
+  importedAs: string;
+  isDefault: boolean;
+  isNamespace: boolean;
+}> {
+  const db = getDb();
+
+  // First, find where the symbol is defined
+  let definitionFile = symbolFile;
+
+  if (!definitionFile) {
+    // Try to find the definition
+    const defRow = db.query(`
+      SELECT f.file_path
+      FROM symbols s
+      JOIN repo_files f ON s.file_id = f.id
+      WHERE s.repo_id = ? AND s.name = ? AND s.exported = 1
+      ORDER BY s.is_default DESC
+      LIMIT 1
+    `).get(repoId, symbolName) as { file_path: string } | null;
+
+    if (!defRow) {
+      return [];
+    }
+    definitionFile = defRow.file_path;
+  }
+
+  // Normalize the definition path for import matching
+  // Convert "src/utils/foo.ts" to patterns like "./utils/foo", "../utils/foo", etc.
+  const pathWithoutExt = definitionFile.replace(/\.(ts|tsx|js|jsx|mjs)$/, '');
+  const fileName = pathWithoutExt.split('/').pop() || '';
+
+  // Find all imports that could reference this file
+  const rows = db.query(`
+    SELECT
+      f.file_path as caller_file,
+      i.line,
+      i.imported_name,
+      i.local_name,
+      i.source_path,
+      i.is_default,
+      i.is_namespace
+    FROM imports i
+    JOIN repo_files f ON i.file_id = f.id
+    WHERE f.repo_id = ?
+      AND (
+        i.source_path LIKE '%' || ? || '%'
+        OR i.imported_name = ?
+        OR i.local_name = ?
+      )
+    ORDER BY f.file_path ASC, i.line ASC
+  `).all(repoId, fileName, symbolName, symbolName) as Array<{
+    caller_file: string;
+    line: number;
+    imported_name: string;
+    local_name: string | null;
+    source_path: string;
+    is_default: number;
+    is_namespace: number;
+  }>;
+
+  // Filter to relevant imports and deduplicate
+  const seen = new Set<string>();
+  const results: Array<{
+    file: string;
+    line: number;
+    importedAs: string;
+    isDefault: boolean;
+    isNamespace: boolean;
+  }> = [];
+
+  for (const row of rows) {
+    // Skip self-references
+    if (row.caller_file === definitionFile) continue;
+
+    // Determine if this import is actually for our symbol
+    const isRelevant =
+      row.imported_name === symbolName ||
+      row.local_name === symbolName ||
+      row.is_default === 1 ||
+      row.is_namespace === 1;
+
+    if (!isRelevant) continue;
+
+    const key = `${row.caller_file}:${row.line}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    results.push({
+      file: row.caller_file,
+      line: row.line,
+      importedAs: row.local_name || row.imported_name,
+      isDefault: row.is_default === 1,
+      isNamespace: row.is_namespace === 1,
+    });
+  }
+
+  return results;
+}
+
+/**
  * Clear entire index for a repository
  */
 export function clearRepoIndex(repoId: string): void {

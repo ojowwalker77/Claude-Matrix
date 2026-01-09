@@ -256,3 +256,21 @@ export function formatDuration(ms: number): string {
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
   return `${(ms / 60000).toFixed(1)}m`;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Re-exports for Verbosity-Aware Formatting (v2.0)
+// ═══════════════════════════════════════════════════════════════
+export {
+  getVerbosity,
+  formatGitContext,
+  formatCodeIndexContext,
+  formatMatrixContext,
+  formatPromptContext,
+  assembleContext,
+  type GitContextData,
+  type IndexResult,
+  type SolutionData,
+  type FailureData,
+  type ComplexityData,
+  type Assumption,
+} from './format-helpers.js';

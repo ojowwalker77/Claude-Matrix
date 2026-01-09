@@ -34,7 +34,7 @@
         ]
       },
       {
-        "matcher": "mcp__plugin_matrix_matrix__matrix_recall|mcp__plugin_matrix_matrix__matrix_status|mcp__plugin_matrix_matrix__matrix_warn_check|mcp__plugin_matrix_matrix__matrix_warn_list|mcp__plugin_matrix_matrix__matrix_find_definition|mcp__plugin_matrix_matrix__matrix_search_symbols|mcp__plugin_matrix_matrix__matrix_list_exports|mcp__plugin_matrix_matrix__matrix_get_imports|mcp__plugin_matrix_matrix__matrix_index_status|mcp__plugin_matrix_matrix__matrix_reindex|mcp__plugin_matrix_matrix__matrix_repomix|mcp__plugin_matrix_matrix__matrix_prompt",
+        "matcher": "mcp__plugin_matrix_matrix__matrix_recall|mcp__plugin_matrix_matrix__matrix_status|mcp__plugin_matrix_matrix__matrix_warn|mcp__plugin_matrix_matrix__matrix_find_definition|mcp__plugin_matrix_matrix__matrix_search_symbols|mcp__plugin_matrix_matrix__matrix_list_exports|mcp__plugin_matrix_matrix__matrix_get_imports|mcp__plugin_matrix_matrix__matrix_index_status|mcp__plugin_matrix_matrix__matrix_reindex|mcp__plugin_matrix_matrix__matrix_repomix|mcp__plugin_matrix_matrix__matrix_prompt",
         "hooks": [
           {
             "type": "command",

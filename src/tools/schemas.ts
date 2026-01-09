@@ -15,12 +15,10 @@ import {
   RewardInputSchema,
   FailureInputSchema,
   StatusInputSchema,
-  WarnCheckInputSchema,
-  WarnAddInputSchema,
-  WarnRemoveInputSchema,
-  WarnListInputSchema,
+  WarnInputSchema,
   PromptInputSchema,
   FindDefinitionInputSchema,
+  FindCallersInputSchema,
   ListExportsInputSchema,
   SearchSymbolsInputSchema,
   GetImportsInputSchema,
@@ -28,6 +26,8 @@ import {
   ReindexInputSchema,
   RepomixInputSchema,
   DoctorInputSchema,
+  SkillCandidatesInputSchema,
+  LinkSkillInputSchema,
 } from './validation.js';
 
 // TypeBox schemas ARE JSON Schema - we just need to cast them for MCP's type system
@@ -99,34 +99,13 @@ export const TOOLS: Tool[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // Warning Tools - Always visible
+  // Warning Tool (v2.0 Consolidated) - Always visible
   // ═══════════════════════════════════════════════════════════════
   {
-    name: 'matrix_warn_check',
-    description: 'Check if a file or package has warnings (personal grudges). Use before editing cursed files or installing problematic packages.',
-    annotations: { readOnlyHint: true },
-    inputSchema: toInputSchema(WarnCheckInputSchema),
-    _meta: { delegable: true, category: 'warn' as ToolCategory, visibility: 'always' as VisibilityRule },
-  },
-  {
-    name: 'matrix_warn_add',
-    description: 'Add a warning for a file or package. Use to mark problematic dependencies or cursed files.',
+    name: 'matrix_warn',
+    description: 'Unified warning management. Actions: "check" (verify file/package warnings), "add" (create warning), "remove" (delete by ID or type+target), "list" (show all). Use to manage problematic files and packages.',
     annotations: { idempotentHint: true },
-    inputSchema: toInputSchema(WarnAddInputSchema),
-    _meta: { delegable: true, category: 'warn' as ToolCategory, visibility: 'always' as VisibilityRule },
-  },
-  {
-    name: 'matrix_warn_remove',
-    description: 'Remove a warning by ID or by type+target.',
-    annotations: { destructiveHint: true, idempotentHint: true },
-    inputSchema: toInputSchema(WarnRemoveInputSchema),
-    _meta: { delegable: true, category: 'warn' as ToolCategory, visibility: 'always' as VisibilityRule },
-  },
-  {
-    name: 'matrix_warn_list',
-    description: 'List all warnings.',
-    annotations: { readOnlyHint: true },
-    inputSchema: toInputSchema(WarnListInputSchema),
+    inputSchema: toInputSchema(WarnInputSchema),
     _meta: { delegable: true, category: 'warn' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
 
@@ -184,6 +163,13 @@ export const TOOLS: Tool[] = [
     _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'indexable' as VisibilityRule },
   },
   {
+    name: 'matrix_find_callers',
+    description: 'Find all files that import and use a symbol. Useful for blast radius calculation in code reviews.',
+    annotations: { readOnlyHint: true },
+    inputSchema: toInputSchema(FindCallersInputSchema),
+    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'indexable' as VisibilityRule },
+  },
+  {
     name: 'matrix_list_exports',
     description: 'List exported symbols from a file or directory.',
     annotations: { readOnlyHint: true },
@@ -203,5 +189,23 @@ export const TOOLS: Tool[] = [
     annotations: { readOnlyHint: true },
     inputSchema: toInputSchema(GetImportsInputSchema),
     _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'indexable' as VisibilityRule },
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // Skill Factory Tools (v2.0) - Always visible
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'matrix_skill_candidates',
+    description: 'List Matrix solutions that are good candidates for promotion to Claude Code Skills. Returns solutions with high success rates and usage.',
+    annotations: { readOnlyHint: true },
+    inputSchema: toInputSchema(SkillCandidatesInputSchema),
+    _meta: { delegable: true, category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
+  },
+  {
+    name: 'matrix_link_skill',
+    description: 'Link a Matrix solution to a Claude Code Skill file. Marks the solution as promoted and prevents duplicate promotions.',
+    annotations: { idempotentHint: true },
+    inputSchema: toInputSchema(LinkSkillInputSchema),
+    _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
 ];

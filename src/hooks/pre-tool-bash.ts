@@ -27,7 +27,7 @@ import {
   type HookOutput,
   type Ecosystem,
 } from './index.js';
-import { matrixWarnCheck } from '../tools/warn.js';
+import { matrixWarn, type WarnCheckResult } from '../tools/warn.js';
 
 interface AuditIssue {
   type: 'cve' | 'deprecated' | 'size' | 'warning';
@@ -162,7 +162,7 @@ async function auditPackage(packageName: string, ecosystem: Ecosystem): Promise<
   // Run all checks in parallel
   const [cves, localWarnings, bundleInfo, npmInfo] = await Promise.all([
     queryOSV(packageName, ecosystem),
-    matrixWarnCheck({ type: 'package', target: packageName, ecosystem }),
+    matrixWarn({ action: 'check', type: 'package', target: packageName, ecosystem }) as Promise<WarnCheckResult>,
     ecosystem === 'npm' ? queryBundlephobia(packageName) : Promise.resolve(null),
     ecosystem === 'npm' ? queryNpmRegistry(packageName) : Promise.resolve(null),
   ]);

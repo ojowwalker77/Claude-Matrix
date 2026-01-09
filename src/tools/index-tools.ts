@@ -18,6 +18,7 @@ import {
   getIndexStatus,
   searchSymbols,
   getFileImports,
+  findCallers,
 } from '../indexer/store.js';
 import { indexRepository } from '../indexer/index.js';
 import type { SymbolKind, DefinitionResult, ExportResult, IndexStatus } from '../indexer/types.js';
@@ -116,6 +117,12 @@ export interface GetImportsInput {
   repoPath?: string;
 }
 
+export interface FindCallersInput {
+  symbol: string;
+  file?: string;  // Optional: file where symbol is defined
+  repoPath?: string;
+}
+
 export interface IndexStatusInput {
   repoPath?: string;
 }
@@ -142,6 +149,19 @@ export interface IndexStatusResult {
 export interface SearchSymbolsResult {
   found: boolean;
   results?: DefinitionResult[];
+  message?: string;
+}
+
+export interface FindCallersResult {
+  found: boolean;
+  callers?: Array<{
+    file: string;
+    line: number;
+    importedAs: string;
+    isDefault: boolean;
+    isNamespace: boolean;
+  }>;
+  definitionFile?: string;
   message?: string;
 }
 
@@ -285,6 +305,39 @@ export function matrixGetImports(input: GetImportsInput) {
   return {
     found: true,
     imports,
+  };
+}
+
+/**
+ * Find all callers/importers of a symbol (blast radius calculation)
+ */
+export function matrixFindCallers(input: FindCallersInput): FindCallersResult {
+  const repo = getRepoInfo(input.repoPath);
+  if (!repo.success) {
+    return {
+      found: false,
+      message: repo.message,
+    };
+  }
+
+  // First, find the definition to get the source file
+  const definitions = findDefinitions(repo.id, input.symbol, undefined, input.file);
+  const definitionFile = definitions.length > 0 ? definitions[0]?.file : input.file;
+
+  const callers = findCallers(repo.id, input.symbol, definitionFile);
+
+  if (callers.length === 0) {
+    return {
+      found: false,
+      definitionFile,
+      message: `No callers found for "${input.symbol}"`,
+    };
+  }
+
+  return {
+    found: true,
+    callers,
+    definitionFile,
   };
 }
 

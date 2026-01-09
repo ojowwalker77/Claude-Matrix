@@ -102,7 +102,7 @@ describe('Tool Registry', () => {
       expect(toolNames).toContain('matrix_recall');
       expect(toolNames).toContain('matrix_store');
       expect(toolNames).toContain('matrix_status');
-      expect(toolNames).toContain('matrix_warn_check');
+      expect(toolNames).toContain('matrix_warn');
       expect(toolNames).toContain('matrix_doctor');
 
       // Index tools should be hidden (not indexable)

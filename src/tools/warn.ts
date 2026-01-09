@@ -18,14 +18,14 @@ export interface Warning {
   createdAt: string;
 }
 
-// Input/Output types
+// Input/Output types (exported for use in hooks)
 interface WarnCheckInput {
   type: WarningType;
   target: string;
   ecosystem?: PackageEcosystem;
 }
 
-interface WarnCheckResult {
+export interface WarnCheckResult {
   hasWarning: boolean;
   warnings: Array<{
     id: string;
@@ -45,7 +45,7 @@ interface WarnAddInput {
   repoSpecific?: boolean;
 }
 
-interface WarnAddResult {
+export interface WarnAddResult {
   id: string;
   status: 'added' | 'updated';
   message: string;
@@ -58,7 +58,7 @@ interface WarnRemoveInput {
   ecosystem?: PackageEcosystem;
 }
 
-interface WarnRemoveResult {
+export interface WarnRemoveResult {
   removed: number;
   message: string;
 }
@@ -68,15 +68,15 @@ interface WarnListInput {
   repoOnly?: boolean;
 }
 
-interface WarnListResult {
+export interface WarnListResult {
   warnings: Warning[];
   total: number;
 }
 
 /**
- * Check if a file or package has warnings
+ * Check if a file or package has warnings (internal helper)
  */
-export async function matrixWarnCheck(input: WarnCheckInput): Promise<WarnCheckResult> {
+async function matrixWarnCheck(input: WarnCheckInput): Promise<WarnCheckResult> {
   const db = getDb();
 
   // Get current repo for context
@@ -144,9 +144,9 @@ export async function matrixWarnCheck(input: WarnCheckInput): Promise<WarnCheckR
 }
 
 /**
- * Add a warning for a file or package
+ * Add a warning for a file or package (internal helper)
  */
-export async function matrixWarnAdd(input: WarnAddInput): Promise<WarnAddResult> {
+async function matrixWarnAdd(input: WarnAddInput): Promise<WarnAddResult> {
   const db = getDb();
   const id = `warn_${randomUUID().slice(0, 8)}`;
 
@@ -198,9 +198,9 @@ export async function matrixWarnAdd(input: WarnAddInput): Promise<WarnAddResult>
 }
 
 /**
- * Remove a warning by ID or by type+target
+ * Remove a warning by ID or by type+target (internal helper)
  */
-export async function matrixWarnRemove(input: WarnRemoveInput): Promise<WarnRemoveResult> {
+async function matrixWarnRemove(input: WarnRemoveInput): Promise<WarnRemoveResult> {
   const db = getDb();
 
   if (input.id) {
@@ -240,9 +240,9 @@ export async function matrixWarnRemove(input: WarnRemoveInput): Promise<WarnRemo
 }
 
 /**
- * List all warnings
+ * List all warnings (internal helper)
  */
-export async function matrixWarnList(input: WarnListInput = {}): Promise<WarnListResult> {
+async function matrixWarnList(input: WarnListInput = {}): Promise<WarnListResult> {
   const db = getDb();
 
   let query = 'SELECT id, type, target, ecosystem, reason, severity, repo_id, created_at FROM warnings WHERE 1=1';
@@ -286,4 +286,74 @@ export async function matrixWarnList(input: WarnListInput = {}): Promise<WarnLis
     })),
     total: rows.length,
   };
+}
+
+// ============================================================================
+// v2.0 Unified Warn Tool
+// ============================================================================
+
+export interface WarnInput {
+  action: 'check' | 'add' | 'remove' | 'list';
+  type?: WarningType;
+  target?: string;
+  reason?: string;
+  severity?: WarningSeverity;
+  ecosystem?: PackageEcosystem;
+  id?: string;
+  repoOnly?: boolean;
+  repoSpecific?: boolean;
+}
+
+export type WarnResult = WarnCheckResult | WarnAddResult | WarnRemoveResult | WarnListResult;
+
+/**
+ * Unified warning management tool (v2.0)
+ * Consolidates check, add, remove, and list operations into a single tool.
+ */
+export async function matrixWarn(input: WarnInput): Promise<WarnResult> {
+  switch (input.action) {
+    case 'check': {
+      if (!input.type || !input.target) {
+        throw new Error('check action requires type and target');
+      }
+      return matrixWarnCheck({
+        type: input.type,
+        target: input.target,
+        ecosystem: input.ecosystem,
+      });
+    }
+
+    case 'add': {
+      if (!input.type || !input.target || !input.reason) {
+        throw new Error('add action requires type, target, and reason');
+      }
+      return matrixWarnAdd({
+        type: input.type,
+        target: input.target,
+        reason: input.reason,
+        severity: input.severity,
+        ecosystem: input.ecosystem,
+        repoSpecific: input.repoSpecific,
+      });
+    }
+
+    case 'remove': {
+      return matrixWarnRemove({
+        id: input.id,
+        type: input.type,
+        target: input.target,
+        ecosystem: input.ecosystem,
+      });
+    }
+
+    case 'list': {
+      return matrixWarnList({
+        type: input.type,
+        repoOnly: input.repoOnly,
+      });
+    }
+
+    default:
+      throw new Error(`Unknown action: ${input.action}`);
+  }
 }

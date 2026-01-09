@@ -11,19 +11,27 @@ export type {
   StoreInput,
   RewardInput,
   FailureInput,
-  WarnCheckInput,
-  WarnAddInput,
-  WarnRemoveInput,
-  WarnListInput,
+  WarnInput,  // v2.0: Consolidated warn tool input
   PromptInput,
   FindDefinitionInput,
+  FindCallersInput,  // v2.0: New callers tool
   ListExportsInput,
   SearchSymbolsInput,
   GetImportsInput,
   IndexStatusInput,
   ReindexInput,
   RepomixInput,
+  SkillCandidatesInput,  // v2.0: Skill factory
+  LinkSkillInput,        // v2.0: Skill factory
 } from '../tools/validation.js';
+
+// Re-export warn result types (for hooks)
+export type {
+  WarnCheckResult,
+  WarnAddResult,
+  WarnRemoveResult,
+  WarnListResult,
+} from '../tools/warn.js';
 
 // Tool output types (kept here as they're not part of validation)
 export interface SolutionMatch {

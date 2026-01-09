@@ -63,7 +63,7 @@ ${subagentInstructions.join('\n')}`);
   sections.push(`## Cost Optimization
 Delegate read-only tools to Haiku sub-agents via Task(model="haiku"):
 - matrix_recall, matrix_reward, matrix_status
-- matrix_warn_check, matrix_warn_add, matrix_warn_remove, matrix_warn_list
+- matrix_warn (all actions: check, add, remove, list)
 - matrix_find_definition, matrix_search_symbols, matrix_list_exports, matrix_get_imports
 - matrix_index_status, matrix_reindex`);
 
@@ -72,7 +72,7 @@ Delegate read-only tools to Haiku sub-agents via Task(model="haiku"):
 
 BEFORE implementing:
 - matrix_recall: Check if similar problem was solved before
-- matrix_warn_check: Check if touching a cursed file/package
+- matrix_warn({ action: "check" }): Check if touching a cursed file/package
 
 AFTER implementing:
 - matrix_store: Save reusable solutions (not one-offs)

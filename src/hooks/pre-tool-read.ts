@@ -29,7 +29,7 @@ import {
   type HookOutput,
 } from './index.js';
 import { getConfig, type SensitiveFilesConfig } from '../config/index.js';
-import { matrixWarnCheck } from '../tools/warn.js';
+import { matrixWarn, type WarnCheckResult } from '../tools/warn.js';
 
 // ═══════════════════════════════════════════════════════════════
 // Sensitive File Patterns
@@ -214,7 +214,7 @@ export async function run() {
     // Also check Matrix warnings database
     let matrixWarning = false;
     try {
-      const result = await matrixWarnCheck({ type: 'file', target: filePath });
+      const result = await matrixWarn({ action: 'check', type: 'file', target: filePath }) as WarnCheckResult;
       if (result.hasWarning) {
         matrixWarning = true;
       }

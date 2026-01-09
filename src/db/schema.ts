@@ -41,7 +41,10 @@ CREATE TABLE IF NOT EXISTS solutions (
     anti_patterns JSON DEFAULT '[]',
     code_blocks JSON DEFAULT '[]',
     related_solutions JSON DEFAULT '[]',
-    supersedes TEXT REFERENCES solutions(id)
+    supersedes TEXT REFERENCES solutions(id),
+    -- v2.0 Skill Factory
+    promoted_to_skill TEXT,          -- path to skill file if promoted
+    promoted_at TEXT                  -- timestamp of promotion
 );
 
 -- Falhas registradas

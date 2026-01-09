@@ -7,6 +7,13 @@
 
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import {
+  formatGitContext,
+  formatPromptContext,
+  assembleContext,
+  getVerbosity,
+  type GitContextData,
+} from './format-helpers.js';
 
 // Shortcut patterns for quick responses
 export const SHORTCUTS: Record<string, { action: 'execute' | 'abort' | 'expand' | 'hierarchize' | 'skip'; label: string }> = {
@@ -215,11 +222,16 @@ export function loadClaudeMdContext(cwd?: string): string[] {
 }
 
 /**
- * Get git context
+ * Get git context as structured data (v2.0)
+ * Returns raw data for verbosity-aware formatting
  */
-export async function getGitContext(cwd?: string): Promise<string[]> {
-  const contexts: string[] = [];
+export async function getGitContextData(cwd?: string): Promise<GitContextData> {
   const workingDir = cwd || process.cwd();
+  const result: GitContextData = {
+    branch: null,
+    commits: [],
+    changedFiles: [],
+  };
 
   try {
     // Get current branch
@@ -229,10 +241,7 @@ export async function getGitContext(cwd?: string): Promise<string[]> {
       stderr: 'pipe',
     });
     const branchOutput = await new Response(branchProc.stdout).text();
-    const branch = branchOutput.trim();
-    if (branch) {
-      contexts.push(`[Git Branch] ${branch}`);
-    }
+    result.branch = branchOutput.trim() || null;
 
     // Get recent commit messages (last 3)
     const logProc = Bun.spawn(['git', 'log', '--oneline', '-3'], {
@@ -242,7 +251,7 @@ export async function getGitContext(cwd?: string): Promise<string[]> {
     });
     const logOutput = await new Response(logProc.stdout).text();
     if (logOutput.trim()) {
-      contexts.push(`[Recent Commits] ${logOutput.trim().replace(/\n/g, '; ')}`);
+      result.commits = logOutput.trim().split('\n');
     }
 
     // Get changed files (staged + unstaged)
@@ -253,14 +262,23 @@ export async function getGitContext(cwd?: string): Promise<string[]> {
     });
     const statusOutput = await new Response(statusProc.stdout).text();
     if (statusOutput.trim()) {
-      const files = statusOutput.trim().split('\n').slice(0, 5);
-      contexts.push(`[Changed Files] ${files.join('; ')}`);
+      result.changedFiles = statusOutput.trim().split('\n').slice(0, 10);
     }
   } catch {
     // Not a git repo or git not available
   }
 
-  return contexts;
+  return result;
+}
+
+/**
+ * Get git context (backward compatible wrapper)
+ * @deprecated Use getGitContextData() + formatGitContext() instead
+ */
+export async function getGitContext(cwd?: string): Promise<string[]> {
+  const data = await getGitContextData(cwd);
+  const formatted = formatGitContext(data, 'full');
+  return formatted ? formatted.split('\n') : [];
 }
 
 /**
@@ -365,6 +383,7 @@ export function calculateConfidence(
  *
  * Returns analysis without blocking or asking questions.
  * Used by UserPromptSubmit hook to gather context before complexity assessment.
+ * Supports verbosity-aware formatting (v2.0).
  */
 export async function analyzePromptSilent(
   prompt: string,
@@ -384,29 +403,43 @@ export async function analyzePromptSilent(
     };
   }
 
-  // Gather context in parallel
-  const [claudeMdContext, gitContext] = await Promise.all([
+  // Gather context in parallel (use structured data for verbosity-aware formatting)
+  const [claudeMdContext, gitData] = await Promise.all([
     Promise.resolve(loadClaudeMdContext(cwd)),
-    getGitContext(cwd),
+    getGitContextData(cwd),
   ]);
 
   // Analyze ambiguity (for warning, not blocking)
   const ambiguity = analyzeAmbiguity(prompt);
 
-  // Generate assumptions
-  const assumptions = generateAssumptions(prompt, claudeMdContext, gitContext);
+  // Generate assumptions (still needs legacy git context format)
+  const legacyGitContext: string[] = [];
+  if (gitData.branch) legacyGitContext.push(`[Git Branch] ${gitData.branch}`);
+  if (gitData.commits.length > 0) legacyGitContext.push(`[Recent Commits] ${gitData.commits.join('; ')}`);
+  if (gitData.changedFiles.length > 0) legacyGitContext.push(`[Changed Files] ${gitData.changedFiles.join('; ')}`);
+
+  const assumptions = generateAssumptions(prompt, claudeMdContext, legacyGitContext);
 
   // Calculate confidence (without memory context yet - that's done later)
   const confidence = calculateConfidence(prompt, ambiguity, assumptions, []);
 
-  // Collect all context for injection
-  const contextInjected: string[] = [...claudeMdContext, ...gitContext];
+  // Format context using verbosity-aware helpers (v2.0)
+  const verbosity = getVerbosity();
+  const contextParts: (string | null)[] = [];
 
-  // Add assumptions as context hints
-  const highConfidenceAssumptions = assumptions.filter(a => a.confidence > 0.7);
-  for (const a of highConfidenceAssumptions) {
-    contextInjected.push(`[Assumed: ${a.assumption}]`);
-  }
+  // Git context (verbosity-aware)
+  contextParts.push(formatGitContext(gitData, verbosity));
+
+  // Prompt context: CLAUDE.md + assumptions (verbosity-aware)
+  const assumptionData = assumptions.map(a => ({
+    assumption: a.assumption,
+    confidence: a.confidence,
+  }));
+  contextParts.push(formatPromptContext(claudeMdContext, assumptionData, verbosity));
+
+  // Assemble final context
+  const assembled = assembleContext(contextParts, verbosity);
+  const contextInjected = assembled ? [assembled] : [];
 
   return {
     shortcut,

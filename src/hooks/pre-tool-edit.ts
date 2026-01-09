@@ -18,7 +18,7 @@ import {
   type PreToolUseInput,
   type HookOutput,
 } from './index.js';
-import { matrixWarnCheck } from '../tools/warn.js';
+import { matrixWarn, type WarnCheckResult } from '../tools/warn.js';
 
 export async function run() {
   try {
@@ -37,10 +37,11 @@ export async function run() {
     }
 
     // Check for file warnings
-    const result = await matrixWarnCheck({
+    const result = await matrixWarn({
+      action: 'check',
       type: 'file',
       target: filePath,
-    });
+    }) as WarnCheckResult;
 
     if (!result.hasWarning) {
       process.exit(0);

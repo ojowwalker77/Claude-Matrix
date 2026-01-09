@@ -31,9 +31,17 @@ import {
   matrixSearchSymbols,
   matrixIndexStatus,
 } from '../tools/index-tools.js';
+import {
+  formatCodeIndexContext,
+  formatMatrixContext,
+  assembleContext,
+  getVerbosity,
+  type IndexResult,
+  type SolutionData,
+  type FailureData,
+} from './format-helpers.js';
 
 const MAX_CONTEXT_WORDS = 500;
-const MAX_SOLUTION_CHARS = 300;
 
 // Patterns for detecting code navigation queries
 const DEFINITION_PATTERNS = [
@@ -77,7 +85,7 @@ function detectCodeNavQuery(prompt: string): { type: 'definition' | 'search'; sy
 }
 
 /**
- * Query code index and format results for context injection
+ * Query code index and format results for context injection (v2.0 verbosity-aware)
  */
 function queryCodeIndex(query: { type: 'definition' | 'search'; symbol: string }): string | null {
   try {
@@ -87,20 +95,24 @@ function queryCodeIndex(query: { type: 'definition' | 'search'; symbol: string }
       return null;
     }
 
+    const verbosity = getVerbosity();
+
     if (query.type === 'definition') {
       const result = matrixFindDefinition({ symbol: query.symbol });
       if (!result.found || !result.definitions?.length) {
         return null;
       }
 
-      const lines = [`[Code Index: "${query.symbol}" definitions]`];
-      for (const def of result.definitions.slice(0, 5)) {
-        const sig = def.signature ? ` - ${def.signature}` : '';
-        const exp = def.exported ? ' (exported)' : '';
-        lines.push(`• ${def.file}:${def.line} [${def.kind}]${sig}${exp}`);
-      }
-      lines.push('[End Code Index]');
-      return lines.join('\n');
+      const indexResults: IndexResult[] = result.definitions.slice(0, 5).map(def => ({
+        symbol: query.symbol,
+        file: def.file,
+        line: def.line,
+        kind: def.kind,
+        signature: def.signature,
+        exported: def.exported,
+      }));
+
+      return formatCodeIndexContext(query.symbol, indexResults, verbosity);
     }
 
     if (query.type === 'search') {
@@ -109,13 +121,16 @@ function queryCodeIndex(query: { type: 'definition' | 'search'; symbol: string }
         return null;
       }
 
-      const lines = [`[Code Index: symbols matching "${query.symbol}"]`];
-      for (const sym of result.results.slice(0, 10)) {
-        const sig = sym.signature ? ` - ${sym.signature}` : '';
-        lines.push(`• ${sym.file}:${sym.line} [${sym.kind}]${sig}`);
-      }
-      lines.push('[End Code Index]');
-      return lines.join('\n');
+      const indexResults: IndexResult[] = result.results.slice(0, 10).map(sym => ({
+        symbol: query.symbol, // Use the query symbol, not from result
+        file: sym.file,
+        line: sym.line,
+        kind: sym.kind,
+        signature: sym.signature,
+        exported: sym.exported,
+      }));
+
+      return formatCodeIndexContext(query.symbol, indexResults, verbosity);
     }
 
     return null;
@@ -126,7 +141,7 @@ function queryCodeIndex(query: { type: 'definition' | 'search'; symbol: string }
 }
 
 /**
- * Format solutions for context injection
+ * Format solutions for context injection (v2.0 verbosity-aware wrapper)
  */
 function formatContext(
   solutions: Array<{
@@ -146,63 +161,29 @@ function formatContext(
   }>,
   complexity: { score: number; reasoning: string }
 ): string {
-  if (solutions.length === 0 && failures.length === 0) {
+  const verbosity = getVerbosity();
+
+  // Use the verbosity-aware formatter
+  const result = formatMatrixContext(
+    solutions as SolutionData[],
+    failures as FailureData[],
+    complexity,
+    verbosity
+  );
+
+  if (!result) {
     return '';
   }
 
-  const lines: string[] = [
-    `[Matrix Memory Context - Complexity: ${complexity.score}/10]`,
-  ];
-
-  if (complexity.reasoning) {
-    lines.push(`Reason: ${complexity.reasoning}`);
-  }
-
-  if (solutions.length > 0) {
-    lines.push('');
-    lines.push('Relevant solutions:');
-
-    for (const sol of solutions.slice(0, 3)) {
-      const boost = sol.contextBoost ? ` (${sol.contextBoost})` : '';
-      const successPct = Math.round(sol.successRate * 100);
-      lines.push(`• [${sol.id}] ${successPct}% success${boost}`);
-
-      // Truncate problem to first line or 100 chars
-      const problemPreview = sol.problem.split('\n')[0]?.slice(0, 100) || sol.problem.slice(0, 100);
-      lines.push(`  Problem: ${problemPreview}${problemPreview.length < sol.problem.length ? '...' : ''}`);
-
-      // Truncate solution
-      const solutionPreview = sol.solution.slice(0, MAX_SOLUTION_CHARS);
-      lines.push(`  Solution: ${solutionPreview}${solutionPreview.length < sol.solution.length ? '...' : ''}`);
+  // Apply max words limit (only in full mode, compact is already short)
+  if (verbosity === 'full') {
+    const words = result.split(/\s+/);
+    if (words.length > MAX_CONTEXT_WORDS) {
+      return words.slice(0, MAX_CONTEXT_WORDS).join(' ') + '\n[Truncated...]';
     }
   }
 
-  if (failures.length > 0) {
-    lines.push('');
-    lines.push('Related errors to avoid:');
-
-    for (const fail of failures.slice(0, 2)) {
-      const errorPreview = fail.errorMessage.slice(0, 80);
-      lines.push(`• [${fail.id}] ${errorPreview}${errorPreview.length < fail.errorMessage.length ? '...' : ''}`);
-      if (fail.rootCause) {
-        lines.push(`  Cause: ${fail.rootCause.slice(0, 100)}`);
-      }
-      if (fail.fixApplied) {
-        lines.push(`  Fix: ${fail.fixApplied.slice(0, 100)}`);
-      }
-    }
-  }
-
-  lines.push('[End Matrix Context]');
-
-  // Truncate to max words
-  const fullText = lines.join('\n');
-  const words = fullText.split(/\s+/);
-  if (words.length > MAX_CONTEXT_WORDS) {
-    return words.slice(0, MAX_CONTEXT_WORDS).join(' ') + '\n[Truncated...]';
-  }
-
-  return fullText;
+  return result;
 }
 
 export async function run() {
@@ -257,16 +238,22 @@ export async function run() {
 
     // Skip memory injection if below threshold
     if (complexity.score < threshold) {
-      // Still inject prompt agent context and code index if available
-      const lowComplexityContext: string[] = [];
+      // Still inject prompt agent context and code index if available (v2.0 verbosity-aware)
+      const verbosity = getVerbosity();
+      const lowComplexityParts: (string | null)[] = [];
+
       if (promptAnalysis.contextInjected.length > 0) {
-        lowComplexityContext.push(`[Prompt Context]\n${promptAnalysis.contextInjected.join('\n')}`);
+        if (verbosity === 'full') {
+          lowComplexityParts.push(`[Prompt Context]\n${promptAnalysis.contextInjected.join('\n')}`);
+        } else {
+          lowComplexityParts.push(promptAnalysis.contextInjected.join('\n'));
+        }
       }
-      if (codeIndexContext) {
-        lowComplexityContext.push(codeIndexContext);
-      }
-      if (lowComplexityContext.length > 0) {
-        outputText(lowComplexityContext.join('\n\n'));
+      lowComplexityParts.push(codeIndexContext);
+
+      const assembled = assembleContext(lowComplexityParts, verbosity);
+      if (assembled) {
+        outputText(assembled);
       }
       process.exit(0);
     }
@@ -291,28 +278,33 @@ export async function run() {
     );
 
     // ============================================
-    // STEP 5: Output combined context
+    // STEP 5: Output combined context (v2.0 verbosity-aware)
     // ============================================
-    const contextParts: string[] = [];
+    const verbosity = getVerbosity();
 
-    // Add prompt agent context first
+    // Collect all context parts (some may be null)
+    const contextParts: (string | null)[] = [];
+
+    // Add prompt agent context first (already verbosity-formatted)
     if (promptAnalysis.contextInjected.length > 0) {
-      contextParts.push(`[Prompt Context]\n${promptAnalysis.contextInjected.join('\n')}`);
+      // In compact mode, context is already formatted; in full mode, wrap it
+      if (verbosity === 'full') {
+        contextParts.push(`[Prompt Context]\n${promptAnalysis.contextInjected.join('\n')}`);
+      } else {
+        contextParts.push(promptAnalysis.contextInjected.join('\n'));
+      }
     }
 
-    // Add code index context
-    if (codeIndexContext) {
-      contextParts.push(codeIndexContext);
-    }
+    // Add code index context (already verbosity-formatted)
+    contextParts.push(codeIndexContext);
 
-    // Add Matrix memory context
-    if (context) {
-      contextParts.push(context);
-    }
+    // Add Matrix memory context (already verbosity-formatted)
+    contextParts.push(context || null);
 
-    // Output all context to Claude
-    if (contextParts.length > 0) {
-      outputText(contextParts.join('\n\n'));
+    // Assemble and output using verbosity-aware separator
+    const assembled = assembleContext(contextParts, verbosity);
+    if (assembled) {
+      outputText(assembled);
     }
 
     process.exit(0);

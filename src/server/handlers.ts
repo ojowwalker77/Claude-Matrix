@@ -8,19 +8,16 @@ import {
   matrixDoctor,
   searchFailures,
   matrixFindDefinition,
+  matrixFindCallers,
   matrixListExports,
   matrixSearchSymbols,
   matrixGetImports,
   matrixIndexStatus,
   matrixReindex,
 } from '../tools/index.js';
-import {
-  matrixWarnCheck,
-  matrixWarnAdd,
-  matrixWarnRemove,
-  matrixWarnList,
-} from '../tools/warn.js';
+import { matrixWarn } from '../tools/warn.js';
 import { matrixPrompt } from '../tools/prompt.js';
+import { matrixSkillCandidates, matrixLinkSkill } from '../tools/skill-factory.js';
 import { packRepository, formatResult } from '../repomix/index.js';
 import {
   validators,
@@ -30,12 +27,10 @@ import {
   type StoreInput,
   type RewardInput,
   type FailureInput,
-  type WarnCheckInput,
-  type WarnAddInput,
-  type WarnRemoveInput,
-  type WarnListInput,
+  type WarnInput,
   type PromptInput,
   type FindDefinitionInput,
+  type FindCallersInput,
   type ListExportsInput,
   type SearchSymbolsInput,
   type GetImportsInput,
@@ -43,6 +38,8 @@ import {
   type ReindexInput,
   type RepomixInput,
   type DoctorInput,
+  type SkillCandidatesInput,
+  type LinkSkillInput,
 } from '../tools/validation.js';
 
 /**
@@ -205,28 +202,10 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         return JSON.stringify(result);
       }
 
-      // Warning tools
-      case 'matrix_warn_check': {
-        const input = validate<WarnCheckInput>(validators.warnCheck, args);
-        const result = await matrixWarnCheck(input);
-        return JSON.stringify(result);
-      }
-
-      case 'matrix_warn_add': {
-        const input = validate<WarnAddInput>(validators.warnAdd, args);
-        const result = await matrixWarnAdd(input);
-        return JSON.stringify(result);
-      }
-
-      case 'matrix_warn_remove': {
-        const input = validate<WarnRemoveInput>(validators.warnRemove, args);
-        const result = await matrixWarnRemove(input);
-        return JSON.stringify(result);
-      }
-
-      case 'matrix_warn_list': {
-        const input = validate<WarnListInput>(validators.warnList, args);
-        const result = await matrixWarnList(input);
+      // v2.0 Unified Warning tool
+      case 'matrix_warn': {
+        const input = validate<WarnInput>(validators.warn, args);
+        const result = await matrixWarn(input);
         return JSON.stringify(result);
       }
 
@@ -241,6 +220,12 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
       case 'matrix_find_definition': {
         const input = validate<FindDefinitionInput>(validators.findDefinition, args);
         const result = matrixFindDefinition(input);
+        return JSON.stringify(result);
+      }
+
+      case 'matrix_find_callers': {
+        const input = validate<FindCallersInput>(validators.findCallers, args);
+        const result = matrixFindCallers(input);
         return JSON.stringify(result);
       }
 
@@ -285,6 +270,19 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
       case 'matrix_doctor': {
         const input = validate<DoctorInput>(validators.doctor, args);
         const result = await matrixDoctor(input);
+        return JSON.stringify(result);
+      }
+
+      // Skill Factory (v2.0)
+      case 'matrix_skill_candidates': {
+        const input = validate<SkillCandidatesInput>(validators.skillCandidates, args);
+        const result = matrixSkillCandidates(input);
+        return JSON.stringify(result);
+      }
+
+      case 'matrix_link_skill': {
+        const input = validate<LinkSkillInput>(validators.linkSkill, args);
+        const result = matrixLinkSkill(input);
         return JSON.stringify(result);
       }
 
