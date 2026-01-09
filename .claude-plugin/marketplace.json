@@ -8,8 +8,8 @@
       "name": "matrix",
       "source": "./",
       "description": "Claude on Rails Tooling System - Persistent memory for Claude Code",
-      "version": "1.3.0"
+      "version": "1.2.2"
     }
   ],
-  "version": "1.3.0"
+  "version": "1.2.2"
 }
