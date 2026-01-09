@@ -179,9 +179,12 @@ function detectSkillCandidates(): SkillCandidate[] {
       s.code_blocks,
       s.complexity,
       s.created_at,
-      COUNT(r.id) as uses,
-      AVG(CASE WHEN r.outcome = 'success' THEN 1.0 ELSE 0.0 END) as success_rate,
-      MAX(r.created_at) as last_used
+      s.uses,
+      CASE WHEN (s.successes + s.failures) > 0 
+        THEN CAST(s.successes AS REAL) / (s.successes + s.failures)
+        ELSE 0.5 
+      END as success_rate,
+      s.last_used_at as last_used
     FROM solutions s
     LEFT JOIN rewards r ON s.id = r.solution_id
     WHERE s.promoted_to_skill IS NULL
