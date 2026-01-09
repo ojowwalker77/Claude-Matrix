@@ -27,7 +27,14 @@ import {
   type HookOutput,
   type Ecosystem,
 } from './index.js';
-import { matrixWarn, type WarnCheckResult } from '../tools/warn.js';
+import { matrixWarn, type WarnCheckResult, type WarnResult } from '../tools/warn.js';
+
+/**
+ * Type guard to check if a WarnResult is a WarnCheckResult
+ */
+function isWarnCheckResult(result: WarnResult): result is WarnCheckResult {
+  return 'hasWarning' in result && 'warnings' in result;
+}
 
 interface AuditIssue {
   type: 'cve' | 'deprecated' | 'size' | 'warning';
@@ -160,12 +167,17 @@ async function auditPackage(packageName: string, ecosystem: Ecosystem): Promise<
   const issues: AuditIssue[] = [];
 
   // Run all checks in parallel
-  const [cves, localWarnings, bundleInfo, npmInfo] = await Promise.all([
+  const [cves, warnResult, bundleInfo, npmInfo] = await Promise.all([
     queryOSV(packageName, ecosystem),
-    matrixWarn({ action: 'check', type: 'package', target: packageName, ecosystem }) as Promise<WarnCheckResult>,
+    matrixWarn({ action: 'check', type: 'package', target: packageName, ecosystem }),
     ecosystem === 'npm' ? queryBundlephobia(packageName) : Promise.resolve(null),
     ecosystem === 'npm' ? queryNpmRegistry(packageName) : Promise.resolve(null),
   ]);
+
+  // Type-safe narrowing of warn result
+  const localWarnings: WarnCheckResult = isWarnCheckResult(warnResult)
+    ? warnResult
+    : { hasWarning: false, warnings: [] };
 
   // Check CVEs
   if (cves.length > 0) {

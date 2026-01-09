@@ -347,6 +347,7 @@ export function searchSymbols(
   }>;
 
   return rows.map(row => ({
+    name: row.name,           // Include actual symbol name for search results
     file: row.file_path,
     line: row.line,
     column: row.column,
@@ -431,6 +432,12 @@ export function findCallers(
   const pathWithoutExt = definitionFile.replace(/\.(ts|tsx|js|jsx|mjs)$/, '');
   const fileName = pathWithoutExt.split('/').pop() || '';
 
+  // Build more precise path patterns for matching
+  // Match: ends with /fileName or is exactly fileName (for relative imports)
+  // This avoids false positives like "user" matching "super-user"
+  const exactFilePattern = `%/${fileName}`;
+  const indexPattern = `%/${fileName}/index`;
+
   // Find all imports that could reference this file
   const rows = db.query(`
     SELECT
@@ -445,12 +452,14 @@ export function findCallers(
     JOIN repo_files f ON i.file_id = f.id
     WHERE f.repo_id = ?
       AND (
-        i.source_path LIKE '%' || ? || '%'
+        i.source_path LIKE ?
+        OR i.source_path LIKE ?
+        OR i.source_path = ?
         OR i.imported_name = ?
         OR i.local_name = ?
       )
     ORDER BY f.file_path ASC, i.line ASC
-  `).all(repoId, fileName, symbolName, symbolName) as Array<{
+  `).all(repoId, exactFilePattern, indexPattern, fileName, symbolName, symbolName) as Array<{
     caller_file: string;
     line: number;
     imported_name: string;
@@ -474,12 +483,27 @@ export function findCallers(
     // Skip self-references
     if (row.caller_file === definitionFile) continue;
 
+    // Check if the import source path actually matches our definition file
+    // This prevents false positives from files that happen to import a different
+    // file with a similar name or a different symbol with the same name
+    const sourcePathMatchesFile =
+      row.source_path.endsWith(`/${fileName}`) ||
+      row.source_path.endsWith(`/${fileName}/index`) ||
+      row.source_path === fileName ||
+      row.source_path === `./${fileName}` ||
+      row.source_path === `../${fileName}`;
+
     // Determine if this import is actually for our symbol
-    const isRelevant =
+    // For named imports: the imported_name or local_name must match
+    // For default/namespace imports: the source path must match our file
+    const isNamedImportMatch =
       row.imported_name === symbolName ||
-      row.local_name === symbolName ||
-      row.is_default === 1 ||
-      row.is_namespace === 1;
+      row.local_name === symbolName;
+
+    const isDefaultOrNamespaceFromOurFile =
+      (row.is_default === 1 || row.is_namespace === 1) && sourcePathMatchesFile;
+
+    const isRelevant = isNamedImportMatch || isDefaultOrNamespaceFromOurFile;
 
     if (!isRelevant) continue;
 

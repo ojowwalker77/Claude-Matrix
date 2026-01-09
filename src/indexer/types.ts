@@ -125,6 +125,7 @@ export interface ImportRow {
 
 // Query result types for MCP tools
 export interface DefinitionResult {
+  name?: string;        // Symbol name (included in search results)
   file: string;
   line: number;
   column: number;

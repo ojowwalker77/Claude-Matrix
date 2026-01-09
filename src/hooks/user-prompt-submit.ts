@@ -122,7 +122,7 @@ function queryCodeIndex(query: { type: 'definition' | 'search'; symbol: string }
       }
 
       const indexResults: IndexResult[] = result.results.slice(0, 10).map(sym => ({
-        symbol: query.symbol, // Use the query symbol, not from result
+        symbol: sym.name || query.symbol, // Use actual symbol name if available
         file: sym.file,
         line: sym.line,
         kind: sym.kind,

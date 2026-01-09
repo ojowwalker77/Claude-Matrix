@@ -167,7 +167,13 @@ export function matrixSkillCandidates(input: SkillCandidatesInput = {}): SkillCa
   const candidates: SkillCandidate[] = rows
     .map(row => {
       const successRate = row.uses > 0 ? row.successes / row.uses : 0;
-      const tags = row.tags ? JSON.parse(row.tags) : [];
+      // Defensive JSON.parse - handle corrupted data gracefully
+      let tags: string[] = [];
+      try {
+        tags = row.tags ? JSON.parse(row.tags) : [];
+      } catch {
+        tags = [];
+      }
 
       return {
         solutionId: row.id,
@@ -266,10 +272,20 @@ export function generateSkillTemplate(
     return null;
   }
 
-  const tags = solution.tags ? JSON.parse(solution.tags) : [];
-  const prerequisites = solution.prerequisites ? JSON.parse(solution.prerequisites) : [];
-  const antiPatterns = solution.anti_patterns ? JSON.parse(solution.anti_patterns) : [];
-  const codeBlocks = solution.code_blocks ? JSON.parse(solution.code_blocks) : [];
+  // Defensive JSON.parse - handle corrupted data gracefully
+  const safeJsonParse = <T>(json: string | null, fallback: T): T => {
+    if (!json) return fallback;
+    try {
+      return JSON.parse(json) ?? fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const tags = safeJsonParse<string[]>(solution.tags, []);
+  const prerequisites = safeJsonParse<string[]>(solution.prerequisites, []);
+  const antiPatterns = safeJsonParse<string[]>(solution.anti_patterns, []);
+  const codeBlocks = safeJsonParse<Array<{ language?: string; code: string; description?: string }>>(solution.code_blocks, []);
 
   const lines: string[] = [];
 
