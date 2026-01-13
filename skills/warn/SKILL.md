@@ -1,12 +1,17 @@
 ---
-description: Manage file and package warnings
+name: Matrix Warnings
+description: This skill should be used when the user asks to "add warning", "remove warning", "list warnings", "check file warning", "check package warning", "manage grudges", or needs to manage file and package warnings in Matrix.
+user-invocable: true
+agent: haiku
+allowed-tools:
+  - mcp__plugin_matrix_matrix__matrix_warn
 ---
 
 # Matrix Warnings
 
 Manage "personal grudges" - warnings for problematic files or packages.
 
-Parse the arguments: `$ARGUMENTS`
+Parse user arguments from the skill invocation (text after the trigger phrase).
 
 Use the `matrix_warn` tool with the appropriate action parameter.
 
@@ -36,6 +41,7 @@ Use `matrix_warn` with `action: "check"` and:
 - target: file path or package name
 
 ## Examples
+
 - `/matrix:warn` - list all warnings
 - `/matrix:warn add file src/legacy/*.ts "Deprecated, do not modify"`
 - `/matrix:warn add package moment "Use date-fns instead"`

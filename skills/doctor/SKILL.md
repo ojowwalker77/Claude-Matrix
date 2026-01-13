@@ -1,5 +1,10 @@
 ---
-description: Run Matrix diagnostics and auto-fix issues
+name: Matrix Doctor
+description: This skill should be used when the user asks to "run matrix diagnostics", "check matrix health", "fix matrix issues", "troubleshoot matrix", or mentions matrix not working. Runs comprehensive diagnostics on the Matrix plugin and automatically fixes issues.
+user-invocable: true
+agent: haiku
+allowed-tools:
+  - mcp__plugin_matrix_matrix__matrix_doctor
 ---
 
 # Matrix Doctor

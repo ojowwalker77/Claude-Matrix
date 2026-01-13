@@ -2,6 +2,37 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.0.3] - 2025-01-13
+
+### Changed
+
+#### Commands Migrated to Skills
+- **Hot-Reload Support** - All 10 Matrix commands now use the new skills format
+  - Skills auto-discovered from `skills/` directory
+  - Edit skills without restarting Claude Code
+  - Progressive disclosure with `references/` for complex skills
+
+- **Model Delegation** - Intelligent agent assignment for cost optimization
+  - Default (opus) for complex operations: repomix, create-skill, deep-research, review
+  - `agent: haiku` for simple operations: doctor, reindex, list, export, warn, skill-candidates
+  - Estimated ~40-50% cost reduction for simple operations
+
+- **Context Isolation** - Fork mode for unbiased analysis
+  - `context: fork` for review and deep-research skills
+  - Fresh execution environment prevents prior conversation bias
+  - Matches recommendation: "run in fresh session for unbiased perspective"
+
+- **Tool Permissions** - Explicit `allowed-tools` for security
+  - Each skill declares exactly which MCP tools it needs
+  - Wildcard support: `mcp__plugin_matrix_matrix__*`
+  - Prevents unintended tool access
+
+### Removed
+
+- **Commands Directory** - Deleted `commands/` in favor of `skills/`
+  - All functionality preserved in new skills format
+  - Old `/matrix:*` invocation still works via skill triggers
+
 ## [2.0.2] - 2025-01-13
 
 ### Added

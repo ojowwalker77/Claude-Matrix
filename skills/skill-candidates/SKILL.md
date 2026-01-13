@@ -1,5 +1,10 @@
 ---
-description: List Matrix solutions that are good candidates for promotion to Claude Code Skills
+name: Matrix Skill Candidates
+description: This skill should be used when the user asks to "find skill candidates", "which solutions can be promoted", "list promotable solutions", "find high-value solutions", or wants to identify Matrix solutions suitable for promotion to Skills.
+user-invocable: true
+agent: haiku
+allowed-tools:
+  - mcp__plugin_matrix_matrix__matrix_skill_candidates
 ---
 
 # Matrix Skill Candidates
@@ -10,7 +15,7 @@ Identify high-value Matrix solutions that can be promoted to Claude Code Skills 
 
 Use the `matrix_skill_candidates` MCP tool to find promotable solutions.
 
-Parse optional arguments: `$ARGUMENTS`
+Parse optional user arguments from the skill invocation (text after the trigger phrase).
 
 **Argument patterns:**
 - `top 5` or `limit 5` - Limit to N candidates
@@ -51,7 +56,7 @@ After identifying candidates:
 1. Review the solution details: `/matrix:list solutions`
 2. Create a skill: `/matrix:create-skill <solution_id>`
 
-## Example
+## Examples
 
 ```
 /matrix:skill-candidates

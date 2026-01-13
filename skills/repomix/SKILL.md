@@ -1,5 +1,9 @@
 ---
-description: Pack external repositories for context with minimal token consumption
+name: Matrix Repomix
+description: This skill should be used when the user asks to "pack repository", "repomix", "fetch external code", "pack github repo", "get code from repository", or needs to pack external repositories for context analysis.
+user-invocable: true
+allowed-tools:
+  - mcp__plugin_matrix_matrix__matrix_repomix
 ---
 
 # Matrix Repomix

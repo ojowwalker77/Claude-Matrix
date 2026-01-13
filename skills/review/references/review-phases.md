@@ -1,42 +1,8 @@
----
-description: Conduct a multi-phase code review with blast radius analysis
----
+# Code Review Phases
 
-# Matrix Code Review
+Detailed procedures for the 5-phase code review pipeline.
 
-Perform a comprehensive, context-aware code review using Matrix's review pipeline with full index integration.
-
-> **Tip:** For best results, run `/matrix:review` in a **fresh session**. A new session has no prior context about the code, which provides an unbiased perspective—similar to how a human reviewer would approach the code for the first time.
-
-## Usage
-
-Parse arguments: `$ARGUMENTS`
-
-**Expected format:** `<target> [mode]`
-
-- **target**: File path, PR number, or "staged" for staged changes
-- **mode** (optional): `default` | `lazy` (default: from config or `default`)
-
-## Modes
-
-### Default Mode (Comprehensive)
-Full 5-phase review pipeline with maximum index utilization:
-- Blast radius analysis via `matrix_find_callers`
-- Symbol lookup via `matrix_find_definition` and `matrix_search_symbols`
-- Memory recall via `matrix_recall` for relevant past solutions
-- Deep security and edge case analysis
-- ~10+ comments, thorough coverage
-
-### Lazy Mode (Quick)
-Single-pass review for fast feedback:
-- Direct code inspection only
-- No index queries (faster)
-- Main issues only
-- ~2-3 comments
-
-## 5-Phase Review Pipeline
-
-### Phase 1: Context Mapping (Blast Radius)
+## Phase 1: Context Mapping (Blast Radius)
 
 Calculate the impact scope of changes:
 
@@ -71,7 +37,7 @@ First-degree impact: 8 files
 Impact Score: 7/10 (medium-high)
 ```
 
-### Phase 2: Intent Inference
+## Phase 2: Intent Inference
 
 Analyze what the change is trying to accomplish:
 
@@ -92,7 +58,7 @@ Analyze what the change is trying to accomplish:
    - What problem is being solved?
    - What approach is being taken?
 
-### Phase 3: Socratic Questioning
+## Phase 3: Socratic Questioning
 
 Generate probing questions about the changes:
 
@@ -116,7 +82,7 @@ Generate probing questions about the changes:
    - Authentication/authorization?
    - Data sanitization?
 
-### Phase 4: Targeted Investigation
+## Phase 4: Targeted Investigation
 
 For each concern from Phase 3:
 
@@ -132,18 +98,18 @@ For each concern from Phase 3:
    - For unfamiliar patterns, query external documentation
    - Use `matrix_recall` for past issues with similar code
 
-### Phase 5: Reflection & Consolidation
+## Phase 5: Reflection & Consolidation
 
 Generate final review output in Greptile-style format:
 
-1. **Calculate Confidence Score (1-5)**
-   - 5/5: No issues, ready to merge
-   - 4/5: Minor suggestions only, approve with optional changes
-   - 3/5: Some issues that should be addressed but not blocking
-   - 2/5: Important issues that need attention before merge
-   - 1/5: Critical bugs or issues that will cause incorrect behavior
+### Confidence Score (1-5)
+- 5/5: No issues, ready to merge
+- 4/5: Minor suggestions only, approve with optional changes
+- 3/5: Some issues that should be addressed but not blocking
+- 2/5: Important issues that need attention before merge
+- 1/5: Critical bugs or issues that will cause incorrect behavior
 
-2. **Format review output**
+### Output Format
 
 ```markdown
 # Matrix Review
@@ -197,32 +163,15 @@ Generate final review output in Greptile-style format:
 [Detailed analysis of this file's changes, issues found, and suggestions]
 ```
 
-3. **Scoring Guidelines per File**
-   - 5/5: No issues, clean implementation
-   - 4/5: Minor style or documentation suggestions
-   - 3/5: Some improvements recommended
-   - 2/5: Has bugs or significant issues
-   - 1/5: Critical bugs that will cause incorrect behavior
+### Scoring Guidelines per File
+- 5/5: No issues, clean implementation
+- 4/5: Minor style or documentation suggestions
+- 3/5: Some improvements recommended
+- 2/5: Has bugs or significant issues
+- 1/5: Critical bugs that will cause incorrect behavior
 
-4. **Learning loop**
-   - If reviewer spots a pattern that should be remembered:
-     Use `matrix_store` to save for future reviews
-   - If a recalled solution helped:
-     Use `matrix_reward` to improve future recommendations
-
-## Examples
-
-```
-/matrix:review src/utils/auth.ts          # Default mode (comprehensive)
-/matrix:review staged                     # Review staged changes
-/matrix:review staged lazy                # Quick review of staged changes
-/matrix:review 123                        # Review PR #123
-/matrix:review 123 lazy                   # Quick review of PR #123
-```
-
-## Output Location
-
-Review results are displayed inline. For thorough reviews, consider saving to a file:
-```
-/matrix:review src/auth.ts thorough > ~/Downloads/review-auth.md
-```
+### Learning Loop
+- If reviewer spots a pattern that should be remembered:
+  Use `matrix_store` to save for future reviews
+- If a recalled solution helped:
+  Use `matrix_reward` to improve future recommendations

@@ -1,12 +1,18 @@
 ---
-description: Export Matrix memory to file
+name: Matrix Export
+description: This skill should be used when the user asks to "export matrix data", "backup matrix", "export solutions", "export failures", "export warnings", or needs to export Matrix memory to a portable format.
+user-invocable: true
+agent: haiku
+allowed-tools:
+  - mcp__plugin_matrix_matrix__matrix_status
+  - Write
 ---
 
 # Matrix Export
 
 Export the Matrix memory database to a portable format.
 
-Arguments: `$ARGUMENTS`
+Parse user arguments from the skill invocation (text after the trigger phrase).
 
 ## Export Options
 
