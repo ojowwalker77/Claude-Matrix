@@ -6,6 +6,8 @@ description: Conduct a multi-phase code review with blast radius analysis
 
 Perform a comprehensive, context-aware code review using Matrix's review pipeline with full index integration.
 
+> **Tip:** For best results, run `/matrix:review` in a **fresh session**. A new session has no prior context about the code, which provides an unbiased perspective—similar to how a human reviewer would approach the code for the first time.
+
 ## Usage
 
 Parse arguments: `$ARGUMENTS`

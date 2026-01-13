@@ -52,18 +52,23 @@ Verify with `/matrix:doctor`
 
 ## What's New in v2.0
 
-### Core Improvements
+### v2.0.2
+- **Subagent Hooks** — `SubagentStart` injects Matrix guidance to Explore/Plan agents
+- **Wildcard Warnings** — Glob patterns in warning rules (`src/legacy/**`)
+- **Hook Timeouts** — Configurable timeout (default 30s, max 120s)
+- **Index Tools Anywhere** — Query any indexed repo via `repoPath` parameter
+- **Token Optimization** — ~10-12% reduction in MCP tool definitions
+
+### v2.0.0
 - **Hook Verbosity** — `compact` mode cuts token overhead by 80%
 - **Unified Warn API** — Single `matrix_warn` tool with `action` parameter
-
-### New Capabilities
 - **Skill Factory** — Promote high-value solutions to Claude Code Skills
 - **Blast Radius** — `matrix_find_callers` shows impact before changes
 - **Code Review** — 5-phase review pipeline via `/matrix:review`
 - **Deep Research** — Multi-source aggregation via `/matrix:deep-research`
 - **User Rules** — Custom pattern matching (block, warn, allow)
 
-### Breaking Changes
+### Breaking Changes (v2.0)
 - Removed: `/matrix:verify`, `/matrix:stats`, `/matrix:search`
 - Changed: Four warn tools → single `matrix_warn`
 
