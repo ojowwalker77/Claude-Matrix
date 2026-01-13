@@ -2,6 +2,91 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.0.2] - 2025-01-13
+
+### Added
+
+#### Subagent Hooks
+- **New `SubagentStart` Hook** - Inject Matrix guidance when subagents spawn
+  - Fires when Explore, Plan, or other subagents start
+  - Injects guidance to prefer Matrix index tools over Grep for code search
+  - Injects guidance to prefer Context7 over WebSearch for library docs
+  - Respects `toolSearch.preferMatrixIndex` and `toolSearch.preferContext7` config
+  - Verbosity-aware output (full/compact/minimal)
+  - Agent-specific hints for explore/plan agents to use `matrix_recall`
+
+- **New `SubagentStop` Hook** - Track subagent completion
+  - Fires when Explore, Plan, or other subagents complete
+  - Logs completion in verbose mode
+
+#### Token Optimization
+- **Reduced MCP Tool Token Usage** - ~10-12% reduction in Matrix tool definitions
+  - Shortened parameter descriptions across all schemas
+  - Removed redundant "Optional:", "default:" phrases
+  - Optimized tool description verbosity
+
+#### Index Tools Accessibility
+- **Index Tools Always Available** - Can now use from any directory
+  - Changed visibility from `'indexable'` → `'always'` for query tools
+  - Pass `repoPath` parameter to query any indexed repository
+  - Tools: `matrix_find_definition`, `matrix_find_callers`, `matrix_list_exports`, `matrix_search_symbols`, `matrix_get_imports`
+
+#### Auto-Install Features
+- **File Suggestion Script** - Auto-installs `~/.claude/file-suggestion.sh`
+  - Uses ripgrep + fzf for fast fuzzy file matching
+  - Follows symlinks and respects .gitignore
+  - Auto-merges `fileSuggestion` config into `~/.claude/settings.json`
+
+#### Model Delegation Config
+- **New `delegation` Config Section** - Control sub-agent model selection
+  - `enabled`: Toggle delegation (default: true)
+  - `model`: `'haiku'` or `'sonnet'` (default: `'haiku'`)
+  - MCP instructions updated to tell Claude which model to use for read-only tools
+
+#### Config Auto-Upgrade
+- **Session Start Config Migration** - Automatically adds missing config sections
+  - Detects missing: `memoryInjection`, `permissions`, `userRules`, `gitCommitReview`, `delegation`
+  - Preserves existing user settings while adding new defaults
+  - No manual `/matrix:doctor` needed after upgrades
+
+### Changed
+
+#### Code Review Refactored
+- **Simplified Review Modes** - Two modes instead of three depths
+  - `default`: Comprehensive 5-phase review with full index utilization
+  - `lazy`: Quick single-pass review, no index queries
+- **New Config Structure** - `hooks.gitCommitReview`
+  - `suggestOnCommit`: Suggest review before commits (default: true)
+  - `defaultMode`: `'default'` or `'lazy'` (default: `'default'`)
+  - `autoRun`: Never auto-runs, always suggests (default: false)
+- **BREAKING**: Removed `depth` setting (`quick`/`standard`/`thorough`)
+
+#### Memory Injection Config
+- **Proper Config Usage** - `hooks.promptAnalysis.memoryInjection` now actually used
+  - `enabled`: Toggle memory injection (default: true)
+  - `maxSolutions`: Max solutions to inject (default: 3)
+  - `maxFailures`: Max failures to inject (default: 2)
+  - `minScore`: Minimum similarity score (default: 0.35)
+
+#### Wildcard Permission Patterns
+- **Simplified PermissionRequest matchers** - Leverages Claude Code 2.1.0+ wildcards
+  - `mcp__plugin_matrix_matrix__*` replaces 11 individual tool matchers
+  - `mcp__plugin_matrix_context7__*` replaces 2 individual tool matchers
+  - Auto-includes new tools added to MCP servers
+
+#### Increased Hook Timeouts
+- **Leverage Claude Code 2.1.3's 10-minute limit** for complex analysis
+  - `UserPromptSubmit`: 60s → **600s** (deep-research, review commands)
+  - `PreCompact`: 30s → **600s** (session analysis before compaction)
+  - `PreToolUse:Bash`: 30s → 60s (package auditing)
+  - `Stop`: 30s → 60s (session summary)
+
+### Fixed
+
+- Removed unused imports in `session-start.ts` (oxlint warnings)
+
+---
+
 ## [2.0.1] - 2025-01-09
 
 ### Added

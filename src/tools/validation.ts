@@ -91,20 +91,12 @@ const PromptModeEnum = Type.Union([
 // ============================================================================
 
 export const RecallInputSchema = Type.Object({
-  query: Type.String({ description: 'What problem are you trying to solve?' }),
-  limit: Type.Optional(Type.Number({ description: 'Max results (default: 5)' })),
-  minScore: Type.Optional(Type.Number({
-    minimum: 0,
-    maximum: 1,
-    description: 'Minimum similarity score 0-1 (default: 0.3)',
-  })),
+  query: Type.String({ description: 'Problem to solve' }),
+  limit: Type.Optional(Type.Number({ description: 'Max results' })),
+  minScore: Type.Optional(Type.Number({ minimum: 0, maximum: 1, description: 'Min similarity 0-1' })),
   scopeFilter: Type.Optional(ScopeFilterEnum),
   categoryFilter: Type.Optional(CategoryEnum),
-  maxComplexity: Type.Optional(Type.Number({
-    minimum: 1,
-    maximum: 10,
-    description: 'Only return solutions with complexity <= this value',
-  })),
+  maxComplexity: Type.Optional(Type.Number({ minimum: 1, maximum: 10, description: 'Max complexity filter' })),
 });
 
 const CodeBlockSchema = Type.Object({
@@ -114,37 +106,33 @@ const CodeBlockSchema = Type.Object({
 });
 
 export const StoreInputSchema = Type.Object({
-  problem: Type.String({ description: 'The problem that was solved' }),
-  solution: Type.String({ description: 'The solution (code, steps, explanation)' }),
+  problem: Type.String({ description: 'Problem solved' }),
+  solution: Type.String({ description: 'Solution (code, steps, explanation)' }),
   scope: ScopeEnum,
-  tags: Type.Optional(Type.Array(Type.String(), { description: 'Tags for categorization' })),
-  filesAffected: Type.Optional(Type.Array(Type.String(), { description: 'Files that were modified' })),
+  tags: Type.Optional(Type.Array(Type.String(), { description: 'Tags' })),
+  filesAffected: Type.Optional(Type.Array(Type.String(), { description: 'Modified files' })),
   category: Type.Optional(CategoryEnum),
-  complexity: Type.Optional(Type.Number({
-    minimum: 1,
-    maximum: 10,
-    description: 'Complexity 1-10 (auto-calculated if not provided)',
-  })),
-  prerequisites: Type.Optional(Type.Array(Type.String(), { description: 'Conditions for this solution to apply' })),
+  complexity: Type.Optional(Type.Number({ minimum: 1, maximum: 10, description: 'Complexity 1-10' })),
+  prerequisites: Type.Optional(Type.Array(Type.String(), { description: 'Required conditions' })),
   antiPatterns: Type.Optional(Type.Array(Type.String(), { description: 'What NOT to do' })),
   codeBlocks: Type.Optional(Type.Array(CodeBlockSchema, { description: 'Code snippets' })),
-  relatedSolutions: Type.Optional(Type.Array(Type.String(), { description: 'IDs of related solutions' })),
-  supersedes: Type.Optional(Type.String({ description: 'ID of solution this replaces' })),
+  relatedSolutions: Type.Optional(Type.Array(Type.String(), { description: 'Related solution IDs' })),
+  supersedes: Type.Optional(Type.String({ description: 'Superseded solution ID' })),
 });
 
 export const RewardInputSchema = Type.Object({
-  solutionId: Type.String({ description: 'ID of the solution (from matrix_recall)' }),
+  solutionId: Type.String({ description: 'Solution ID from matrix_recall' }),
   outcome: OutcomeEnum,
-  notes: Type.Optional(Type.String({ description: 'What worked or what needed to change' })),
+  notes: Type.Optional(Type.String({ description: 'What worked or needed change' })),
 });
 
 export const FailureInputSchema = Type.Object({
   errorType: ErrorTypeEnum,
   errorMessage: Type.String(),
-  stackTrace: Type.Optional(Type.String({ description: 'Stack trace if available' })),
-  rootCause: Type.String({ description: 'What actually caused the error' }),
-  fixApplied: Type.String({ description: 'How it was fixed' }),
-  prevention: Type.Optional(Type.String({ description: 'How to avoid this in the future' })),
+  stackTrace: Type.Optional(Type.String({ description: 'Stack trace' })),
+  rootCause: Type.String({ description: 'Root cause' }),
+  fixApplied: Type.String({ description: 'Fix applied' }),
+  prevention: Type.Optional(Type.String({ description: 'Prevention strategy' })),
   filesInvolved: Type.Optional(Type.Array(Type.String())),
 });
 
@@ -161,97 +149,87 @@ const WarnActionEnum = Type.Union([
 export const WarnInputSchema = Type.Object({
   action: WarnActionEnum,
   type: Type.Optional(WarningTypeEnum),
-  target: Type.Optional(Type.String({ description: 'File path (supports glob patterns) or package name' })),
-  reason: Type.Optional(Type.String({ description: 'Why this file/package is problematic (required for add action)' })),
+  target: Type.Optional(Type.String({ description: 'File path/glob or package name' })),
+  reason: Type.Optional(Type.String({ description: 'Why problematic (for add)' })),
   severity: Type.Optional(SeverityEnum),
   ecosystem: Type.Optional(EcosystemEnum),
-  id: Type.Optional(Type.String({ description: 'Warning ID (for remove action)' })),
-  repoOnly: Type.Optional(Type.Boolean({ description: 'If true, only show warnings specific to current repository (for list action)' })),
-  repoSpecific: Type.Optional(Type.Boolean({ description: 'If true, warning only applies to current repository (for add action)' })),
+  id: Type.Optional(Type.String({ description: 'Warning ID (for remove)' })),
+  repoOnly: Type.Optional(Type.Boolean({ description: 'Repo-specific only (for list)' })),
+  repoSpecific: Type.Optional(Type.Boolean({ description: 'Repo-specific warning (for add)' })),
 });
 
 export const PromptInputSchema = Type.Object({
-  rawPrompt: Type.String({ description: 'The original user prompt to analyze' }),
+  rawPrompt: Type.String({ description: 'User prompt to analyze' }),
   mode: Type.Optional(PromptModeEnum),
-  skipClarification: Type.Optional(Type.Boolean({ description: 'If true, skip clarification questions and proceed with assumptions' })),
+  skipClarification: Type.Optional(Type.Boolean({ description: 'Skip clarification questions' })),
 });
 
+// Shared description for repoPath - remove redundancy
+const repoPathDesc = 'Repository path';
+
 export const FindDefinitionInputSchema = Type.Object({
-  symbol: Type.String({ description: 'The symbol name to find (e.g., "handleRequest", "UserService")' }),
+  symbol: Type.String({ description: 'Symbol name (e.g., "handleRequest")' }),
   kind: Type.Optional(SymbolKindEnum),
-  file: Type.Optional(Type.String({ description: 'Optional: limit search to a specific file path' })),
-  repoPath: Type.Optional(Type.String({ description: 'Optional: path to repository to search (defaults to current directory)' })),
+  file: Type.Optional(Type.String({ description: 'Limit to file' })),
+  repoPath: Type.Optional(Type.String({ description: repoPathDesc })),
 });
 
 export const FindCallersInputSchema = Type.Object({
-  symbol: Type.String({ description: 'The symbol name to find callers of (e.g., "handleRequest", "UserService")' }),
-  file: Type.Optional(Type.String({ description: 'Optional: file where the symbol is defined' })),
-  repoPath: Type.Optional(Type.String({ description: 'Optional: path to repository to search (defaults to current directory)' })),
+  symbol: Type.String({ description: 'Symbol to find callers of' }),
+  file: Type.Optional(Type.String({ description: 'File where symbol is defined' })),
+  repoPath: Type.Optional(Type.String({ description: repoPathDesc })),
 });
 
 export const ListExportsInputSchema = Type.Object({
-  path: Type.Optional(Type.String({ description: 'File or directory path to list exports from (e.g., "src/utils" or "src/index.ts")' })),
-  repoPath: Type.Optional(Type.String({ description: 'Optional: path to repository to search (defaults to current directory)' })),
+  path: Type.Optional(Type.String({ description: 'File or directory path' })),
+  repoPath: Type.Optional(Type.String({ description: repoPathDesc })),
 });
 
 export const SearchSymbolsInputSchema = Type.Object({
-  query: Type.String({ description: 'Partial symbol name to search for (e.g., "handle" finds "handleRequest", "handleError")' }),
-  limit: Type.Optional(Type.Number({ description: 'Max results (default: 20)' })),
-  repoPath: Type.Optional(Type.String({ description: 'Optional: path to repository to search (defaults to current directory)' })),
+  query: Type.String({ description: 'Partial symbol name' }),
+  limit: Type.Optional(Type.Number({ description: 'Max results' })),
+  repoPath: Type.Optional(Type.String({ description: repoPathDesc })),
 });
 
 export const GetImportsInputSchema = Type.Object({
-  file: Type.String({ description: 'File path to get imports from' }),
-  repoPath: Type.Optional(Type.String({ description: 'Optional: path to repository (defaults to current directory)' })),
+  file: Type.String({ description: 'File path' }),
+  repoPath: Type.Optional(Type.String({ description: repoPathDesc })),
 });
 
 export const IndexStatusInputSchema = Type.Object({
-  repoPath: Type.Optional(Type.String({ description: 'Optional: path to repository (defaults to current directory)' })),
+  repoPath: Type.Optional(Type.String({ description: repoPathDesc })),
 });
 
 export const ReindexInputSchema = Type.Object({
-  full: Type.Optional(Type.Boolean({ description: 'Force full reindex, ignoring incremental mode (default: false)' })),
-  repoPath: Type.Optional(Type.String({ description: 'Optional: path to repository to index (defaults to current directory)' })),
+  full: Type.Optional(Type.Boolean({ description: 'Force full reindex' })),
+  repoPath: Type.Optional(Type.String({ description: repoPathDesc })),
 });
 
 export const RepomixInputSchema = Type.Object({
-  target: Type.String({ description: 'GitHub shorthand (owner/repo) or local path' }),
-  query: Type.String({ description: 'What implementation are you looking for? Used for semantic search.' }),
-  branch: Type.Optional(Type.String({ description: 'Git branch (default: HEAD/main)' })),
-  confirmedFiles: Type.Optional(Type.Array(Type.String(), { description: 'Files to pack (from Phase 1 suggestions). Omit for Phase 1 index.' })),
-  maxTokens: Type.Optional(Type.Number({ description: 'Maximum tokens for packed output (default: 30000)' })),
-  maxFiles: Type.Optional(Type.Number({ description: 'Maximum files to suggest in Phase 1 (default: 15)' })),
-  cacheTTLHours: Type.Optional(Type.Number({ description: 'Cache TTL in hours (default: 24)' })),
+  target: Type.String({ description: 'GitHub owner/repo or local path' }),
+  query: Type.String({ description: 'What to search for' }),
+  branch: Type.Optional(Type.String({ description: 'Git branch' })),
+  confirmedFiles: Type.Optional(Type.Array(Type.String(), { description: 'Files to pack (Phase 2)' })),
+  maxTokens: Type.Optional(Type.Number({ description: 'Max output tokens' })),
+  maxFiles: Type.Optional(Type.Number({ description: 'Max files to suggest' })),
+  cacheTTLHours: Type.Optional(Type.Number({ description: 'Cache TTL hours' })),
 });
 
 export const DoctorInputSchema = Type.Object({
-  autoFix: Type.Optional(Type.Boolean({ description: 'Automatically attempt to fix issues (default: true)' })),
+  autoFix: Type.Optional(Type.Boolean({ description: 'Auto-fix issues' })),
 });
 
 // v2.0 Skill Factory Schemas
 export const SkillCandidatesInputSchema = Type.Object({
-  minScore: Type.Optional(Type.Number({
-    minimum: 0,
-    maximum: 1,
-    description: 'Minimum success rate threshold (default: 0.7)',
-  })),
-  minUses: Type.Optional(Type.Number({
-    minimum: 1,
-    description: 'Minimum number of uses (default: 3)',
-  })),
-  limit: Type.Optional(Type.Number({
-    minimum: 1,
-    maximum: 50,
-    description: 'Maximum candidates to return (default: 10)',
-  })),
-  excludePromoted: Type.Optional(Type.Boolean({
-    description: 'Exclude already promoted solutions (default: true)',
-  })),
+  minScore: Type.Optional(Type.Number({ minimum: 0, maximum: 1, description: 'Min success rate' })),
+  minUses: Type.Optional(Type.Number({ minimum: 1, description: 'Min uses' })),
+  limit: Type.Optional(Type.Number({ minimum: 1, maximum: 50, description: 'Max candidates' })),
+  excludePromoted: Type.Optional(Type.Boolean({ description: 'Exclude promoted' })),
 });
 
 export const LinkSkillInputSchema = Type.Object({
-  solutionId: Type.String({ description: 'ID of the solution to link' }),
-  skillPath: Type.String({ description: 'Path to the skill file (e.g., ~/.claude/skills/my-skill.md)' }),
+  solutionId: Type.String({ description: 'Solution ID to link' }),
+  skillPath: Type.String({ description: 'Skill file path' }),
 });
 
 // ============================================================================

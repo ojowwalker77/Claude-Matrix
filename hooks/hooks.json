@@ -17,7 +17,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh user-prompt-submit",
-            "timeout": 60
+            "timeout": 600
           }
         ]
       }
@@ -34,7 +34,7 @@
         ]
       },
       {
-        "matcher": "mcp__plugin_matrix_matrix__matrix_recall|mcp__plugin_matrix_matrix__matrix_status|mcp__plugin_matrix_matrix__matrix_warn|mcp__plugin_matrix_matrix__matrix_find_definition|mcp__plugin_matrix_matrix__matrix_search_symbols|mcp__plugin_matrix_matrix__matrix_list_exports|mcp__plugin_matrix_matrix__matrix_get_imports|mcp__plugin_matrix_matrix__matrix_index_status|mcp__plugin_matrix_matrix__matrix_reindex|mcp__plugin_matrix_matrix__matrix_repomix|mcp__plugin_matrix_matrix__matrix_prompt",
+        "matcher": "mcp__plugin_matrix_matrix__*",
         "hooks": [
           {
             "type": "command",
@@ -44,7 +44,7 @@
         ]
       },
       {
-        "matcher": "mcp__plugin_matrix_context7__resolve-library-id|mcp__plugin_matrix_context7__query-docs",
+        "matcher": "mcp__plugin_matrix_context7__*",
         "hooks": [
           {
             "type": "command",
@@ -71,7 +71,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh pre-tool-bash",
-            "timeout": 30
+            "timeout": 60
           }
         ]
       },
@@ -124,7 +124,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh pre-compact",
-            "timeout": 30
+            "timeout": 600
           }
         ]
       }
@@ -135,7 +135,29 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh stop-session",
-            "timeout": 30
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh subagent-start",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh subagent-stop",
+            "timeout": 10
           }
         ]
       }

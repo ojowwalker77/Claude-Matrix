@@ -101,12 +101,15 @@ export interface PromptAnalysisConfig {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Pre-Commit Review Config
+// Code Review Config
 // ═══════════════════════════════════════════════════════════════
 export interface GitCommitReviewConfig {
-  enabled: boolean;
-  /** Review depth: 'quick' | 'standard' | 'thorough' */
-  depth: 'quick' | 'standard' | 'thorough';
+  /** Suggest review before git commits */
+  suggestOnCommit: boolean;
+  /** Default review mode: 'default' (comprehensive) | 'lazy' (quick) */
+  defaultMode: 'default' | 'lazy';
+  /** Auto-run review (NOT recommended - prefer suggestion) */
+  autoRun: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -203,6 +206,13 @@ export interface MatrixConfig {
     preferContext7: boolean;
     /** Log when tools are shown/hidden due to project context */
     verbose: boolean;
+  };
+  /** Model delegation settings for read-only tools */
+  delegation: {
+    /** Enable tool delegation to cheaper models */
+    enabled: boolean;
+    /** Model for delegable tools: 'haiku' (cheaper) or 'sonnet' (more capable) */
+    model: 'haiku' | 'sonnet';
   };
 }
 
@@ -327,11 +337,12 @@ export const DEFAULT_CONFIG: MatrixConfig = {
       },
     },
 
-    // ─── Pre-Commit Review (PreToolUse:Bash hook) ───
-    // Triggers Matrix review before git/jj commits
+    // ─── Code Review Config ───
+    // Controls /matrix:review behavior and commit suggestions
     gitCommitReview: {
-      enabled: true,
-      depth: 'standard' as const,
+      suggestOnCommit: true,  // Suggest review before git commits
+      defaultMode: 'default' as const,  // 'default' (comprehensive) or 'lazy' (quick)
+      autoRun: false,  // Never auto-run, always suggest
     },
 
     // ─── User Rules (v2.0) ───
@@ -379,6 +390,10 @@ export const DEFAULT_CONFIG: MatrixConfig = {
     preferMatrixIndex: true,
     preferContext7: true,
     verbose: false,
+  },
+  delegation: {
+    enabled: true,
+    model: 'haiku' as const,  // Use haiku for cheaper read-only operations
   },
 };
 

@@ -139,6 +139,31 @@ function checkDatabase(): DiagnosticCheck {
 }
 
 /**
+ * Check config file for missing sections
+ * Returns list of missing config paths that need to be added
+ */
+function findMissingConfigSections(config: ReturnType<typeof getConfig>): string[] {
+  const missing: string[] = [];
+
+  // Check for required config sections (added in v2.0+)
+  if (!config.hooks) missing.push('hooks');
+  if (!config.hooks?.promptAnalysis) missing.push('hooks.promptAnalysis');
+  if (!config.hooks?.promptAnalysis?.memoryInjection) missing.push('hooks.promptAnalysis.memoryInjection');
+  if (!config.hooks?.permissions) missing.push('hooks.permissions');
+  if (!config.hooks?.preCompact) missing.push('hooks.preCompact');
+  if (!config.hooks?.sensitiveFiles) missing.push('hooks.sensitiveFiles');
+  if (!config.hooks?.stop) missing.push('hooks.stop');
+  if (!config.hooks?.packageAuditor) missing.push('hooks.packageAuditor');
+  if (!config.hooks?.cursedFiles) missing.push('hooks.cursedFiles');
+  if (!config.hooks?.userRules) missing.push('hooks.userRules');
+  if (!config.indexing) missing.push('indexing');
+  if (!config.toolSearch) missing.push('toolSearch');
+  if (!config.delegation) missing.push('delegation');
+
+  return missing;
+}
+
+/**
  * Check config file
  */
 function checkConfig(): DiagnosticCheck {
@@ -146,12 +171,13 @@ function checkConfig(): DiagnosticCheck {
 
   try {
     const config = getConfig();
+    const missingSections = findMissingConfigSections(config);
 
-    if (!config.hooks) {
+    if (missingSections.length > 0) {
       return {
         name: 'Configuration',
         status: 'warn',
-        message: 'Config missing hooks section',
+        message: 'Missing sections: ' + missingSections.slice(0, 3).join(', ') + (missingSections.length > 3 ? ' (+' + (missingSections.length - 3) + ' more)' : ''),
         autoFixable: true,
         fixAction: 'Add missing sections (preserves user settings)',
       };

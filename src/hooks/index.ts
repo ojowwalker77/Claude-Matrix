@@ -44,6 +44,26 @@ export interface StopInput extends HookInput {
 }
 
 /**
+ * SubagentStart hook input (Claude Code 2.0.43+)
+ * Fires when a subagent (Explore, Plan, etc.) starts
+ */
+export interface SubagentStartInput extends HookInput {
+  agent_id: string;
+  agent_type: string;
+  hook_event_name: 'SubagentStart';
+}
+
+/**
+ * SubagentStop hook input (Claude Code 2.0.42+)
+ * Fires when a subagent completes
+ */
+export interface SubagentStopInput extends HookInput {
+  agent_id: string;
+  agent_transcript_path: string;
+  stop_hook_active?: boolean;
+}
+
+/**
  * PermissionRequest decision structure
  */
 export interface PermissionDecision {

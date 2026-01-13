@@ -10,6 +10,8 @@ import { run as preToolEdit } from './pre-tool-edit.js';
 import { run as preToolWeb } from './pre-tool-web.js';
 import { run as preCompact } from './pre-compact.js';
 import { run as stopSession } from './stop-session.js';
+import { run as subagentStart } from './subagent-start.js';
+import { run as subagentStop } from './subagent-stop.js';
 
 const hooks: Record<string, () => Promise<void>> = {
   'session-start': sessionStart,
@@ -23,6 +25,8 @@ const hooks: Record<string, () => Promise<void>> = {
   'pre-tool-web': preToolWeb,
   'pre-compact': preCompact,
   'stop-session': stopSession,
+  'subagent-start': subagentStart,
+  'subagent-stop': subagentStop,
 };
 
 const hookType = process.argv[2];

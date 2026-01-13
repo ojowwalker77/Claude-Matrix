@@ -59,13 +59,18 @@ ${subagentInstructions.join('\n')}`);
     }
   }
 
-  // Cost Optimization (always included)
-  sections.push(`## Cost Optimization
-Delegate read-only tools to Haiku sub-agents via Task(model="haiku"):
+  // Cost Optimization (controlled by delegation config)
+  if (config.delegation?.enabled) {
+    const model = config.delegation.model || 'haiku';
+    sections.push(`## Cost Optimization
+Delegate read-only tools to ${model === 'haiku' ? 'Haiku' : 'Sonnet'} sub-agents via Task(model="${model}"):
 - matrix_recall, matrix_reward, matrix_status
 - matrix_warn (all actions: check, add, remove, list)
 - matrix_find_definition, matrix_search_symbols, matrix_list_exports, matrix_get_imports
-- matrix_index_status, matrix_reindex`);
+- matrix_index_status, matrix_reindex
+
+IMPORTANT: When using these tools, spawn a Task agent with model="${model}" to reduce costs.`);
+  }
 
   // When to Use Matrix Tools (always included)
   sections.push(`## When to Use Matrix Tools

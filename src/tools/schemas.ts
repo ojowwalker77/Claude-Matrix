@@ -114,14 +114,14 @@ export const TOOLS: Tool[] = [
   // ═══════════════════════════════════════════════════════════════
   {
     name: 'matrix_prompt',
-    description: 'Analyze and optimize a prompt before execution. Detects ambiguity, infers context, and either returns an optimized prompt or asks clarification questions. Use for complex or ambiguous user requests.',
+    description: 'Analyze and optimize a prompt. Detects ambiguity, infers context, returns optimized prompt or asks clarification questions.',
     annotations: { readOnlyHint: true },
     inputSchema: toInputSchema(PromptInputSchema),
     _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
   {
     name: 'matrix_repomix',
-    description: 'Pack external repositories for context. Two-phase flow: Phase 1 (no files) returns suggested files based on query. Phase 2 (with confirmedFiles) packs those files. Minimizes token consumption by letting you confirm before packing.',
+    description: 'Pack external repositories for context. Phase 1: suggest files. Phase 2 (with confirmedFiles): pack them.',
     annotations: { readOnlyHint: true, openWorldHint: true },
     inputSchema: toInputSchema(RepomixInputSchema),
     _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
@@ -146,49 +146,49 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'matrix_reindex',
-    description: 'Manually trigger repository reindexing. Use to refresh the code index after changes.',
+    description: 'Manually trigger repository reindexing.',
     annotations: { idempotentHint: true },
     inputSchema: toInputSchema(ReindexInputSchema),
     _meta: { delegable: true, category: 'index-mgmt' as ToolCategory, visibility: 'indexable' as VisibilityRule },
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // Code Index Query Tools - Visible only if project is indexable
+  // Code Index Query Tools - Always visible, use repoPath for other repos
   // ═══════════════════════════════════════════════════════════════
   {
     name: 'matrix_find_definition',
-    description: 'Find where a symbol (function, class, type, variable) is defined in the codebase.',
+    description: 'Find where a symbol is defined. Pass repoPath to query other repos.',
     annotations: { readOnlyHint: true },
     inputSchema: toInputSchema(FindDefinitionInputSchema),
-    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'indexable' as VisibilityRule },
+    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
   {
     name: 'matrix_find_callers',
-    description: 'Find all files that import and use a symbol. Useful for blast radius calculation in code reviews.',
+    description: 'Find all files that import and use a symbol. Useful for blast radius analysis.',
     annotations: { readOnlyHint: true },
     inputSchema: toInputSchema(FindCallersInputSchema),
-    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'indexable' as VisibilityRule },
+    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
   {
     name: 'matrix_list_exports',
     description: 'List exported symbols from a file or directory.',
     annotations: { readOnlyHint: true },
     inputSchema: toInputSchema(ListExportsInputSchema),
-    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'indexable' as VisibilityRule },
+    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
   {
     name: 'matrix_search_symbols',
-    description: 'Search for symbols by partial name match. Use when you know part of a symbol name.',
+    description: 'Search for symbols by partial name match.',
     annotations: { readOnlyHint: true },
     inputSchema: toInputSchema(SearchSymbolsInputSchema),
-    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'indexable' as VisibilityRule },
+    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
   {
     name: 'matrix_get_imports',
     description: 'Get all imports in a file.',
     annotations: { readOnlyHint: true },
     inputSchema: toInputSchema(GetImportsInputSchema),
-    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'indexable' as VisibilityRule },
+    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -196,14 +196,14 @@ export const TOOLS: Tool[] = [
   // ═══════════════════════════════════════════════════════════════
   {
     name: 'matrix_skill_candidates',
-    description: 'List Matrix solutions that are good candidates for promotion to Claude Code Skills. Returns solutions with high success rates and usage.',
+    description: 'List solutions good for promotion to Skills. Returns high success rate solutions.',
     annotations: { readOnlyHint: true },
     inputSchema: toInputSchema(SkillCandidatesInputSchema),
     _meta: { delegable: true, category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
   {
     name: 'matrix_link_skill',
-    description: 'Link a Matrix solution to a Claude Code Skill file. Marks the solution as promoted and prevents duplicate promotions.',
+    description: 'Link a solution to a Skill file. Marks as promoted.',
     annotations: { idempotentHint: true },
     inputSchema: toInputSchema(LinkSkillInputSchema),
     _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },

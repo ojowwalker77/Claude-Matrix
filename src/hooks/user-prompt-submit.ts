@@ -291,16 +291,45 @@ export async function run() {
     }
 
     // ============================================
-    // STEP 4: Search Matrix memory
+    // STEP 4: Search Matrix memory (if enabled)
     // ============================================
+    const memoryConfig = config.promptAnalysis?.memoryInjection ?? {
+      enabled: true,
+      maxSolutions: 3,
+      maxFailures: 2,
+      minScore: 0.35,
+    };
+
+    // Skip memory injection if disabled in config
+    if (!memoryConfig.enabled) {
+      // Still inject prompt agent context and code index if available
+      const verbosity = getVerbosity();
+      const noMemoryParts: (string | null)[] = [];
+
+      if (promptAnalysis.contextInjected.length > 0) {
+        if (verbosity === 'full') {
+          noMemoryParts.push(`[Prompt Context]\n${promptAnalysis.contextInjected.join('\n')}`);
+        } else {
+          noMemoryParts.push(promptAnalysis.contextInjected.join('\n'));
+        }
+      }
+      noMemoryParts.push(codeIndexContext);
+
+      const assembled = assembleContext(noMemoryParts, verbosity);
+      if (assembled) {
+        outputText(assembled);
+      }
+      process.exit(0);
+    }
+
     const recallResult = await matrixRecall({
-      query: input.prompt.slice(0, 500), // Shorter query = less compute
-      limit: 3,
-      minScore: 0.55, // Higher threshold = fewer irrelevant injections
+      query: input.prompt.slice(0, 500),
+      limit: memoryConfig.maxSolutions,
+      minScore: memoryConfig.minScore,
     });
 
     // Also search for related failures
-    const failures = await searchFailures(input.prompt.slice(0, 500), 2);
+    const failures = await searchFailures(input.prompt.slice(0, 500), memoryConfig.maxFailures);
 
     // Format context
     const context = formatContext(

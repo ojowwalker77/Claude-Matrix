@@ -105,9 +105,9 @@ describe('Tool Registry', () => {
       expect(toolNames).toContain('matrix_warn');
       expect(toolNames).toContain('matrix_doctor');
 
-      // Index tools should be hidden (not indexable)
-      expect(toolNames).not.toContain('matrix_find_definition');
-      expect(toolNames).not.toContain('matrix_search_symbols');
+      // Index tools should also be visible (can query any repo via repoPath)
+      expect(toolNames).toContain('matrix_find_definition');
+      expect(toolNames).toContain('matrix_search_symbols');
     });
 
     it('should show index tools for indexable projects', async () => {

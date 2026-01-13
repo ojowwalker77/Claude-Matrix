@@ -4,22 +4,35 @@ description: Conduct a multi-phase code review with blast radius analysis
 
 # Matrix Code Review
 
-Perform a comprehensive, context-aware code review using Matrix's 5-phase review pipeline.
+Perform a comprehensive, context-aware code review using Matrix's review pipeline with full index integration.
+
+> **Tip:** For best results, run `/matrix:review` in a **fresh session**. A new session has no prior context about the code, which provides an unbiased perspective—similar to how a human reviewer would approach the code for the first time.
 
 ## Usage
 
 Parse arguments: `$ARGUMENTS`
 
-**Expected format:** `<target> [depth]`
+**Expected format:** `<target> [mode]`
 
 - **target**: File path, PR number, or "staged" for staged changes
-- **depth** (optional): `quick` | `standard` | `thorough` (default: `standard`)
+- **mode** (optional): `default` | `lazy` (default: from config or `default`)
 
-## Depth Levels
+## Modes
 
-- **quick**: Single-pass review, main issues only (~2-3 comments)
-- **standard**: Full pipeline, balanced coverage (~5-10 comments)
-- **thorough**: Deep analysis, edge cases, security review (~10+ comments)
+### Default Mode (Comprehensive)
+Full 5-phase review pipeline with maximum index utilization:
+- Blast radius analysis via `matrix_find_callers`
+- Symbol lookup via `matrix_find_definition` and `matrix_search_symbols`
+- Memory recall via `matrix_recall` for relevant past solutions
+- Deep security and edge case analysis
+- ~10+ comments, thorough coverage
+
+### Lazy Mode (Quick)
+Single-pass review for fast feedback:
+- Direct code inspection only
+- No index queries (faster)
+- Main issues only
+- ~2-3 comments
 
 ## 5-Phase Review Pipeline
 
@@ -200,9 +213,11 @@ Generate final review output in Greptile-style format:
 ## Examples
 
 ```
-/matrix:review src/utils/auth.ts standard
-/matrix:review staged thorough
-/matrix:review 123 quick
+/matrix:review src/utils/auth.ts          # Default mode (comprehensive)
+/matrix:review staged                     # Review staged changes
+/matrix:review staged lazy                # Quick review of staged changes
+/matrix:review 123                        # Review PR #123
+/matrix:review 123 lazy                   # Quick review of PR #123
 ```
 
 ## Output Location

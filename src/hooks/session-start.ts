@@ -20,10 +20,94 @@ import { homedir } from 'os';
 import { Database } from 'bun:sqlite';
 import { createHash } from 'crypto';
 import { spawnSync } from 'child_process';
-import { getConfig } from '../config/index.js';
+import { getConfig, saveConfig, clearCache } from '../config/index.js';
 import { runMigrations } from '../db/migrate.js';
 
 const CURRENT_VERSION = '1.0.3';
+const CLAUDE_DIR = join(homedir(), '.claude');
+const FILE_SUGGESTION_DEST = join(CLAUDE_DIR, 'file-suggestion.sh');
+const SETTINGS_PATH = join(CLAUDE_DIR, 'settings.json');
+
+// Embedded file-suggestion.sh content
+const FILE_SUGGESTION_SCRIPT = `#!/bin/bash
+# Custom file suggestion script for Claude Code (installed by Matrix)
+# Uses rg + fzf for fuzzy matching and symlink support
+# Prerequisites: brew install ripgrep jq fzf
+
+QUERY=$(jq -r '.query // ""')
+PROJECT_DIR="\${CLAUDE_PROJECT_DIR:-.}"
+cd "$PROJECT_DIR" || exit 1
+rg --files --follow --hidden . 2>/dev/null | sort -u | fzf --filter "$QUERY" | head -15
+`;
+
+/**
+ * Install file-suggestion.sh and update settings.json
+ * Returns true if any changes were made
+ */
+function installFileSuggestion(): boolean {
+  let changed = false;
+
+  try {
+    // Install the script if not present
+    if (!existsSync(FILE_SUGGESTION_DEST)) {
+      writeFileSync(FILE_SUGGESTION_DEST, FILE_SUGGESTION_SCRIPT, { mode: 0o755 });
+      changed = true;
+    }
+
+    // Update settings.json to use it
+    let settings: Record<string, unknown> = {};
+    if (existsSync(SETTINGS_PATH)) {
+      try {
+        settings = JSON.parse(readFileSync(SETTINGS_PATH, 'utf-8'));
+      } catch {
+        // Invalid JSON, start fresh
+        settings = {};
+      }
+    }
+
+    // Add fileSuggestion if not configured (respects explicit null/false)
+    if (!('fileSuggestion' in settings)) {
+      settings.fileSuggestion = {
+        type: 'command',
+        command: '~/.claude/file-suggestion.sh',
+      };
+      writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
+      changed = true;
+    }
+
+    return changed;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check for missing config sections and save if needed
+ * This ensures config file is updated with new sections on upgrade
+ */
+function ensureConfigComplete(): void {
+  try {
+    clearCache(); // Get fresh config from disk
+    const config = getConfig();
+
+    // Check for v2.0+ required sections
+    const missingSections: string[] = [];
+    if (!config.hooks?.promptAnalysis?.memoryInjection) missingSections.push('memoryInjection');
+    if (!config.hooks?.permissions) missingSections.push('permissions');
+    if (!config.hooks?.userRules) missingSections.push('userRules');
+    if (!config.hooks?.gitCommitReview) missingSections.push('gitCommitReview');
+    if (!config.indexing) missingSections.push('indexing');
+    if (!config.toolSearch) missingSections.push('toolSearch');
+    if (!config.delegation) missingSections.push('delegation');
+
+    if (missingSections.length > 0) {
+      // getConfig() already merged with defaults, just save it
+      saveConfig(config);
+    }
+  } catch {
+    // Config issues will be caught by doctor
+  }
+}
 const MATRIX_DIR = join(homedir(), '.claude', 'matrix');
 const MARKER_FILE = join(MATRIX_DIR, '.initialized');
 const DB_PATH = join(MATRIX_DIR, 'matrix.db');
@@ -308,6 +392,12 @@ export async function run() {
       state.lastSessionAt = new Date().toISOString();
       writeFileSync(MARKER_FILE, JSON.stringify(state, null, 2));
     }
+
+    // Ensure config has all v2.0+ sections (auto-upgrades old configs)
+    ensureConfigComplete();
+
+    // Install file-suggestion.sh and update settings.json (silent)
+    installFileSuggestion();
 
     // Run indexer for supported projects (if enabled)
     const config = getConfig();

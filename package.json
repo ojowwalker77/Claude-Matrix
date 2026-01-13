@@ -1,6 +1,6 @@
 {
   "name": "claude-matrix",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Claude on Rails Tooling System",
   "type": "module",
   "main": "src/index.ts",

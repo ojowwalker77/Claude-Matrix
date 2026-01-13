@@ -298,15 +298,16 @@ export async function run() {
     const gitReviewConfig = config.hooks.gitCommitReview;
     const commitCheck = isCommitCommand(command);
 
-    if (gitReviewConfig?.enabled && commitCheck.isCommit) {
-      const depth = gitReviewConfig.depth ?? 'standard';
+    if (gitReviewConfig?.suggestOnCommit && commitCheck.isCommit) {
+      const mode = gitReviewConfig.defaultMode ?? 'default';
       const vcsName = commitCheck.vcs === 'jj' ? 'Jujutsu' : 'Git';
+      const modeArg = mode === 'lazy' ? ' lazy' : '';
 
       // Suggest review before commit (non-blocking)
       const output: HookOutput = {
         hookSpecificOutput: {
           hookEventName: 'PreToolUse',
-          additionalContext: `[Matrix] ${vcsName} commit detected. Consider running a code review first:\n\n/matrix:review staged ${depth}\n\nThis helps catch issues before they're committed.`,
+          additionalContext: `[Matrix] ${vcsName} commit detected. Consider running a code review first:\n\n\`/matrix:review staged${modeArg}\`\n\nThis helps catch issues before they're committed.`,
         },
       };
 
