@@ -12,7 +12,7 @@ allowed-tools:
 
 Export the Matrix memory database to a portable format.
 
-Arguments: `$ARGUMENTS`
+Parse user arguments from the skill invocation (text after the trigger phrase).
 
 ## Export Options
 

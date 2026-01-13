@@ -25,11 +25,13 @@ Display:
 
 ## Argument-Based Filtering
 
-If the user provided arguments, adjust the listing:
-- `$ARGUMENTS` contains "stats" or "statistics" - focus on statistics only
-- `$ARGUMENTS` contains "failure" - focus on recorded failures
-- `$ARGUMENTS` contains "warn" - use `matrix_warn` tool with action "list" to show warnings
-- `$ARGUMENTS` contains "solutions" - show detailed solutions list
+Parse user arguments from the skill invocation. When Claude Code loads this skill, the user's additional text after the trigger phrase is available for parsing.
+
+Based on user input, adjust the listing:
+- Contains "stats" or "statistics" - focus on statistics only
+- Contains "failure" - focus on recorded failures
+- Contains "warn" - use `matrix_warn` tool with action "list" to show warnings
+- Contains "solutions" - show detailed solutions list
 - Otherwise - show comprehensive overview
 
 Format the output as a clear, organized summary that helps the user understand their accumulated knowledge.

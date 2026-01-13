@@ -16,7 +16,7 @@ Transform a high-value Matrix solution into a reusable Claude Code Skill.
 
 ## Usage
 
-Parse arguments: `$ARGUMENTS`
+Parse user arguments from the skill invocation (text after the trigger phrase).
 
 **Expected format:** `<solution_id> [skill_name]`
 

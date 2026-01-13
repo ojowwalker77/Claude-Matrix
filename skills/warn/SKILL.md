@@ -11,7 +11,7 @@ allowed-tools:
 
 Manage "personal grudges" - warnings for problematic files or packages.
 
-Parse the arguments: `$ARGUMENTS`
+Parse user arguments from the skill invocation (text after the trigger phrase).
 
 Use the `matrix_warn` tool with the appropriate action parameter.
 

@@ -15,7 +15,7 @@ Identify high-value Matrix solutions that can be promoted to Claude Code Skills 
 
 Use the `matrix_skill_candidates` MCP tool to find promotable solutions.
 
-Parse optional arguments: `$ARGUMENTS`
+Parse optional user arguments from the skill invocation (text after the trigger phrase).
 
 **Argument patterns:**
 - `top 5` or `limit 5` - Limit to N candidates

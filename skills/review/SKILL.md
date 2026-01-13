@@ -24,7 +24,7 @@ Perform a comprehensive, context-aware code review using Matrix's review pipelin
 
 ## Usage
 
-Parse arguments: `$ARGUMENTS`
+Parse user arguments from the skill invocation (text after the trigger phrase).
 
 **Expected format:** `<target> [mode]`
 

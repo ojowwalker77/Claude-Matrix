@@ -22,7 +22,7 @@ Perform comprehensive research on a topic using multiple sources: web search, Co
 
 ## Usage
 
-Parse the arguments: `$ARGUMENTS`
+Parse user arguments from the skill invocation (text after the trigger phrase).
 
 **Format:** `<query> [depth]`
 
