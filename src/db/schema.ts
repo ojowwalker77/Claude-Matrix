@@ -142,6 +142,30 @@ CREATE TABLE IF NOT EXISTS api_cache (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Track one-time hook executions per session
+CREATE TABLE IF NOT EXISTS hook_executions (
+    hook_name TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    executed_at TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (hook_name, session_id)
+);
+
+-- Background job tracking for async operations
+CREATE TABLE IF NOT EXISTS background_jobs (
+    id TEXT PRIMARY KEY,
+    tool_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued', 'running', 'completed', 'failed', 'cancelled')),
+    progress_percent INTEGER DEFAULT 0,
+    progress_message TEXT,
+    input JSON,
+    result JSON,
+    error TEXT,
+    pid INTEGER,                        -- process ID for orphan cleanup
+    created_at TEXT DEFAULT (datetime('now')),
+    started_at TEXT,
+    completed_at TEXT
+);
+
 -- Indexes for hooks tables
 CREATE INDEX IF NOT EXISTS idx_warnings_type_target ON warnings(type, target);
 CREATE INDEX IF NOT EXISTS idx_warnings_repo ON warnings(repo_id);
@@ -150,6 +174,9 @@ CREATE INDEX IF NOT EXISTS idx_dep_installs_session ON dependency_installs(sessi
 CREATE INDEX IF NOT EXISTS idx_dep_installs_repo ON dependency_installs(repo_id);
 CREATE INDEX IF NOT EXISTS idx_session_summaries_session ON session_summaries(session_id);
 CREATE INDEX IF NOT EXISTS idx_api_cache_created ON api_cache(created_at);
+CREATE INDEX IF NOT EXISTS idx_hook_executions_session ON hook_executions(session_id);
+CREATE INDEX IF NOT EXISTS idx_background_jobs_status ON background_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_background_jobs_tool ON background_jobs(tool_name);
 
 -- ============================================================================
 -- Code Indexer Tables (Repository Symbol Index)

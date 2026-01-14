@@ -203,6 +203,7 @@ export const IndexStatusInputSchema = Type.Object({
 export const ReindexInputSchema = Type.Object({
   full: Type.Optional(Type.Boolean({ description: 'Force full reindex' })),
   repoPath: Type.Optional(Type.String({ description: repoPathDesc })),
+  async: Type.Optional(Type.Boolean({ description: 'Run in background, returns jobId for polling' })),
 });
 
 export const RepomixInputSchema = Type.Object({
@@ -233,6 +234,31 @@ export const LinkSkillInputSchema = Type.Object({
 });
 
 // ============================================================================
+// Background Job Schemas
+// ============================================================================
+
+export const JobStatusInputSchema = Type.Object({
+  jobId: Type.String({ description: 'Job ID to check' }),
+});
+
+export const JobCancelInputSchema = Type.Object({
+  jobId: Type.String({ description: 'Job ID to cancel' }),
+});
+
+export const JobListInputSchema = Type.Object({
+  status: Type.Optional(
+    Type.Union([
+      Type.Literal('queued'),
+      Type.Literal('running'),
+      Type.Literal('completed'),
+      Type.Literal('failed'),
+      Type.Literal('cancelled'),
+    ], { description: 'Filter by status' })
+  ),
+  limit: Type.Optional(Type.Number({ minimum: 1, maximum: 100, description: 'Max jobs to return' })),
+});
+
+// ============================================================================
 // Type Exports (inferred from schemas)
 // ============================================================================
 
@@ -254,6 +280,9 @@ export type RepomixInput = Static<typeof RepomixInputSchema>;
 export type DoctorInput = Static<typeof DoctorInputSchema>;
 export type SkillCandidatesInput = Static<typeof SkillCandidatesInputSchema>;
 export type LinkSkillInput = Static<typeof LinkSkillInputSchema>;
+export type JobStatusInput = Static<typeof JobStatusInputSchema>;
+export type JobCancelInput = Static<typeof JobCancelInputSchema>;
+export type JobListInput = Static<typeof JobListInputSchema>;
 
 // ============================================================================
 // Compiled Validators
@@ -278,6 +307,9 @@ export const validators = {
   doctor: TypeCompiler.Compile(DoctorInputSchema),
   skillCandidates: TypeCompiler.Compile(SkillCandidatesInputSchema),
   linkSkill: TypeCompiler.Compile(LinkSkillInputSchema),
+  jobStatus: TypeCompiler.Compile(JobStatusInputSchema),
+  jobCancel: TypeCompiler.Compile(JobCancelInputSchema),
+  jobList: TypeCompiler.Compile(JobListInputSchema),
 } as const;
 
 // ============================================================================
