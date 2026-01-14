@@ -19,6 +19,7 @@ import { matrixWarn } from '../tools/warn.js';
 import { matrixPrompt } from '../tools/prompt.js';
 import { matrixSkillCandidates, matrixLinkSkill } from '../tools/skill-factory.js';
 import { packRepository, formatResult } from '../repomix/index.js';
+import { getJob, cancelJob, listJobs, createJob, spawnBackgroundJob } from '../jobs/index.js';
 import {
   validators,
   validate,
@@ -40,6 +41,9 @@ import {
   type DoctorInput,
   type SkillCandidatesInput,
   type LinkSkillInput,
+  type JobStatusInput,
+  type JobCancelInput,
+  type JobListInput,
 } from '../tools/validation.js';
 
 /**
@@ -255,6 +259,19 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
 
       case 'matrix_reindex': {
         const input = validate<ReindexInput>(validators.reindex, args);
+
+        // Async mode: return job ID immediately for polling
+        if (input.async) {
+          const jobId = createJob('matrix_reindex', input);
+          spawnBackgroundJob('reindex', jobId, input);
+          return JSON.stringify({
+            jobId,
+            status: 'queued',
+            message: 'Reindex started in background. Use matrix_job_status to poll for progress.',
+          });
+        }
+
+        // Sync mode: wait for completion (existing behavior)
         const result = await matrixReindex(input);
         return JSON.stringify(result);
       }
@@ -284,6 +301,58 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         const input = validate<LinkSkillInput>(validators.linkSkill, args);
         const result = matrixLinkSkill(input);
         return JSON.stringify(result);
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // Background Job Tools
+      // ═══════════════════════════════════════════════════════════════
+
+      case 'matrix_job_status': {
+        const input = validate<JobStatusInput>(validators.jobStatus, args);
+        const job = getJob(input.jobId);
+        if (!job) {
+          return JSON.stringify({ error: `Job not found: ${input.jobId}` });
+        }
+        return JSON.stringify({
+          id: job.id,
+          toolName: job.toolName,
+          status: job.status,
+          progress: job.progressPercent,
+          message: job.progressMessage,
+          result: job.result,
+          error: job.error,
+          createdAt: job.createdAt,
+          startedAt: job.startedAt,
+          completedAt: job.completedAt,
+        });
+      }
+
+      case 'matrix_job_cancel': {
+        const input = validate<JobCancelInput>(validators.jobCancel, args);
+        const cancelled = cancelJob(input.jobId);
+        return JSON.stringify({
+          jobId: input.jobId,
+          cancelled,
+          message: cancelled
+            ? 'Job cancelled successfully'
+            : 'Job could not be cancelled (already completed or not found)',
+        });
+      }
+
+      case 'matrix_job_list': {
+        const input = validate<JobListInput>(validators.jobList, args);
+        const jobs = listJobs(input.status, input.limit ?? 50);
+        return JSON.stringify({
+          jobs: jobs.map(job => ({
+            id: job.id,
+            toolName: job.toolName,
+            status: job.status,
+            progress: job.progressPercent,
+            message: job.progressMessage,
+            createdAt: job.createdAt,
+          })),
+          count: jobs.length,
+        });
       }
 
       default:

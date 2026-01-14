@@ -28,6 +28,9 @@ import {
   DoctorInputSchema,
   SkillCandidatesInputSchema,
   LinkSkillInputSchema,
+  JobStatusInputSchema,
+  JobCancelInputSchema,
+  JobListInputSchema,
 } from './validation.js';
 
 // TypeBox schemas ARE JSON Schema - we just need to cast them for MCP's type system
@@ -207,5 +210,30 @@ export const TOOLS: Tool[] = [
     annotations: { idempotentHint: true },
     inputSchema: toInputSchema(LinkSkillInputSchema),
     _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // Background Job Tools - Always visible
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'matrix_job_status',
+    description: 'Get the status and progress of a background job. Use to poll for completion after starting an async operation.',
+    annotations: { readOnlyHint: true },
+    inputSchema: toInputSchema(JobStatusInputSchema),
+    _meta: { delegable: true, category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
+  },
+  {
+    name: 'matrix_job_cancel',
+    description: 'Cancel a running or queued background job.',
+    annotations: { destructiveHint: true },
+    inputSchema: toInputSchema(JobCancelInputSchema),
+    _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
+  },
+  {
+    name: 'matrix_job_list',
+    description: 'List background jobs. Filter by status to see queued, running, or completed jobs.',
+    annotations: { readOnlyHint: true },
+    inputSchema: toInputSchema(JobListInputSchema),
+    _meta: { delegable: true, category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
 ];

@@ -4,6 +4,22 @@ All notable changes to Claude Matrix are documented here.
 
 ## [2.0.3] - 2025-01-13
 
+### Added
+
+#### Background Job System
+- **Async Reindex** - Run `matrix_reindex` with `async: true` to avoid timeouts
+  - Returns `jobId` immediately for long-running operations
+  - Poll progress with `matrix_job_status`
+  - Cancel with `matrix_job_cancel`
+  - List all jobs with `matrix_job_list`
+
+#### One-Time Hook Execution
+- **once:true Support** - Hooks can now run only once per session
+  - `hasRunThisSession(hookName, sessionId)` - Check if already executed
+  - `markAsRun(hookName, sessionId)` - Mark hook as complete
+  - Database-backed tracking in `hook_executions` table
+  - Auto-cleanup of old records (7 days)
+
 ### Changed
 
 #### Commands Migrated to Skills

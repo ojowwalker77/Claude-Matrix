@@ -58,14 +58,14 @@ function isIndexableProject(root: string): boolean {
 /**
  * Result from getRepoInfo - either success with repo info or failure with message
  */
-type RepoInfoResult =
+export type RepoInfoResult =
   | { success: true; root: string; id: string }
   | { success: false; message: string };
 
 /**
  * Get repo info from a path (defaults to cwd)
  */
-function getRepoInfo(targetPath?: string): RepoInfoResult {
+export function getRepoInfo(targetPath?: string): RepoInfoResult {
   // Resolve relative paths to absolute
   const basePath = targetPath ? resolve(targetPath) : process.cwd();
 

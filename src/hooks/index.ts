@@ -294,3 +294,13 @@ export {
   type ComplexityData,
   type Assumption,
 } from './format-helpers.js';
+
+// ═══════════════════════════════════════════════════════════════
+// Re-exports for One-Time Hook Execution (v2.0.3)
+// ═══════════════════════════════════════════════════════════════
+export {
+  hasRunThisSession,
+  markAsRun,
+  clearExecution,
+  cleanupOldExecutions,
+} from './once.js';
