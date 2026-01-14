@@ -33,11 +33,18 @@ async function main() {
         process.exit(1);
     }
 
-    process.exit(0);
   } catch (err) {
     console.error(`Worker error: ${err instanceof Error ? err.message : err}`);
+    // Update job status to failed if it hasn't been updated yet
+    const { getJob, updateJob } = await import('./manager.js');
+    const job = getJob(jobId);
+    if (job && (job.status === 'queued' || job.status === 'running')) {
+      updateJob(jobId, {
+        status: 'failed',
+        error: `Worker script error: ${err instanceof Error ? err.message : String(err)}`,
+      });
+    }
     process.exit(1);
-  }
 }
 
 main();
