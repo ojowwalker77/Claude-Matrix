@@ -305,7 +305,6 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         return JSON.stringify(result);
       }
 
-<<<<<<< HEAD
       // ═══════════════════════════════════════════════════════════════
       // Background Job Tools
       // ═══════════════════════════════════════════════════════════════
