@@ -2,7 +2,7 @@
 
 All notable changes to Claude Matrix are documented here.
 
-## [2.1.0] - 2025-01-17
+## [2.1.1] - 2025-01-17
 
 ### Added
 
