@@ -20,6 +20,7 @@ import { matrixPrompt } from '../tools/prompt.js';
 import { matrixSkillCandidates, matrixLinkSkill } from '../tools/skill-factory.js';
 import { packRepository, formatResult } from '../repomix/index.js';
 import { getJob, cancelJob, listJobs, createJob, spawnBackgroundJob } from '../jobs/index.js';
+import { matrixDreamer } from '../dreamer/index.js';
 import {
   validators,
   validate,
@@ -44,6 +45,7 @@ import {
   type JobStatusInput,
   type JobCancelInput,
   type JobListInput,
+  type DreamerInput,
 } from '../tools/validation.js';
 
 /**
@@ -303,6 +305,7 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         return JSON.stringify(result);
       }
 
+<<<<<<< HEAD
       // ═══════════════════════════════════════════════════════════════
       // Background Job Tools
       // ═══════════════════════════════════════════════════════════════
@@ -353,6 +356,13 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
           })),
           count: jobs.length,
         });
+      }
+
+      // Dreamer - Scheduled Task Automation
+      case 'matrix_dreamer': {
+        const input = validate<DreamerInput>(validators.dreamer, args);
+        const result = await matrixDreamer(input);
+        return JSON.stringify(result);
       }
 
       default:

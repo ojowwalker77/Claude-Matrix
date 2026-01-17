@@ -249,4 +249,58 @@ CREATE INDEX IF NOT EXISTS idx_imports_source ON imports(source_path);
 CREATE INDEX IF NOT EXISTS idx_imports_name ON imports(imported_name);
 CREATE INDEX IF NOT EXISTS idx_symbol_refs_symbol ON symbol_refs(symbol_id);
 CREATE INDEX IF NOT EXISTS idx_symbol_refs_file ON symbol_refs(file_id);
+
+-- ============================================================================
+-- Dreamer Tables (Scheduled Task Automation)
+-- ============================================================================
+
+-- Scheduled task definitions
+CREATE TABLE IF NOT EXISTS dreamer_tasks (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    enabled INTEGER DEFAULT 1,
+    cron_expression TEXT NOT NULL,
+    timezone TEXT DEFAULT 'local',
+    command TEXT NOT NULL,
+    working_directory TEXT DEFAULT '.',
+    timeout INTEGER DEFAULT 300,
+    env JSON DEFAULT '{}',
+    skip_permissions INTEGER DEFAULT 0,
+    worktree_enabled INTEGER DEFAULT 0,
+    worktree_base_path TEXT,
+    worktree_branch_prefix TEXT DEFAULT 'claude-task/',
+    worktree_remote TEXT DEFAULT 'origin',
+    tags JSON DEFAULT '[]',
+    repo_id TEXT REFERENCES repos(id),
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Execution history for scheduled tasks
+CREATE TABLE IF NOT EXISTS dreamer_executions (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL REFERENCES dreamer_tasks(id) ON DELETE CASCADE,
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    status TEXT NOT NULL CHECK(status IN ('running','success','failure','timeout','skipped')),
+    triggered_by TEXT NOT NULL,
+    duration INTEGER,
+    exit_code INTEGER,
+    output_preview TEXT,
+    error TEXT,
+    task_name TEXT NOT NULL,
+    project_path TEXT,
+    cron_expression TEXT,
+    worktree_path TEXT,
+    worktree_branch TEXT,
+    worktree_pushed INTEGER
+);
+
+-- Indexes for dreamer tables
+CREATE INDEX IF NOT EXISTS idx_dreamer_tasks_repo ON dreamer_tasks(repo_id);
+CREATE INDEX IF NOT EXISTS idx_dreamer_tasks_enabled ON dreamer_tasks(enabled);
+CREATE INDEX IF NOT EXISTS idx_dreamer_executions_task ON dreamer_executions(task_id);
+CREATE INDEX IF NOT EXISTS idx_dreamer_executions_started ON dreamer_executions(started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_dreamer_executions_status ON dreamer_executions(status);
 `;

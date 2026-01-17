@@ -2,6 +2,57 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.1.0] - 2025-01-17
+
+### Added
+
+#### Dreamer - Scheduled Task Automation
+- **`matrix_dreamer` Tool** - Schedule and manage automated Claude tasks
+  - 7 actions: `add`, `list`, `run`, `remove`, `status`, `logs`, `history`
+  - Native OS schedulers: launchd (macOS), crontab (Linux)
+  - Execution history tracked in SQLite database
+
+- **Schedule Formats** - Flexible scheduling options
+  - Standard cron expressions: `0 9 * * *`
+  - Natural language: `every day at 9am`, `weekdays at 10:30am`, `every Monday at 5pm`
+  - Presets: `hourly`, `daily-9am`, `weekly-monday`, etc.
+
+- **Git Worktree Mode** - Isolated task execution (optional)
+  - Creates branch + worktree before execution
+  - Auto-commits and pushes changes on completion
+  - Cleans up worktree after successful push
+  - Configurable: `basePath`, `branchPrefix`, `remoteName`
+
+- **Task Configuration Options**
+  - `timeout`: Execution timeout in seconds (default: 300)
+  - `timezone`: IANA timezone or "local"
+  - `tags`: Organize tasks with tags
+  - `skipPermissions`: Run without permission prompts (opt-in)
+  - `env`: Custom environment variables
+
+#### New Skills
+- **`/scheduler:schedule-add`** - Create scheduled tasks interactively
+- **`/scheduler:schedule-list`** - View all scheduled tasks
+- **`/scheduler:schedule-run`** - Manually trigger a task
+- **`/scheduler:schedule-remove`** - Delete a scheduled task
+- **`/scheduler:schedule-status`** - Check scheduler health
+- **`/scheduler:schedule-logs`** - View task output logs
+- **`/scheduler:schedule-history`** - View execution history
+
+### Database Schema
+
+- **v5 Migration** - Added Dreamer tables
+  - `dreamer_tasks`: Scheduled task definitions
+  - `dreamer_executions`: Execution history records
+  - Indexes for efficient querying by repo, status, and time
+
+### Dependencies
+
+- Added `croner` (^8.1.2) - Cron expression parsing and validation
+- Added `cronstrue` (^2.52.0) - Human-readable cron descriptions
+
+---
+
 ## [2.0.3] - 2025-01-13
 
 ### Added
@@ -48,6 +99,8 @@ All notable changes to Claude Matrix are documented here.
 - **Commands Directory** - Deleted `commands/` in favor of `skills/`
   - All functionality preserved in new skills format
   - Old `/matrix:*` invocation still works via skill triggers
+
+---
 
 ## [2.0.2] - 2025-01-13
 

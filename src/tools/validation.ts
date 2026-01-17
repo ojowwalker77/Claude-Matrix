@@ -259,6 +259,63 @@ export const JobListInputSchema = Type.Object({
 });
 
 // ============================================================================
+// Dreamer (Scheduled Task Automation) Schemas
+// ============================================================================
+
+const DreamerActionEnum = Type.Union([
+  Type.Literal('add'),
+  Type.Literal('list'),
+  Type.Literal('run'),
+  Type.Literal('remove'),
+  Type.Literal('status'),
+  Type.Literal('logs'),
+  Type.Literal('history'),
+]);
+
+const DreamerExecutionStatusEnum = Type.Union([
+  Type.Literal('running'),
+  Type.Literal('success'),
+  Type.Literal('failure'),
+  Type.Literal('timeout'),
+  Type.Literal('skipped'),
+]);
+
+const WorktreeConfigSchema = Type.Object({
+  enabled: Type.Optional(Type.Boolean({ description: 'Run in isolated git worktree' })),
+  basePath: Type.Optional(Type.String({ description: 'Worktree base directory' })),
+  branchPrefix: Type.Optional(Type.String({ description: 'Branch name prefix (default: claude-task/)' })),
+  remoteName: Type.Optional(Type.String({ description: 'Remote for pushing (default: origin)' })),
+});
+
+export const DreamerInputSchema = Type.Object({
+  action: DreamerActionEnum,
+
+  // For 'add' action
+  name: Type.Optional(Type.String({ description: 'Task name', maxLength: 100 })),
+  schedule: Type.Optional(Type.String({ description: 'Cron expression or natural language (e.g., "every day at 9am")' })),
+  command: Type.Optional(Type.String({ description: 'Claude prompt or /command to execute' })),
+  description: Type.Optional(Type.String({ description: 'Task description', maxLength: 500 })),
+  workingDirectory: Type.Optional(Type.String({ description: 'Working directory' })),
+  timeout: Type.Optional(Type.Number({ description: 'Timeout in seconds (default: 300)' })),
+  timezone: Type.Optional(Type.String({ description: 'IANA timezone or "local"' })),
+  tags: Type.Optional(Type.Array(Type.String(), { description: 'Tags for organization' })),
+  skipPermissions: Type.Optional(Type.Boolean({ description: 'Run with --dangerously-skip-permissions' })),
+  worktree: Type.Optional(WorktreeConfigSchema),
+  env: Type.Optional(Type.Record(Type.String(), Type.String(), { description: 'Environment variables' })),
+
+  // For 'run', 'remove', 'logs' actions
+  taskId: Type.Optional(Type.String({ description: 'Task ID' })),
+
+  // For 'list' and 'history' actions
+  limit: Type.Optional(Type.Number({ description: 'Max results to return' })),
+  tag: Type.Optional(Type.String({ description: 'Filter by tag' })),
+
+  // For 'logs' action
+  lines: Type.Optional(Type.Number({ description: 'Number of log lines (default: 50)' })),
+  stream: Type.Optional(Type.Union([Type.Literal('stdout'), Type.Literal('stderr'), Type.Literal('both')], { description: 'Log stream to read' })),
+});
+
+// ============================================================================
 // Type Exports (inferred from schemas)
 // ============================================================================
 
@@ -283,6 +340,7 @@ export type LinkSkillInput = Static<typeof LinkSkillInputSchema>;
 export type JobStatusInput = Static<typeof JobStatusInputSchema>;
 export type JobCancelInput = Static<typeof JobCancelInputSchema>;
 export type JobListInput = Static<typeof JobListInputSchema>;
+export type DreamerInput = Static<typeof DreamerInputSchema>;
 
 // ============================================================================
 // Compiled Validators
@@ -310,6 +368,7 @@ export const validators = {
   jobStatus: TypeCompiler.Compile(JobStatusInputSchema),
   jobCancel: TypeCompiler.Compile(JobCancelInputSchema),
   jobList: TypeCompiler.Compile(JobListInputSchema),
+  dreamer: TypeCompiler.Compile(DreamerInputSchema),
 } as const;
 
 // ============================================================================

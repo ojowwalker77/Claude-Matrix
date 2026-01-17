@@ -31,6 +31,7 @@ import {
   JobStatusInputSchema,
   JobCancelInputSchema,
   JobListInputSchema,
+  DreamerInputSchema,
 } from './validation.js';
 
 // TypeBox schemas ARE JSON Schema - we just need to cast them for MCP's type system
@@ -235,5 +236,16 @@ export const TOOLS: Tool[] = [
     annotations: { readOnlyHint: true },
     inputSchema: toInputSchema(JobListInputSchema),
     _meta: { delegable: true, category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // Dreamer - Scheduled Task Automation (v2.1)
+  // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'matrix_dreamer',
+    description: 'Schedule and manage automated Claude tasks. Actions: "add" (create task), "list" (show all tasks), "run" (execute manually), "remove" (delete task), "status" (system health), "logs" (view output), "history" (execution records). Uses native OS schedulers (launchd on macOS, crontab on Linux).',
+    annotations: { idempotentHint: false },
+    inputSchema: toInputSchema(DreamerInputSchema),
+    _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
 ];
