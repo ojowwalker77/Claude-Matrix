@@ -150,6 +150,13 @@ CREATE TABLE IF NOT EXISTS hook_executions (
     PRIMARY KEY (hook_name, session_id)
 );
 
+-- Plugin metadata (version, install source, etc.)
+CREATE TABLE IF NOT EXISTS plugin_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
 -- Background job tracking for async operations
 CREATE TABLE IF NOT EXISTS background_jobs (
     id TEXT PRIMARY KEY,

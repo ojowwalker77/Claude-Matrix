@@ -2,6 +2,24 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.1.4] - 2025-01-18
+
+### Fixed
+
+#### Database Initialization
+- **Missing `plugin_meta` Table** - Fixed session start crash when inserting plugin metadata
+  - `session-start.ts` attempted to INSERT into `plugin_meta` table that didn't exist
+  - Added `plugin_meta` table to `schema.ts` for fresh installs
+  - Added v6 migration in `migrate.ts` for existing databases
+  - Added v6 version detection in migration logic
+
+### Database Schema
+
+- **v6 Migration** - Added plugin metadata table
+  - `plugin_meta`: Key-value store for plugin version, install source, etc.
+
+---
+
 ## [2.1.3] - 2025-01-18
 
 ### Changed

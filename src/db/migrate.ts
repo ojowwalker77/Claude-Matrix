@@ -4,7 +4,7 @@ import { homedir } from 'os';
 import { SCHEMA_SQL } from './schema.js';
 
 // Schema version - increment when schema changes
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 // Migration definitions - each migration upgrades from (version - 1) to version
 const migrations: Record<number, string> = {
@@ -133,6 +133,15 @@ const migrations: Record<number, string> = {
     CREATE INDEX IF NOT EXISTS idx_dreamer_executions_started ON dreamer_executions(started_at DESC);
     CREATE INDEX IF NOT EXISTS idx_dreamer_executions_status ON dreamer_executions(status);
   `,
+
+  // v5 -> v6: Plugin metadata table
+  6: `
+    CREATE TABLE IF NOT EXISTS plugin_meta (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TEXT DEFAULT (datetime('now'))
+    );
+  `,
 };
 
 function getDbPath(): string {
@@ -208,7 +217,20 @@ function getCurrentVersion(db: Database): number {
           }
         }
 
-        const initialVersion = hasV5Tables ? 5 : (hasV4Columns ? 4 : (hasV3Columns ? 3 : (hasAllV2Tables ? 2 : 1)));
+        // Check for v6 (plugin_meta table)
+        let hasV6Tables = false;
+        if (hasV5Tables) {
+          try {
+            const pluginMetaTable = db.query(`
+              SELECT name FROM sqlite_master WHERE type='table' AND name='plugin_meta'
+            `).get();
+            hasV6Tables = !!pluginMetaTable;
+          } catch {
+            hasV6Tables = false;
+          }
+        }
+
+        const initialVersion = hasV6Tables ? 6 : (hasV5Tables ? 5 : (hasV4Columns ? 4 : (hasV3Columns ? 3 : (hasAllV2Tables ? 2 : 1))));
         db.exec(`INSERT INTO schema_version (version) VALUES (${initialVersion})`);
         return initialVersion;
       } else {
