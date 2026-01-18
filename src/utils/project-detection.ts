@@ -80,9 +80,9 @@ const PROJECT_PATTERNS: Array<{
     displayName: 'Swift',
     supported: true,
   },
-  // C# - use glob patterns for .csproj and .sln
+  // C# - use glob patterns for .csproj, .sln, and .slnx
   {
-    files: ['*.csproj', '*.sln', 'global.json'],
+    files: ['*.csproj', '*.sln', '*.slnx', 'global.json'],
     type: 'csharp',
     displayName: 'C#',
     supported: true,
