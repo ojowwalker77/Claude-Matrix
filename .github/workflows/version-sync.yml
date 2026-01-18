@@ -1,98 +1,49 @@
 name: Version Sync
 
 on:
-  pull_request:
-    types: [opened, synchronize]
+  push:
+    branches: [main]
     paths:
       - 'CHANGELOG.md'
 
 jobs:
   sync-versions:
-    name: Sync Version Files
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.MATRIX_BOT_TOKEN }}
 
       - name: Extract version from CHANGELOG
         id: changelog
         run: |
-          # Get the first version number from CHANGELOG.md (latest release)
           VERSION=$(grep -oP '(?<=^## \[)[0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md | head -1)
-          if [ -z "$VERSION" ]; then
-            echo "No version found in CHANGELOG.md"
-            exit 1
-          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Found version: $VERSION"
 
-      - name: Check current versions
-        id: current
+      - name: Check if update needed
+        id: check
         run: |
-          PKG_VERSION=$(jq -r '.version' package.json)
-          PLUGIN_VERSION=$(jq -r '.version' .claude-plugin/plugin.json)
-          MARKET_VERSION=$(jq -r '.version' .claude-plugin/marketplace.json)
-          MARKET_PLUGIN_VERSION=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
-
-          echo "package=$PKG_VERSION" >> $GITHUB_OUTPUT
-          echo "plugin=$PLUGIN_VERSION" >> $GITHUB_OUTPUT
-          echo "marketplace=$MARKET_VERSION" >> $GITHUB_OUTPUT
-          echo "marketplace_plugin=$MARKET_PLUGIN_VERSION" >> $GITHUB_OUTPUT
-
-          CHANGELOG_VERSION="${{ steps.changelog.outputs.version }}"
-
-          if [ "$PKG_VERSION" = "$CHANGELOG_VERSION" ] && \
-             [ "$PLUGIN_VERSION" = "$CHANGELOG_VERSION" ] && \
-             [ "$MARKET_VERSION" = "$CHANGELOG_VERSION" ] && \
-             [ "$MARKET_PLUGIN_VERSION" = "$CHANGELOG_VERSION" ]; then
-            echo "needs_update=false" >> $GITHUB_OUTPUT
+          PKG=$(jq -r '.version' package.json)
+          CHANGELOG="${{ steps.changelog.outputs.version }}"
+          if [ "$PKG" = "$CHANGELOG" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
           else
-            echo "needs_update=true" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update version files
-        if: steps.current.outputs.needs_update == 'true'
+      - name: Update versions
+        if: steps.check.outputs.skip == 'false'
         run: |
           VERSION="${{ steps.changelog.outputs.version }}"
+          jq --arg v "$VERSION" '.version = $v' package.json > tmp && mv tmp package.json
+          jq --arg v "$VERSION" '.version = $v' .claude-plugin/plugin.json > tmp && mv tmp .claude-plugin/plugin.json
+          jq --arg v "$VERSION" '.version = $v | .plugins[0].version = $v' .claude-plugin/marketplace.json > tmp && mv tmp .claude-plugin/marketplace.json
 
-          # Update package.json
-          jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp
-          mv package.json.tmp package.json
-
-          # Update plugin.json
-          jq --arg v "$VERSION" '.version = $v' .claude-plugin/plugin.json > .claude-plugin/plugin.json.tmp
-          mv .claude-plugin/plugin.json.tmp .claude-plugin/plugin.json
-
-          # Update marketplace.json (both top-level and plugins[0].version)
-          jq --arg v "$VERSION" '.version = $v | .plugins[0].version = $v' .claude-plugin/marketplace.json > .claude-plugin/marketplace.json.tmp
-          mv .claude-plugin/marketplace.json.tmp .claude-plugin/marketplace.json
-
-          echo "Updated all version files to $VERSION"
-
-      - name: Commit changes
-        if: steps.current.outputs.needs_update == 'true'
+      - name: Commit & push
+        if: steps.check.outputs.skip == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add package.json .claude-plugin/plugin.json .claude-plugin/marketplace.json
+          git add -A
           git commit -m "chore: sync versions to ${{ steps.changelog.outputs.version }}"
           git push
-
-      - name: Comment on PR
-        if: steps.current.outputs.needs_update == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `Version files synced to **${{ steps.changelog.outputs.version }}** from CHANGELOG.md`
-            })
