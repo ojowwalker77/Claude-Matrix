@@ -29,9 +29,12 @@ jobs:
       - name: Check if update needed
         id: check
         run: |
-          PKG=$(jq -r '.version' package.json)
           CHANGELOG="${{ steps.changelog.outputs.version }}"
-          if [ "$PKG" = "$CHANGELOG" ]; then
+          PKG=$(jq -r '.version' package.json)
+          PLUGIN=$(jq -r '.version' .claude-plugin/plugin.json)
+          MARKET=$(jq -r '.version' .claude-plugin/marketplace.json)
+          MARKET_PLUGIN=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
+          if [ "$PKG" = "$CHANGELOG" ] && [ "$PLUGIN" = "$CHANGELOG" ] && [ "$MARKET" = "$CHANGELOG" ] && [ "$MARKET_PLUGIN" = "$CHANGELOG" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
           else
             echo "skip=false" >> $GITHUB_OUTPUT
