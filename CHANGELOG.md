@@ -2,6 +2,16 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.1.2] - 2025-01-18
+
+### Added
+
+#### C# Support Enhancements
+- **C# Tree-sitter Grammar** - Added `tree-sitter-c-sharp.wasm` for code indexing
+- **.slnx Detection** - Extended C# project detection to include `.slnx` files
+
+---
+
 ## [2.1.1] - 2025-01-17
 
 ### Added

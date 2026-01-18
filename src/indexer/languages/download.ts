@@ -26,6 +26,7 @@ const GRAMMAR_BASE_URLS: Record<string, string> = {
   'tree-sitter-cpp.wasm': 'https://unpkg.com/tree-sitter-cpp@0.23.4/tree-sitter-cpp.wasm',
   'tree-sitter-ruby.wasm': 'https://unpkg.com/tree-sitter-ruby@0.23.1/tree-sitter-ruby.wasm',
   'tree-sitter-php.wasm': 'https://unpkg.com/tree-sitter-php@0.24.2/tree-sitter-php.wasm',
+  'tree-sitter-c-sharp.wasm': 'https://unpkg.com/tree-sitter-c-sharp@0.23.1/tree-sitter-c_sharp.wasm',
 };
 
 // Track ongoing downloads to avoid duplicates
