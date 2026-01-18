@@ -2,6 +2,24 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.1.3] - 2025-01-18
+
+### Changed
+
+#### Doctor - Comprehensive Diagnostics
+- **Expanded Health Checks** - Added diagnostics for all v2.0+ features
+  - Background Jobs: Table existence, orphaned job cleanup
+  - Hook Executions: Session tracking table validation
+  - Skills Directory: Existence check and skill count
+  - Subagent Hooks: `toolSearch` config validation
+  - Model Delegation: `delegation` config section check
+  - Dreamer Scheduler: Tables and platform registration (launchd/crontab)
+  - File Suggestion: Script installation and settings.json config
+- **Auto-fix Capabilities** - Most issues can be automatically resolved
+- **Enhanced Issue Template** - Categorized checks for better bug reporting
+
+---
+
 ## [2.1.1] - 2025-01-17
 
 ### Added
