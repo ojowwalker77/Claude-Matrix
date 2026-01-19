@@ -9,6 +9,7 @@ import type { DreamerTask } from '../types.js';
 import { createTask, deleteTask } from '../store.js';
 import { getScheduler, isPlatformSupported } from '../scheduler/index.js';
 import { parseSchedule, getNextRuns, cronToHuman } from '../cron/index.js';
+import { getConfig } from '../../config/index.js';
 
 export interface AddResult {
   success: boolean;
@@ -50,6 +51,10 @@ export async function handleAdd(input: DreamerInput): Promise<AddResult> {
   // Generate task ID
   const taskId = crypto.randomUUID();
 
+  // Get config defaults
+  const config = getConfig();
+  const dreamerConfig = config.dreamer;
+
   // Build worktree config
   const worktreeEnabled = input.worktree?.enabled ?? false;
 
@@ -63,13 +68,13 @@ export async function handleAdd(input: DreamerInput): Promise<AddResult> {
     timezone: input.timezone ?? 'local',
     command: input.command,
     workingDirectory: input.workingDirectory ?? process.cwd(),
-    timeout: input.timeout ?? 300,
+    timeout: input.timeout ?? dreamerConfig.execution.defaultTimeout,
     env: input.env ?? {},
-    skipPermissions: input.skipPermissions ?? false,
+    skipPermissions: input.skipPermissions ?? dreamerConfig.execution.defaultSkipPermissions,
     worktreeEnabled,
-    worktreeBasePath: input.worktree?.basePath,
-    worktreeBranchPrefix: input.worktree?.branchPrefix ?? 'claude-task/',
-    worktreeRemote: input.worktree?.remoteName ?? 'origin',
+    worktreeBasePath: input.worktree?.basePath ?? dreamerConfig.worktree.defaultBasePath,
+    worktreeBranchPrefix: input.worktree?.branchPrefix ?? dreamerConfig.worktree.defaultBranchPrefix,
+    worktreeRemote: input.worktree?.remoteName ?? dreamerConfig.worktree.defaultRemote,
     tags: input.tags ?? [],
     repoId: undefined,
   };

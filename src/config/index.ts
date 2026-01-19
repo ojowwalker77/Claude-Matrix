@@ -113,6 +113,30 @@ export interface GitCommitReviewConfig {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Dreamer Config (Scheduled Task Automation)
+// ═══════════════════════════════════════════════════════════════
+export interface DreamerWorktreeConfig {
+  /** Default branch prefix for worktree branches */
+  defaultBranchPrefix: string;
+  /** Default remote for pushing worktree branches */
+  defaultRemote: string;
+  /** Optional custom base path for worktrees */
+  defaultBasePath?: string;
+}
+
+export interface DreamerExecutionConfig {
+  /** Default timeout in seconds */
+  defaultTimeout: number;
+  /** Default value for skip permissions flag */
+  defaultSkipPermissions: boolean;
+}
+
+export interface DreamerConfig {
+  worktree: DreamerWorktreeConfig;
+  execution: DreamerExecutionConfig;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // User-Configurable Rules (v2.0)
 // ═══════════════════════════════════════════════════════════════
 export type RuleEvent = 'bash' | 'edit' | 'read' | 'prompt' | 'write';
@@ -214,6 +238,8 @@ export interface MatrixConfig {
     /** Model for delegable tools: 'haiku' (cheaper) or 'sonnet' (more capable) */
     model: 'haiku' | 'sonnet';
   };
+  /** Dreamer scheduled task automation settings */
+  dreamer: DreamerConfig;
 }
 
 function getDownloadsDirectory(): string {
@@ -394,6 +420,17 @@ export const DEFAULT_CONFIG: MatrixConfig = {
   delegation: {
     enabled: true,
     model: 'haiku' as const,  // Use haiku for cheaper read-only operations
+  },
+  dreamer: {
+    worktree: {
+      defaultBranchPrefix: 'matrix-dreamer/',
+      defaultRemote: 'origin',
+      defaultBasePath: undefined,
+    },
+    execution: {
+      defaultTimeout: 300,  // 5 minutes
+      defaultSkipPermissions: false,
+    },
   },
 };
 

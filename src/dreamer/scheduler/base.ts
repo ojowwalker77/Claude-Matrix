@@ -7,6 +7,7 @@
 
 import type { DreamerTask, SchedulerStatus } from '../types.js';
 import { shellEscape, sanitizeForComment } from './shell.js';
+import { getConfig } from '../../config/index.js';
 
 /**
  * Abstract base class for platform-specific schedulers
@@ -105,11 +106,15 @@ export abstract class BaseScheduler {
     }
 
     // Escape all user-provided values for safe shell embedding
+    const config = getConfig();
+    const defaultPrefix = config.dreamer.worktree.defaultBranchPrefix;
+    const defaultRemote = config.dreamer.worktree.defaultRemote;
+
     const mainRepoEsc = shellEscape(this.getWorkingDirectory(task));
     const taskIdEsc = shellEscape(task.id);
     const taskNameEsc = shellEscape(task.name);
-    const branchPrefixEsc = shellEscape(task.worktreeBranchPrefix || 'claude-task/');
-    const remoteNameEsc = shellEscape(task.worktreeRemote || 'origin');
+    const branchPrefixEsc = shellEscape(task.worktreeBranchPrefix || defaultPrefix);
+    const remoteNameEsc = shellEscape(task.worktreeRemote || defaultRemote);
     const logDirEsc = shellEscape(logDir);
 
     // Sanitize task name for comment (strip anything that could break comment)

@@ -1,177 +1,275 @@
-# Code Review Phases
+# Code Review: Orchestrator + 4-Agent Pipeline
 
-Detailed procedures for the 5-phase code review pipeline.
+## Architecture Overview
 
-## Phase 1: Context Mapping (Blast Radius)
-
-Calculate the impact scope of changes:
-
-1. **Identify changed files/functions**
-   - For file path: Use `Read` tool to examine the file
-   - For "staged": Use `git diff --cached --name-only`
-   - For PR: Use `gh pr diff <number>`
-
-2. **Find all callers using `matrix_find_callers`**
-   - For each exported function/class in changed files
-   - Build dependency graph of affected code
-
-3. **Calculate impact score**
-   - Direct changes: Files modified
-   - First-degree impact: Files that import changed modules
-   - Second-degree impact: Files that import first-degree files
-
-Output format:
 ```
-Blast Radius Analysis
-=====================
-Direct changes: 3 files
-  - src/utils/auth.ts (modified)
-  - src/utils/session.ts (modified)
-  - src/api/login.ts (modified)
-
-First-degree impact: 8 files
-  - src/middleware/authenticate.ts (imports auth)
-  - src/handlers/user.ts (imports session)
-  ...
-
-Impact Score: 7/10 (medium-high)
+ORCHESTRATOR (parses target, routes, aggregates)
+     │
+     ├── DETECTION AGENT → security, runtime, breaking, logic flaws
+     ├── IMPACT AGENT → blast radius, transitive graph, test coverage
+     ├── TRIAGE AGENT → tier assignment, confidence calibration, noise filter
+     └── REMEDIATION AGENT → context-aware fixes, regression checks
 ```
 
-## Phase 2: Intent Inference
+**Execution order:** Sequential (Detection → Impact → Triage → Remediation)
+**Early exit:** If Detection finds nothing critical, skip deep Impact/Triage analysis
 
-Analyze what the change is trying to accomplish:
+---
 
-1. **Gather context**
-   - Commit messages (if available)
-   - PR description (if PR number provided)
-   - Code comments and docstrings
+## Orchestrator
 
-2. **Classify change type**
-   - bugfix: Fixing incorrect behavior
-   - feature: Adding new functionality
-   - refactor: Restructuring without behavior change
-   - performance: Optimization
-   - security: Security improvement
-   - cleanup: Code quality improvement
+### 1. Pre-flight Checks
 
-3. **Summarize intent**
-   - What problem is being solved?
-   - What approach is being taken?
+```
+BEFORE any analysis, verify tool availability:
 
-## Phase 3: Socratic Questioning
+1. Check Index Status:
+   result = matrix_index_status()
 
-Generate probing questions about the changes:
+   If result.indexed == false OR result.stale == true:
+     indexAvailable = false
+     Warn: "Code index unavailable/stale. Using Grep fallback (slower but complete)."
+   Else:
+     indexAvailable = true
 
-1. **Edge cases**
-   - What happens with null/undefined inputs?
-   - What about empty collections?
-   - Boundary conditions?
+2. Set Tool Strategy:
+   If indexAvailable:
+     findCallers = matrix_find_callers
+     findDefinition = matrix_find_definition
+     listExports = matrix_list_exports
+     searchSymbols = matrix_search_symbols
+   Else:
+     findCallers = grep_fallback_callers    # Grep for import statements
+     findDefinition = grep_fallback_def     # Grep for function/class def
+     listExports = grep_fallback_exports    # Grep for export statements
+     searchSymbols = grep_fallback_search   # Grep with pattern
+```
 
-2. **Error handling**
-   - Are errors properly caught and handled?
-   - Are error messages helpful?
-   - Is error state properly cleaned up?
+### 2. Parse Target
 
-3. **Testing coverage**
-   - Are the changes covered by tests?
-   - Are edge cases tested?
-   - Should new tests be added?
+```
+Input: <target> [mode]
 
-4. **Security considerations**
-   - Input validation?
-   - Authentication/authorization?
-   - Data sanitization?
+Targets:
+- File path: "src/utils/auth.ts" → Read file directly
+- "staged": git diff --cached --name-only → list changed files
+- "uncommitted": git diff --name-only → list all uncommitted changes
+- PR number: gh pr diff <number> → get PR changes
 
-## Phase 4: Targeted Investigation
+For PR targets, check merge status first:
+  gh pr view <number> --json mergeable,mergeStateStatus
+  If mergeable = "CONFLICTING":
+    Warn: "PR has merge conflicts. Resolve before review for accurate analysis."
+    Continue with review but note affected files may have conflict markers.
+```
 
-For each concern from Phase 3:
+### 3. Dispatch Agents
 
-1. **Check existing patterns**
-   - Use `matrix_find_definition` to see how similar code handles this
-   - Use `matrix_recall` to find related solutions
+**Default mode:** All 4 agents
+**Lazy mode:** Detection only (Tier 1 issues)
 
-2. **Verify assumptions**
-   - Read related files to understand context
-   - Check test files for expected behavior
+### 4. Aggregate Results
 
-3. **Research if needed**
-   - For unfamiliar patterns, query external documentation
-   - Use `matrix_recall` for past issues with similar code
+Combine agent outputs into final review format (see Output Format below)
 
-## Phase 5: Reflection & Consolidation
+---
 
-Generate final review output in Greptile-style format:
+## Agent References
 
-### Confidence Score (1-5)
-- 5/5: No issues, ready to merge
-- 4/5: Minor suggestions only, approve with optional changes
-- 3/5: Some issues that should be addressed but not blocking
-- 2/5: Important issues that need attention before merge
-- 1/5: Critical bugs or issues that will cause incorrect behavior
+Each agent has detailed documentation:
 
-### Output Format
+- **`agents/detection.md`** - Vulnerability patterns, runtime checks, breaking change detection
+- **`agents/impact.md`** - Transitive blast radius algorithm, service boundary detection
+- **`agents/triage.md`** - Tier definitions, confidence calibration, signal ratio calculation
+- **`agents/remediation.md`** - Fix generation, regression risk assessment
+
+---
+
+## Execution Flow
+
+### Step 1: Detection Agent
+```
+Input: changed files/diff
+Output: DetectionFinding[]
+
+For each file:
+1. Scan for SECURITY patterns (injection, secrets, auth)
+2. Scan for RUNTIME issues (uncaught promises, null access)
+3. Check for BREAKING changes (removed exports, changed signatures)
+4. Identify LOGIC flaws (dead code, unreachable branches)
+
+Early exit check: if no critical/high findings, reduce Impact depth
+```
+
+### Step 2: Impact Agent
+```
+Input: changed files, Detection findings
+Output: ImpactGraph
+
+1. matrix_list_exports(changed_files) → changed symbols
+2. matrix_find_callers(symbols) → direct callers (1st degree)
+3. Recurse for 2nd/3rd degree if critical findings exist
+4. Identify test files (*.test.ts, *.spec.ts)
+5. Detect service boundaries (routes/, api/, handlers/)
+6. Calculate risk score
+```
+
+### Step 3: Triage Agent
+```
+Input: DetectionFinding[], ImpactGraph
+Output: TriagedFinding[] with tier assignments
+
+For each finding:
+1. Assign initial tier based on type/severity
+2. Apply confidence calibration
+3. Calculate signal ratio
+4. Suppress Tier 3 (noise)
+```
+
+### Step 4: Remediation Agent
+```
+Input: Tier 1 & 2 findings, ImpactGraph
+Output: RemediationSuggestion[]
+
+For each finding:
+1. matrix_search_symbols for similar patterns
+2. matrix_recall for past solutions
+3. Generate fix matching codebase style
+4. Assess regression risk against blast radius
+5. Suggest tests if coverage gap
+```
+
+---
+
+## Output Format
 
 ```markdown
 # Matrix Review
 
-## Summary
-[2-3 sentence overview of what this PR/change does and its purpose]
+## Risk Assessment
+Impact Score: 7/10 | Signal Ratio: 87% (23 shown, 3 suppressed)
+Blast Radius: 18 files | API Boundaries: 2 routes | Test Coverage: 75%
 
-## Key Changes
-- [Change 1]: Brief description
-- [Change 2]: Brief description
-- [Change 3]: Brief description
+## Tier 1: Critical (MUST address)
 
-## Critical Issues Found
+### 1. [SECURITY] SQL Injection
+**File:** src/api/users.ts:42 | **Confidence:** 94%
 
-### 1. [Issue Title]
-[Detailed explanation of the issue, why it's critical, and what behavior it will cause]
+**Issue:**
+User input passed directly to query without sanitization.
 
-### 2. [Issue Title]
-[Detailed explanation]
+**Blast Radius:** 8 files import this module, 2 API routes affected
 
-## Additional Issues
-- [Minor issue 1]
-- [Minor issue 2]
+**Suggested Fix:**
+```typescript
+// Before
+const users = await db.query(`SELECT * FROM users WHERE id = ${userId}`);
 
-## Positive Aspects
-- [Good practice observed]
-- [Well-implemented pattern]
+// After
+const users = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+```
 
-## Confidence Score: [N]/5
-
-[Explanation of why this score was given, referencing the critical issues]
-
-**Files requiring attention:** [file1.ts] (critical issue #1), [file2.ts] (critical issue #2)
+**Regression Risk:** Low - parameterized queries are backwards compatible
 
 ---
 
-## Important Files Changed
+## Tier 2: Important (SHOULD address)
 
-| Filename | Score | Overview |
-|----------|-------|----------|
-| path/to/file1.ts | 2/5 | Brief description of issues in this file |
-| path/to/file2.ts | 1/5 | Brief description of critical issues |
-| path/to/file3.ts | 5/5 | No issues found, clean implementation |
+### 3. [PERF] N+1 Query Pattern
+**File:** src/services/orders.ts:67 | **Confidence:** 82%
 
-### File Analysis
+**Issue:**
+Loop executes individual queries instead of batch fetch.
 
-#### `path/to/file1.ts` — Score: 2/5
-[Detailed analysis of this file's changes, issues found, and suggestions]
+**Suggested Fix:** Use `WHERE id IN (...)` with collected IDs
 
-#### `path/to/file2.ts` — Score: 1/5
-[Detailed analysis of this file's changes, issues found, and suggestions]
+---
+
+## Suppressed (Tier 3) - 3 items
+<details>
+<summary>Click to expand low-confidence/style issues</summary>
+
+- [STYLE] Inconsistent spacing in src/utils/format.ts:12 (confidence: 45%)
+- [STYLE] Prefer const over let in src/api/auth.ts:89 (confidence: 52%)
+- [OPINION] Consider destructuring in src/handlers/user.ts:34 (confidence: 38%)
+
+</details>
+
+---
+
+## File Scores
+
+| File | Score | Critical | Important | Coverage |
+|------|-------|----------|-----------|----------|
+| src/api/users.ts | 2/5 | 1 | 0 | 60% |
+| src/services/orders.ts | 3/5 | 0 | 1 | 85% |
+| src/utils/auth.ts | 4/5 | 0 | 0 | 90% |
+
+---
+
+## Confidence Score: 3/5
+
+Important issues found that should be addressed before merge.
+SQL injection vulnerability in users.ts requires immediate fix.
 ```
 
-### Scoring Guidelines per File
-- 5/5: No issues, clean implementation
-- 4/5: Minor style or documentation suggestions
-- 3/5: Some improvements recommended
-- 2/5: Has bugs or significant issues
-- 1/5: Critical bugs that will cause incorrect behavior
+---
 
-### Learning Loop
-- If reviewer spots a pattern that should be remembered:
-  Use `matrix_store` to save for future reviews
-- If a recalled solution helped:
-  Use `matrix_reward` to improve future recommendations
+## Scoring Guidelines
+
+### Overall Confidence Score
+- **5/5:** No issues, ready to merge
+- **4/5:** Minor suggestions only, approve with optional changes
+- **3/5:** Important issues that should be addressed
+- **2/5:** Critical issues requiring attention before merge
+- **1/5:** Critical bugs/vulnerabilities that will cause harm
+
+### Per-File Score
+- **5/5:** No issues, clean implementation
+- **4/5:** Minor style/documentation suggestions
+- **3/5:** Some improvements recommended
+- **2/5:** Has bugs or significant issues
+- **1/5:** Critical bugs that will cause incorrect behavior
+
+---
+
+## Learning Loop
+
+After review completion:
+
+- **If solution helped:** Use `matrix_reward` with outcome
+- **If novel pattern found:** Use `matrix_store` for future reviews
+- **If false positive:** Note for confidence calibration
+- **If fix caused issues:** Use `matrix_failure` to record for prevention
+
+---
+
+## Grep Fallback Patterns
+
+When code index is unavailable, use these Grep patterns:
+
+### grep_fallback_callers(symbol)
+```bash
+# Find files importing the symbol
+Grep pattern: "import.*{[^}]*\b${symbol}\b[^}]*}.*from|import\s+${symbol}\s+from|require\(.*\).*${symbol}"
+```
+
+### grep_fallback_def(symbol)
+```bash
+# Find function/class/type definitions
+Grep pattern: "(function|const|let|var|class|interface|type|enum)\s+${symbol}\b|export\s+(default\s+)?(function|class)\s+${symbol}"
+```
+
+### grep_fallback_exports(file)
+```bash
+# Find all exports in a file
+Grep pattern: "export\s+(default\s+)?(function|class|const|let|var|interface|type|enum)\s+(\w+)|export\s+\{[^}]+\}"
+```
+
+### grep_fallback_search(query)
+```bash
+# General symbol search
+Grep pattern: "\b${query}\b"
+```
+
+**Note:** Grep fallback is slower and may miss dynamic imports/re-exports. Prefer indexed queries when available.

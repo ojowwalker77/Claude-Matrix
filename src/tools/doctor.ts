@@ -192,6 +192,9 @@ function findMissingConfigSections(config: ReturnType<typeof getConfig>): string
   if (!config.indexing) missing.push('indexing');
   if (!config.toolSearch) missing.push('toolSearch');
   if (!config.delegation) missing.push('delegation');
+  if (!config.dreamer) missing.push('dreamer');
+  if (!config.dreamer?.worktree) missing.push('dreamer.worktree');
+  if (!config.dreamer?.execution) missing.push('dreamer.execution');
 
   return missing;
 }
