@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS dreamer_tasks (
     skip_permissions INTEGER DEFAULT 0,
     worktree_enabled INTEGER DEFAULT 0,
     worktree_base_path TEXT,
-    worktree_branch_prefix TEXT DEFAULT 'claude-task/',
+    worktree_branch_prefix TEXT DEFAULT 'matrix-dreamer/',
     worktree_remote TEXT DEFAULT 'origin',
     tags JSON DEFAULT '[]',
     repo_id TEXT REFERENCES repos(id),

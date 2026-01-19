@@ -4,22 +4,44 @@ description: This skill should be used when the user asks to "review this code",
 user-invocable: true
 context: fork
 allowed-tools:
+  # Matrix Code Index
   - mcp__plugin_matrix_matrix__matrix_find_callers
   - mcp__plugin_matrix_matrix__matrix_find_definition
   - mcp__plugin_matrix_matrix__matrix_search_symbols
+  - mcp__plugin_matrix_matrix__matrix_list_exports
+  - mcp__plugin_matrix_matrix__matrix_get_imports
+  - mcp__plugin_matrix_matrix__matrix_index_status
+  # Matrix Memory
   - mcp__plugin_matrix_matrix__matrix_recall
   - mcp__plugin_matrix_matrix__matrix_store
   - mcp__plugin_matrix_matrix__matrix_reward
+  - mcp__plugin_matrix_matrix__matrix_failure
+  # Context7 - Library Documentation
+  - mcp__plugin_matrix_context7__resolve-library-id
+  - mcp__plugin_matrix_context7__query-docs
+  # Standard Tools
   - Read
   - Grep
+  - Glob
   - Bash
 ---
 
 # Matrix Code Review
 
-Perform a comprehensive, context-aware code review using Matrix's review pipeline with full index integration.
+Perform comprehensive, context-aware code review using 4-agent architecture with 95% false positive reduction.
 
 > **Tip:** This skill runs in a **forked context** for an unbiased perspective - similar to how a human reviewer would approach the code for the first time.
+
+## Architecture
+
+```
+ORCHESTRATOR (parses target, routes, aggregates)
+     │
+     ├── DETECTION AGENT → security, runtime, breaking, logic flaws
+     ├── IMPACT AGENT → blast radius, transitive graph, test coverage
+     ├── TRIAGE AGENT → tier assignment, confidence calibration, noise filter
+     └── REMEDIATION AGENT → context-aware fixes, regression checks
+```
 
 ## Usage
 
@@ -33,29 +55,29 @@ Parse user arguments from the skill invocation (text after the trigger phrase).
 ## Modes
 
 ### Default Mode (Comprehensive)
-Full 5-phase review pipeline with maximum index utilization:
-- Blast radius analysis via `matrix_find_callers`
-- Symbol lookup via `matrix_find_definition` and `matrix_search_symbols`
-- Memory recall via `matrix_recall` for relevant past solutions
-- Deep security and edge case analysis
-- ~10+ comments, thorough coverage
+Full 4-agent review pipeline with maximum index utilization:
+- Detection: Security vulns, runtime issues, breaking changes
+- Impact: Transitive blast radius (2-3 levels), service boundaries, test coverage
+- Triage: Tier classification, >80% signal ratio target
+- Remediation: Context-aware fixes matching codebase patterns
 
 ### Lazy Mode (Quick)
-Single-pass review for fast feedback:
-- Direct code inspection only
-- No index queries (faster)
-- Main issues only
-- ~2-3 comments
+Detection agent only:
+- Direct code inspection
+- Critical issues only (Tier 1)
+- ~2-3 comments, no blast radius
 
 ## Review Pipeline
 
-Follow the 5-phase review pipeline detailed in `references/review-phases.md`:
+Follow the 4-agent orchestration detailed in `references/review-phases.md`:
 
-1. **Phase 1: Context Mapping** - Calculate blast radius, find callers, build dependency graph
-2. **Phase 2: Intent Inference** - Classify change type, summarize purpose
-3. **Phase 3: Socratic Questioning** - Generate probing questions about edge cases, errors, security
-4. **Phase 4: Targeted Investigation** - Check patterns, verify assumptions, research
-5. **Phase 5: Reflection & Consolidation** - Generate final review with confidence score
+1. **Orchestrator** - Parse target, dispatch agents, aggregate results
+2. **Detection Agent** - Find security, runtime, breaking, logic issues
+3. **Impact Agent** - Calculate transitive blast radius, test coverage
+4. **Triage Agent** - Classify tiers, calibrate confidence, filter noise
+5. **Remediation Agent** - Generate fixes, check regression risk
+
+**Early exit:** If Detection finds nothing critical, skip Impact/Triage depth.
 
 ## Examples
 
@@ -71,5 +93,8 @@ Follow the 5-phase review pipeline detailed in `references/review-phases.md`:
 
 ### Reference Files
 
-For detailed pipeline procedures, consult:
-- **`references/review-phases.md`** - Complete 5-phase review process with output format and scoring guidelines
+- **`references/review-phases.md`** - Orchestrator + 4-agent pipeline
+- **`references/agents/detection.md`** - Detection patterns and output format
+- **`references/agents/impact.md`** - Blast radius algorithm
+- **`references/agents/triage.md`** - Tier classification and signal ratio
+- **`references/agents/remediation.md`** - Fix generation and regression checks

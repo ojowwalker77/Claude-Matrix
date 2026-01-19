@@ -2,6 +2,20 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.1.5] - 2025-01-19
+
+### Changed
+
+#### Dreamer
+- Default branch prefix: `claude-task/` → `matrix-dreamer/`
+- New config section `dreamer.worktree` and `dreamer.execution` for defaults
+
+#### Review Skill (`/matrix:review`)
+- 4-agent architecture: Detection → Impact → Triage → Remediation
+- Tiered output (critical/important/noise) with confidence scores
+
+---
+
 ## [2.1.4] - 2025-01-18
 
 ### Fixed
