@@ -1,10 +1,8 @@
 <div align="center">
 
-<img src="https://github.com/user-attachments/assets/e8e0f547-87ae-4a4e-94fb-681e834915fe" alt="Matrix" width="180" />
 
-# Claude Matrix
+<img width="1107" height="861" alt="Screenshot 2026-01-19 at 10 53 42" src="https://github.com/user-attachments/assets/8226a695-0fda-44ff-b4e1-16d5ab2fd28c" />
 
-**Claude on Rails — Memory, Indexing, Automation**
 
 [![Version](https://img.shields.io/badge/v2.1.1-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -25,6 +23,14 @@ Matrix turns Claude Code into a complete development environment. Memory that pe
 Requires [Bun](https://bun.sh) v1.0+ and Claude Code v2.0+. Verify with `/matrix:doctor`.
 
 > **macOS and Linux only.** Windows is not supported. Windows users must use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) or fork the repo and adapt paths manually.
+
+## Quick Start 
+
+<img width="991" height="595" alt="Screenshot 2026-01-19 at 11 08 42" src="https://github.com/user-attachments/assets/864e1583-a7ea-4f1d-8065-234a8b917314" />
+<img width="1011" height="778" alt="Screenshot 2026-01-19 at 11 08 55" src="https://github.com/user-attachments/assets/42e493ac-8192-4a57-a1f7-a0fe1fb886bd" />
+
+
+
 
 ---
 
