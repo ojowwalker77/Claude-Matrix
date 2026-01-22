@@ -26,10 +26,9 @@ Requires [Bun](https://bun.sh) v1.0+ and Claude Code v2.0+. Verify with `/matrix
 
 ## Quick Start 
 
-<img width="991" height="595" alt="Screenshot 2026-01-19 at 11 08 42" src="https://github.com/user-attachments/assets/864e1583-a7ea-4f1d-8065-234a8b917314" />
-<img width="1011" height="778" alt="Screenshot 2026-01-19 at 11 08 55" src="https://github.com/user-attachments/assets/42e493ac-8192-4a57-a1f7-a0fe1fb886bd" />
+- With Sessions Modes (new in v2.1.9) this process is so much easier, choose your session intention, Claude will follow along with optimized workflow!
 
-
+<img width="1095" height="586" alt="image" src="https://github.com/user-attachments/assets/8ad4af7f-065b-42ed-93c9-192c337f423d" />
 
 
 ---
