@@ -11,6 +11,7 @@
  */
 
 import { getDb } from '../db/index.js';
+import { clearJobTimeout } from './workers.js';
 
 export type JobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
 
@@ -132,6 +133,8 @@ export function updateJob(jobId: string, updates: JobUpdate): void {
       sets.push("started_at = datetime('now')");
     } else if (['completed', 'failed', 'cancelled'].includes(updates.status)) {
       sets.push("completed_at = datetime('now')");
+      // Clear timeout on terminal states (prevents orphan timers)
+      clearJobTimeout(jobId);
     }
   }
 
@@ -175,6 +178,11 @@ export function cancelJob(jobId: string): boolean {
     SET status = 'cancelled', completed_at = datetime('now')
     WHERE id = ? AND status IN ('queued', 'running')
   `).run(jobId);
+
+  // Clear timeout on cancel (uses direct SQL, so updateJob won't be called)
+  if (result.changes > 0) {
+    clearJobTimeout(jobId);
+  }
 
   return result.changes > 0;
 }

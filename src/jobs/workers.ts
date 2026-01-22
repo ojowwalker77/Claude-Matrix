@@ -5,10 +5,42 @@
  * These run asynchronously and update job status via the manager.
  */
 
-import { updateJob, updateJobPid } from './manager.js';
+import { updateJob, updateJobPid, getJob } from './manager.js';
 import { indexRepository } from '../indexer/index.js';
 import { getRepoInfo } from '../tools/index-tools.js';
 import { toolRegistry } from '../tools/registry.js';
+
+// Track setTimeout handles for orphan cleanup
+const jobTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
+/**
+ * Clear timeout for a specific job (call on terminal states)
+ */
+export function clearJobTimeout(jobId: string): boolean {
+  const timeout = jobTimeouts.get(jobId);
+  if (timeout) {
+    clearTimeout(timeout);
+    jobTimeouts.delete(jobId);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Clear all job timeouts (call on shutdown)
+ */
+export function clearAllJobTimeouts(): number {
+  let cleared = 0;
+  for (const [jobId, timeout] of jobTimeouts) {
+    clearTimeout(timeout);
+    jobTimeouts.delete(jobId);
+    cleared++;
+  }
+  return cleared;
+}
+
+// Expose map for testing only
+export const _jobTimeoutsForTesting = jobTimeouts;
 
 export interface ReindexInput {
   full?: boolean;
@@ -92,6 +124,9 @@ export async function runReindexJob(jobId: string, input: ReindexInput = {}): Pr
   }
 }
 
+// Maximum time a background job can run before being killed (30 minutes)
+const MAX_JOB_TIMEOUT_MS = 30 * 60 * 1000;
+
 /**
  * Spawn a background job in a subprocess
  * This allows the MCP call to return immediately
@@ -116,7 +151,32 @@ export function spawnBackgroundJob(
   });
 
   // Store PID for orphan cleanup tracking
-  if (proc.pid) {
-    updateJobPid(jobId, proc.pid);
+  // Extract pid to primitive to avoid holding proc object in closure for 30 min
+  const pid = proc.pid;
+  if (pid) {
+    updateJobPid(jobId, pid);
+
+    // Add timeout monitoring to prevent zombie processes
+    // This runs in the parent process and will kill the worker if it exceeds max time
+    const timeoutId = setTimeout(() => {
+      // Cleanup from map first (timeout fired = no longer needed)
+      jobTimeouts.delete(jobId);
+
+      const job = getJob(jobId);
+      if (job && (job.status === 'running' || job.status === 'queued')) {
+        try {
+          process.kill(pid, 'SIGKILL');
+        } catch {
+          // Process already dead
+        }
+        updateJob(jobId, {
+          status: 'failed',
+          error: `Job timed out after ${MAX_JOB_TIMEOUT_MS / 60000} minutes`,
+        });
+      }
+    }, MAX_JOB_TIMEOUT_MS);
+
+    // Store timeout handle for orphan cleanup
+    jobTimeouts.set(jobId, timeoutId);
   }
 }

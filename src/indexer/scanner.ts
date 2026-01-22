@@ -110,6 +110,19 @@ export async function scanRepository(options: ScanOptions): Promise<ScannedFile[
   // Always exclude declaration files
   allExcludes.push('**/*.d.ts', '**/*.d.mts', '**/*.d.cts');
 
+  // Pre-compile exclude patterns (avoid regex compilation per file)
+  const compiledExcludes = allExcludes.map(excludePattern => {
+    if (excludePattern.includes('*')) {
+      const regex = excludePattern
+        .replace(/\./g, '\\.')
+        .replace(/\*\*/g, '___DOUBLESTAR___')
+        .replace(/\*/g, '[^/]*')
+        .replace(/___DOUBLESTAR___/g, '.*');
+      return { type: 'regex' as const, regex: new RegExp(`^${regex}$`) };
+    }
+    return { type: 'substring' as const, pattern: excludePattern };
+  });
+
   const glob = new Bun.Glob(pattern);
 
   for await (const filePath of glob.scan({
@@ -124,23 +137,12 @@ export async function scanRepository(options: ScanOptions): Promise<ScannedFile[
       continue;
     }
 
-    // Check additional exclusion patterns
-    const shouldExclude = allExcludes.some(excludePattern => {
-      // Handle glob patterns
-      if (excludePattern.includes('*')) {
-        // Convert glob to regex using placeholder approach
-        // Note: This is a simplified glob conversion that handles common cases.
-        // The placeholder pattern is extremely unlikely in real file paths.
-        // For more robust glob matching, consider using minimatch library.
-        const regex = excludePattern
-          .replace(/\./g, '\\.')
-          .replace(/\*\*/g, '___DOUBLESTAR___')
-          .replace(/\*/g, '[^/]*')
-          .replace(/___DOUBLESTAR___/g, '.*');
-        return new RegExp(`^${regex}$`).test(filePath);
+    // Check pre-compiled exclusion patterns
+    const shouldExclude = compiledExcludes.some(compiled => {
+      if (compiled.type === 'regex') {
+        return compiled.regex.test(filePath);
       }
-      // Simple substring match
-      return filePath.includes(excludePattern);
+      return filePath.includes(compiled.pattern);
     });
 
     if (shouldExclude) {
