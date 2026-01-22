@@ -41,8 +41,52 @@ import {
   type FailureData,
 } from './format-helpers.js';
 import { evaluatePromptRules, formatRuleResult } from './rule-engine.js';
+import { getSession, createSession, updateSessionMode } from '../session/index.js';
+import { isValidSessionMode, SESSION_MODES, type SessionMode } from '../types/session.js';
+import {
+  shouldInjectMemory,
+  shouldRunComplexityAnalysis,
+  shouldSuggestPlanMode,
+  getComplexityThreshold,
+  getMaxSolutions,
+  getMaxFailures,
+  formatModeContext,
+} from './mode-behavior.js';
 
 const MAX_CONTEXT_WORDS = 500;
+
+/**
+ * Mode selection patterns
+ * Matches: "ultrathink", "1", "quick mode", "use debug", etc.
+ */
+const MODE_SELECTION_PATTERNS: Array<{ pattern: RegExp; mode: SessionMode }> = [
+  { pattern: /^(?:use\s+)?(?:1|ultrathink|ultra\s*think)\s*(?:mode)?$/i, mode: 'ultrathink' },
+  { pattern: /^(?:use\s+)?(?:2|quick)\s*(?:mode)?$/i, mode: 'quick' },
+  { pattern: /^(?:use\s+)?(?:3|docs?|documentation)\s*(?:mode)?$/i, mode: 'docs' },
+  { pattern: /^(?:use\s+)?(?:4|debug|investigate)\s*(?:mode)?$/i, mode: 'debug' },
+  { pattern: /^(?:use\s+)?(?:5|classic|normal|default)\s*(?:mode)?$/i, mode: 'classic' },
+];
+
+/**
+ * Detect if prompt is a session mode selection
+ */
+function detectModeSelection(prompt: string): SessionMode | null {
+  const trimmed = prompt.trim().toLowerCase();
+
+  // Check exact mode names first
+  if (isValidSessionMode(trimmed)) {
+    return trimmed;
+  }
+
+  // Check patterns
+  for (const { pattern, mode } of MODE_SELECTION_PATTERNS) {
+    if (pattern.test(trimmed)) {
+      return mode;
+    }
+  }
+
+  return null;
+}
 
 // Patterns for detecting code navigation queries
 const DEFINITION_PATTERNS = [
@@ -210,7 +254,66 @@ export async function run() {
 
     // Get config
     const config = getHooksConfig();
-    const threshold = config.complexityThreshold ?? 5;
+
+    // ============================================
+    // STEP -1: Check/Handle session mode selection
+    // ============================================
+    // Guard: Skip session features if no session_id provided
+    if (!input.session_id) {
+      // Continue without session mode features
+      // This can happen in edge cases (e.g., direct CLI invocation)
+    }
+
+    const existingSession = input.session_id ? getSession(input.session_id) : null;
+
+    // Check if this prompt is a mode selection (or mode switch)
+    const selectedMode = detectModeSelection(input.prompt);
+    if (selectedMode) {
+      const modeInfo = SESSION_MODES.find(m => m.mode === selectedMode);
+
+      if (!existingSession) {
+        // User is selecting a mode for a new session
+        createSession(input.session_id, selectedMode, {
+          repoRoot: input.cwd,
+        });
+
+        const confirmation = modeInfo
+          ? `Session mode set to **${modeInfo.emoji} ${modeInfo.label}**. ${modeInfo.description}.`
+          : `Session mode set to ${selectedMode}.`;
+
+        outputText(`[Matrix] ${confirmation}\n\nNow ready to help. What would you like to work on?`);
+        process.exit(0);
+      } else if (existingSession.mode !== selectedMode) {
+        // User is switching modes mid-session
+        updateSessionMode(input.session_id, selectedMode);
+
+        const oldModeInfo = SESSION_MODES.find(m => m.mode === existingSession.mode);
+        const confirmation = modeInfo
+          ? `Switched from ${oldModeInfo?.label ?? existingSession.mode} to **${modeInfo.emoji} ${modeInfo.label}**. ${modeInfo.description}.`
+          : `Switched to ${selectedMode} mode.`;
+
+        outputText(`[Matrix] ${confirmation}`);
+        process.exit(0);
+      }
+      // If same mode selected, continue normally (don't exit)
+    }
+
+    // If no session exists yet, create one with default mode (classic)
+    // This happens when user didn't respond to mode prompt and just started working
+    let currentSession = existingSession;
+    if (!currentSession && input.session_id) {
+      const { getConfig: getFullConfig } = await import('../config/index.js');
+      const fullConfig = getFullConfig();
+      const defaultMode = fullConfig.sessionModes?.defaultMode ?? 'classic';
+      currentSession = createSession(input.session_id, defaultMode, {
+        repoRoot: input.cwd,
+      });
+    }
+
+    // Get mode-based behavior settings (using cached session)
+    const threshold = getComplexityThreshold(input.session_id);
+    const skipComplexity = !shouldRunComplexityAnalysis(input.session_id);
+    const skipMemory = !shouldInjectMemory(input.session_id);
 
     // ============================================
     // STEP 0: Evaluate user-defined prompt rules
@@ -264,15 +367,27 @@ export async function run() {
     }
 
     // ============================================
-    // STEP 3: Estimate complexity
+    // STEP 3: Estimate complexity (mode-aware)
     // ============================================
-    const complexity = await estimateComplexity(input.prompt);
+    // In quick/docs mode, skip complexity analysis entirely
+    let complexity = { score: 0, reasoning: 'Skipped (quick mode)' };
+    if (!skipComplexity) {
+      complexity = await estimateComplexity(input.prompt);
+    }
 
-    // Skip memory injection if below threshold
-    if (complexity.score < threshold) {
+    // Skip memory injection if below threshold OR if mode says skip
+    if (skipMemory || complexity.score < threshold) {
       // Still inject prompt agent context and code index if available (v2.0 verbosity-aware)
       const verbosity = getVerbosity();
       const lowComplexityParts: (string | null)[] = [];
+
+      // Add mode context if applicable (use cached session)
+      if (currentSession && currentSession.mode !== 'classic') {
+        const modeCtx = formatModeContext(currentSession.mode);
+        if (modeCtx) {
+          lowComplexityParts.push(modeCtx);
+        }
+      }
 
       if (promptAnalysis.contextInjected.length > 0) {
         if (verbosity === 'full') {
@@ -291,8 +406,12 @@ export async function run() {
     }
 
     // ============================================
-    // STEP 4: Search Matrix memory (if enabled)
+    // STEP 4: Search Matrix memory (mode-aware)
     // ============================================
+    // Get mode-specific limits
+    const maxSolutions = getMaxSolutions(input.session_id);
+    const maxFailures = getMaxFailures(input.session_id);
+
     const memoryConfig = config.promptAnalysis?.memoryInjection ?? {
       enabled: true,
       maxSolutions: 3,
@@ -300,36 +419,18 @@ export async function run() {
       minScore: 0.35,
     };
 
-    // Skip memory injection if disabled in config
-    if (!memoryConfig.enabled) {
-      // Still inject prompt agent context and code index if available
-      const verbosity = getVerbosity();
-      const noMemoryParts: (string | null)[] = [];
-
-      if (promptAnalysis.contextInjected.length > 0) {
-        if (verbosity === 'full') {
-          noMemoryParts.push(`[Prompt Context]\n${promptAnalysis.contextInjected.join('\n')}`);
-        } else {
-          noMemoryParts.push(promptAnalysis.contextInjected.join('\n'));
-        }
-      }
-      noMemoryParts.push(codeIndexContext);
-
-      const assembled = assembleContext(noMemoryParts, verbosity);
-      if (assembled) {
-        outputText(assembled);
-      }
-      process.exit(0);
-    }
+    // Use mode-based limits if set, otherwise fall back to config
+    const effectiveMaxSolutions = maxSolutions > 0 ? maxSolutions : memoryConfig.maxSolutions;
+    const effectiveMaxFailures = maxFailures >= 0 ? maxFailures : memoryConfig.maxFailures;
 
     const recallResult = await matrixRecall({
       query: input.prompt.slice(0, 500),
-      limit: memoryConfig.maxSolutions,
+      limit: effectiveMaxSolutions,
       minScore: memoryConfig.minScore,
     });
 
-    // Also search for related failures
-    const failures = await searchFailures(input.prompt.slice(0, 500), memoryConfig.maxFailures);
+    // Also search for related failures (mode-aware limit)
+    const failures = await searchFailures(input.prompt.slice(0, 500), effectiveMaxFailures);
 
     // Format context
     const context = formatContext(
@@ -339,12 +440,25 @@ export async function run() {
     );
 
     // ============================================
-    // STEP 5: Output combined context (v2.0 verbosity-aware)
+    // STEP 5: Output combined context (v2.0 verbosity-aware + mode-aware)
     // ============================================
     const verbosity = getVerbosity();
 
     // Collect all context parts (some may be null)
     const contextParts: (string | null)[] = [];
+
+    // Add mode context first if applicable (use cached session)
+    if (currentSession && currentSession.mode !== 'classic') {
+      const modeCtx = formatModeContext(currentSession.mode);
+      if (modeCtx) {
+        contextParts.push(modeCtx);
+      }
+
+      // In ultrathink mode, suggest plan mode for complex tasks
+      if (shouldSuggestPlanMode(input.session_id, complexity.score)) {
+        contextParts.push('[Matrix] Consider using EnterPlanMode for this task - it appears complex enough to benefit from upfront planning.');
+      }
+    }
 
     // Add prompt agent context first (already verbosity-formatted)
     if (promptAnalysis.contextInjected.length > 0) {

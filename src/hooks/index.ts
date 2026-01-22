@@ -304,3 +304,29 @@ export {
   clearExecution,
   cleanupOldExecutions,
 } from './once.js';
+
+// ═══════════════════════════════════════════════════════════════
+// Re-exports for Session Modes (v2.1 - Constitution-inspired)
+// ═══════════════════════════════════════════════════════════════
+export {
+  getSession,
+  getSessionMode,
+  createSession,
+  updateSessionMode,
+  deleteSession,
+} from '../session/index.js';
+
+export {
+  getModeBehavior,
+  getEffectiveBehavior,
+  shouldInjectMemory,
+  shouldRunComplexityAnalysis,
+  shouldSuggestPlanMode,
+  shouldSuggestReview,
+  getComplexityThreshold,
+  getMaxSolutions,
+  getMaxFailures,
+  formatModeContext,
+} from './mode-behavior.js';
+
+export type { SessionMode, SessionContext } from '../types/session.js';

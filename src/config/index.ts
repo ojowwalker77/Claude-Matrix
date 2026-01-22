@@ -113,6 +113,20 @@ export interface GitCommitReviewConfig {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Session Modes Config (v2.1 - Constitution-inspired)
+// ═══════════════════════════════════════════════════════════════
+export type SessionMode = 'ultrathink' | 'quick' | 'docs' | 'debug' | 'classic';
+
+export interface SessionModesConfig {
+  /** Show mode selection prompt on session start */
+  promptOnStart: boolean;
+  /** Default mode when prompt is disabled or skipped */
+  defaultMode: SessionMode;
+  /** Remember user's last choice and use as default */
+  rememberLastChoice: boolean;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Dreamer Config (Scheduled Task Automation)
 // ═══════════════════════════════════════════════════════════════
 export interface DreamerWorktreeConfig {
@@ -240,6 +254,8 @@ export interface MatrixConfig {
   };
   /** Dreamer scheduled task automation settings */
   dreamer: DreamerConfig;
+  /** Session modes configuration (v2.1) */
+  sessionModes: SessionModesConfig;
 }
 
 function getDownloadsDirectory(): string {
@@ -431,6 +447,11 @@ export const DEFAULT_CONFIG: MatrixConfig = {
       defaultTimeout: 300,  // 5 minutes
       defaultSkipPermissions: false,
     },
+  },
+  sessionModes: {
+    promptOnStart: true,           // Show mode picker on session start
+    defaultMode: 'classic' as SessionMode,  // Fallback if prompt disabled
+    rememberLastChoice: false,     // Don't bias toward last choice
   },
 };
 
