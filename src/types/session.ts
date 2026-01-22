@@ -35,7 +35,6 @@ export interface ModeInfo {
   mode: SessionMode;
   label: string;
   description: string;
-  emoji: string;
 }
 
 /**
@@ -46,31 +45,26 @@ export const SESSION_MODES: ModeInfo[] = [
     mode: 'ultrathink',
     label: 'Ultrathink',
     description: 'Big feature? Plan first, full memory, review everything',
-    emoji: '\u{1F9E0}', // brain
   },
   {
     mode: 'quick',
     label: 'Quick',
     description: 'Small fix? Skip the extras, just code',
-    emoji: '\u{26A1}', // lightning
   },
   {
     mode: 'docs',
     label: 'Docs',
     description: 'Writing docs? No injections, clean context',
-    emoji: '\u{1F4DD}', // memo
   },
   {
     mode: 'debug',
     label: 'Debug',
     description: 'Hunting bugs? Past failures + blast radius',
-    emoji: '\u{1F50D}', // magnifying glass
   },
   {
     mode: 'classic',
     label: 'Classic',
     description: 'Not sure? Uses your config defaults',
-    emoji: '\u{2699}\u{FE0F}', // gear
   },
 ];
 

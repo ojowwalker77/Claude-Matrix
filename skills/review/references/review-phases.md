@@ -1,4 +1,4 @@
-# Code Review: Orchestrator + 4-Agent Pipeline
+# Code Review: Orchestrator + 5-Agent Pipeline
 
 ## Architecture Overview
 
@@ -8,10 +8,11 @@ ORCHESTRATOR (parses target, routes, aggregates)
      ├── DETECTION AGENT → security, runtime, breaking, logic flaws
      ├── IMPACT AGENT → blast radius, transitive graph, test coverage
      ├── TRIAGE AGENT → tier assignment, confidence calibration, noise filter
-     └── REMEDIATION AGENT → context-aware fixes, regression checks
+     ├── REMEDIATION AGENT → context-aware fixes, regression checks
+     └── VERIFICATION AGENT → build, test, lint validation
 ```
 
-**Execution order:** Sequential (Detection → Impact → Triage → Remediation)
+**Execution order:** Sequential (Detection → Impact → Triage → Remediation → Verification)
 **Early exit:** If Detection finds nothing critical, skip deep Impact/Triage analysis
 
 ---
@@ -82,6 +83,7 @@ Each agent has detailed documentation:
 - **`agents/impact.md`** - Transitive blast radius algorithm, service boundary detection
 - **`agents/triage.md`** - Tier definitions, confidence calibration, signal ratio calculation
 - **`agents/remediation.md`** - Fix generation, regression risk assessment
+- **`agents/verification.md`** - Project command detection, build/test/lint execution
 
 ---
 
@@ -137,6 +139,23 @@ For each finding:
 3. Generate fix matching codebase style
 4. Assess regression risk against blast radius
 5. Suggest tests if coverage gap
+```
+
+### Step 5: Verification Agent
+```
+Input: Changed files, project root
+Output: VerificationResult
+
+1. Detect project type (package.json, Cargo.toml, go.mod, etc.)
+2. Extract available commands (build, test, lint, typecheck)
+3. Execute commands in order: build → typecheck → test → lint
+4. Continue on failure, report each result
+5. Summarize: X/Y passed
+
+Skip if:
+- No project config found
+- Lazy mode active
+- Docs-only changes
 ```
 
 ---
@@ -211,6 +230,29 @@ Loop executes individual queries instead of batch fetch.
 
 Important issues found that should be addressed before merge.
 SQL injection vulnerability in users.ts requires immediate fix.
+
+---
+
+## Verification
+
+| Command | Status | Duration |
+|---------|--------|----------|
+| build | PASS | 2.3s |
+| typecheck | PASS | 1.1s |
+| test | FAIL | 8.2s |
+| lint | PASS | 0.5s |
+
+### Failed: test
+\`\`\`
+npm run test
+
+FAIL src/utils/auth.test.ts
+  ● AuthService › should validate token
+    Expected: true
+    Received: false
+\`\`\`
+
+**Summary:** 3/4 passed. Fix test failures before merge.
 ```
 
 ---

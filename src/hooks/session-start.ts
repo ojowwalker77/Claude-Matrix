@@ -69,21 +69,34 @@ function generateModeSelectionContext(): string {
 
   // Format options for AskUserQuestion tool
   const options = SESSION_MODES.map(m => ({
-    label: `${m.emoji} ${m.label}`,
+    label: m.label,
     description: m.description,
   }));
 
-  return `<matrix-session-start>
-IMPORTANT: Before responding to the user, you MUST use the AskUserQuestion tool with these exact parameters:
+  return `<CRITICAL priority="HIGHEST">
+## SESSION MODE SELECTION - BLOCKING REQUIREMENT
+
+This is a NEW SESSION. You MUST call AskUserQuestion BEFORE any other action.
+
+DO NOT:
+- Answer the user's question first
+- Read files first
+- Make any other tool calls first
+
+DO:
+1. Call AskUserQuestion with EXACTLY these parameters
+2. Wait for selection
+3. Then proceed with user's request
 
 Question: "${greeting}${nameStr}! Which Matrix flow for this session?"
 Header: "Session Mode"
 Options:
 ${options.map((o, i) => `  ${i + 1}. label: "${o.label}" | description: "${o.description}"`).join('\n')}
 
-After the user selects, their choice (1-5 or mode name) will be detected automatically.
-Do NOT skip this step - always ask on first interaction.
-</matrix-session-start>`;
+After selection, their choice (1-5 or mode name) will be detected automatically.
+
+FAILURE TO CALL AskUserQuestion FIRST BREAKS THE SESSION SYSTEM.
+</CRITICAL>`;
 }
 
 // Embedded file-suggestion.sh content
