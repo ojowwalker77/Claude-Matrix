@@ -2,17 +2,18 @@
 
 All notable changes to Claude Matrix are documented here.
 
-## [2.1.6] - 2025-01-22
+## [2.1.7] - 2025-01-22
+
 
 ### Fixed
 
-#### Resource Leak Prevention (Claude Code Patterns)
+#### Resource Leak Prevention (new Claude Code Patterns)
 - **setTimeout Orphan Fix** - Job timeouts tracked and cleared on terminal states/shutdown
 - **Dreamer Process Cleanup** - Switched from `exec` to `spawn` with proper stream destruction
 - **Git Command Streams** - Added `runGitCommand()` helper with `finally` cleanup
 - **HTTP Request Timeouts** - Moved `clearTimeout` to `finally` blocks (OSV, Bundlephobia, npm)
 
-#### Memory Bounds (Claude Code Patterns)
+#### Memory Bounds (new Claude Code Patterns)
 - **Embedding Search** - Batch processing (1000 rows) prevents loading entire DB
 - **Dreamer Output** - 1MB cap on stdout/stderr prevents memory exhaustion
 - **Indexer Errors** - Capped at 100 errors to prevent unbounded growth
