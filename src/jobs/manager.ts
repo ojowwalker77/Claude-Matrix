@@ -281,6 +281,16 @@ export function updateJobPid(jobId: string, pid: number): void {
 export function cleanupOrphanedProcesses(): number {
   const db = getDb();
 
+  // Check if background_jobs table exists (defensive - migrations may not have run)
+  const tableExists = db
+    .query(`SELECT name FROM sqlite_master WHERE type='table' AND name='background_jobs'`)
+    .get();
+
+  if (!tableExists) {
+    // Table doesn't exist yet - migrations will create it
+    return 0;
+  }
+
   const running = db
     .query(
       `

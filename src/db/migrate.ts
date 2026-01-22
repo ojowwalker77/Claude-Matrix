@@ -4,7 +4,7 @@ import { homedir } from 'os';
 import { SCHEMA_SQL } from './schema.js';
 
 // Schema version - increment when schema changes
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 // Migration definitions - each migration upgrades from (version - 1) to version
 const migrations: Record<number, string> = {
@@ -142,6 +142,39 @@ const migrations: Record<number, string> = {
         updated_at TEXT DEFAULT (datetime('now'))
     );
   `,
+
+  // v6 -> v7: Missing tables that were in schema but not migrations
+  // This fixes databases that upgraded from older versions
+  7: `
+    -- Track one-time hook executions per session
+    CREATE TABLE IF NOT EXISTS hook_executions (
+        hook_name TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        executed_at TEXT DEFAULT (datetime('now')),
+        PRIMARY KEY (hook_name, session_id)
+    );
+
+    -- Background job tracking for async operations
+    CREATE TABLE IF NOT EXISTS background_jobs (
+        id TEXT PRIMARY KEY,
+        tool_name TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'queued' CHECK(status IN ('queued', 'running', 'completed', 'failed', 'cancelled')),
+        progress_percent INTEGER DEFAULT 0,
+        progress_message TEXT,
+        input JSON,
+        result JSON,
+        error TEXT,
+        pid INTEGER,
+        created_at TEXT DEFAULT (datetime('now')),
+        started_at TEXT,
+        completed_at TEXT
+    );
+
+    -- Indexes
+    CREATE INDEX IF NOT EXISTS idx_hook_executions_session ON hook_executions(session_id);
+    CREATE INDEX IF NOT EXISTS idx_background_jobs_status ON background_jobs(status);
+    CREATE INDEX IF NOT EXISTS idx_background_jobs_tool ON background_jobs(tool_name);
+  `,
 };
 
 function getDbPath(): string {
@@ -230,7 +263,23 @@ function getCurrentVersion(db: Database): number {
           }
         }
 
-        const initialVersion = hasV6Tables ? 6 : (hasV5Tables ? 5 : (hasV4Columns ? 4 : (hasV3Columns ? 3 : (hasAllV2Tables ? 2 : 1))));
+        // Check for v7 (background_jobs and hook_executions tables)
+        let hasV7Tables = false;
+        if (hasV6Tables) {
+          try {
+            const bgJobsTable = db.query(`
+              SELECT name FROM sqlite_master WHERE type='table' AND name='background_jobs'
+            `).get();
+            const hookExecTable = db.query(`
+              SELECT name FROM sqlite_master WHERE type='table' AND name='hook_executions'
+            `).get();
+            hasV7Tables = !!(bgJobsTable && hookExecTable);
+          } catch {
+            hasV7Tables = false;
+          }
+        }
+
+        const initialVersion = hasV7Tables ? 7 : (hasV6Tables ? 6 : (hasV5Tables ? 5 : (hasV4Columns ? 4 : (hasV3Columns ? 3 : (hasAllV2Tables ? 2 : 1)))));
         db.exec(`INSERT INTO schema_version (version) VALUES (${initialVersion})`);
         return initialVersion;
       } else {
