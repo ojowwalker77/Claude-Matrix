@@ -28,15 +28,25 @@ import { ElixirParser } from './languages/elixir.js';
 import { ZigParser } from './languages/zig.js';
 import type { LanguageParser } from './languages/base.js';
 
-// Parser cache by language ID
+// LRU Parser cache by language ID (max 10 parsers to limit memory usage)
+const MAX_CACHED_PARSERS = 10;
 const parserCache = new Map<string, LanguageParser>();
+const parserAccessOrder: string[] = []; // Track access order for LRU eviction
 
 /**
- * Get or create a language parser instance
+ * Get or create a language parser instance (with LRU eviction)
  */
 async function getParserForLanguage(config: LanguageConfig): Promise<LanguageParser | null> {
   const cached = parserCache.get(config.id);
-  if (cached) return cached;
+  if (cached) {
+    // Move to end of access order (most recently used)
+    const idx = parserAccessOrder.indexOf(config.id);
+    if (idx !== -1) {
+      parserAccessOrder.splice(idx, 1);
+    }
+    parserAccessOrder.push(config.id);
+    return cached;
+  }
 
   try {
     const parser = await initParser();
@@ -108,7 +118,16 @@ async function getParserForLanguage(config: LanguageConfig): Promise<LanguagePar
         return null;
     }
 
+    // LRU eviction: remove oldest parser if at capacity
+    if (parserCache.size >= MAX_CACHED_PARSERS && parserAccessOrder.length > 0) {
+      const oldest = parserAccessOrder.shift();
+      if (oldest) {
+        parserCache.delete(oldest);
+      }
+    }
+
     parserCache.set(config.id, langParser);
+    parserAccessOrder.push(config.id);
     return langParser;
   } catch (err) {
     console.error(`Failed to initialize parser for ${config.id}:`, err);

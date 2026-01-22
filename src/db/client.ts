@@ -54,66 +54,82 @@ export function bufferToEmbedding(buffer: Buffer | Uint8Array): Float32Array {
 // Re-export for backwards compatibility
 export { cosineSimilarity };
 
-// Search similar solutions by embedding (brute force, fine for <10k entries)
+// Search similar solutions by embedding (batch processing to avoid memory issues)
 export function searchSimilarSolutions(
   queryEmbedding: Float32Array,
   limit: number = 10,
   minScore: number = 0.3
 ): Array<{ id: string; similarity: number }> {
   const db = getDb();
-
-  const rows = db.query(`
-    SELECT id, problem_embedding FROM solutions
-    WHERE problem_embedding IS NOT NULL
-  `).all() as Array<{ id: string; problem_embedding: Uint8Array }>;
-
+  const BATCH_SIZE = 1000;
+  let offset = 0;
   const results: Array<{ id: string; similarity: number }> = [];
 
-  for (const row of rows) {
-    try {
-      const embedding = bufferToEmbedding(row.problem_embedding);
-      if (embedding.length !== EMBEDDING_DIM) continue;
-      const similarity = cosineSimilarity(queryEmbedding, embedding);
+  while (true) {
+    const rows = db.query(`
+      SELECT id, problem_embedding FROM solutions
+      WHERE problem_embedding IS NOT NULL
+      LIMIT ? OFFSET ?
+    `).all(BATCH_SIZE, offset) as Array<{ id: string; problem_embedding: Uint8Array }>;
 
-      if (similarity >= minScore) {
-        results.push({ id: row.id, similarity });
+    if (rows.length === 0) break;
+
+    for (const row of rows) {
+      try {
+        const embedding = bufferToEmbedding(row.problem_embedding);
+        if (embedding.length !== EMBEDDING_DIM) continue;
+        const similarity = cosineSimilarity(queryEmbedding, embedding);
+
+        if (similarity >= minScore) {
+          results.push({ id: row.id, similarity });
+        }
+      } catch {
+        continue;
       }
-    } catch {
-      continue;
     }
+
+    offset += BATCH_SIZE;
   }
 
   results.sort((a, b) => b.similarity - a.similarity);
   return results.slice(0, limit);
 }
 
-// Search similar failures by embedding
+// Search similar failures by embedding (batch processing to avoid memory issues)
 export function searchSimilarFailures(
   queryEmbedding: Float32Array,
   limit: number = 5,
   minScore: number = 0.5
 ): Array<{ id: string; similarity: number }> {
   const db = getDb();
-
-  const rows = db.query(`
-    SELECT id, error_embedding FROM failures
-    WHERE error_embedding IS NOT NULL
-  `).all() as Array<{ id: string; error_embedding: Uint8Array }>;
-
+  const BATCH_SIZE = 1000;
+  let offset = 0;
   const results: Array<{ id: string; similarity: number }> = [];
 
-  for (const row of rows) {
-    try {
-      const embedding = bufferToEmbedding(row.error_embedding);
-      if (embedding.length !== EMBEDDING_DIM) continue;
-      const similarity = cosineSimilarity(queryEmbedding, embedding);
+  while (true) {
+    const rows = db.query(`
+      SELECT id, error_embedding FROM failures
+      WHERE error_embedding IS NOT NULL
+      LIMIT ? OFFSET ?
+    `).all(BATCH_SIZE, offset) as Array<{ id: string; error_embedding: Uint8Array }>;
 
-      if (similarity >= minScore) {
-        results.push({ id: row.id, similarity });
+    if (rows.length === 0) break;
+
+    for (const row of rows) {
+      try {
+        const embedding = bufferToEmbedding(row.error_embedding);
+        if (embedding.length !== EMBEDDING_DIM) continue;
+        const similarity = cosineSimilarity(queryEmbedding, embedding);
+
+        if (similarity >= minScore) {
+          results.push({ id: row.id, similarity });
+        }
+      } catch {
+        continue;
       }
-    } catch {
-      continue;
     }
+
+    offset += BATCH_SIZE;
   }
 
   results.sort((a, b) => b.similarity - a.similarity);

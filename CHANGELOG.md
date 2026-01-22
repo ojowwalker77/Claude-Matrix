@@ -2,6 +2,34 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.1.6] - 2025-01-22
+
+### Fixed
+
+#### Resource Leak Prevention (Claude Code Patterns)
+- **setTimeout Orphan Fix** - Job timeouts tracked and cleared on terminal states/shutdown
+- **Dreamer Process Cleanup** - Switched from `exec` to `spawn` with proper stream destruction
+- **Git Command Streams** - Added `runGitCommand()` helper with `finally` cleanup
+- **HTTP Request Timeouts** - Moved `clearTimeout` to `finally` blocks (OSV, Bundlephobia, npm)
+
+#### Memory Bounds (Claude Code Patterns)
+- **Embedding Search** - Batch processing (1000 rows) prevents loading entire DB
+- **Dreamer Output** - 1MB cap on stdout/stderr prevents memory exhaustion
+- **Indexer Errors** - Capped at 100 errors to prevent unbounded growth
+- **Parser Cache** - LRU eviction (max 10 parsers) limits memory usage
+
+#### Performance
+- **Scanner Regex** - Pre-compile exclude patterns (avoid per-file regex creation)
+
+### Changed
+
+#### Dreamer Clarification Required
+- **One-time vs Recurring** - MCP instructions now require confirming user intent before scheduling
+- **Tool Description** - Updated `matrix_dreamer` to warn that "at 1am" becomes daily cron
+- **Startup Cleanup** - Orphaned jobs from previous sessions marked as failed
+
+---
+
 ## [2.1.5] - 2025-01-19
 
 ### Changed

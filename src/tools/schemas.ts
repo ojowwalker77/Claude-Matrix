@@ -243,7 +243,7 @@ export const TOOLS: Tool[] = [
   // ═══════════════════════════════════════════════════════════════
   {
     name: 'matrix_dreamer',
-    description: 'Schedule and manage automated Claude tasks. Actions: "add" (create task), "list" (show all tasks), "run" (execute manually), "remove" (delete task), "status" (system health), "logs" (view output), "history" (execution records). Uses native OS schedulers (launchd on macOS, crontab on Linux).',
+    description: 'Schedule and manage automated Claude tasks. Actions: "add" (create task - RECURRING by default, confirm with user first!), "list" (show all tasks), "run" (execute immediately), "remove" (delete task), "status" (system health), "logs" (view output), "history" (execution records). IMPORTANT: Before using "add", ASK user if they want ONE-TIME or RECURRING - natural language like "at 1am" becomes daily cron by default. Uses native OS schedulers (launchd on macOS, crontab on Linux).',
     annotations: { idempotentHint: false },
     inputSchema: toInputSchema(DreamerInputSchema),
     _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },

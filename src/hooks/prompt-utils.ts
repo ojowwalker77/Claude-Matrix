@@ -222,6 +222,41 @@ export function loadClaudeMdContext(cwd?: string): string[] {
 }
 
 /**
+ * Run a git command with proper stream cleanup
+ * Ensures no resource leaks even on error/timeout
+ */
+async function runGitCommand(args: string[], cwd: string): Promise<string> {
+  const proc = Bun.spawn(['git', ...args], {
+    cwd,
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+
+  try {
+    const output = await new Response(proc.stdout).text();
+    await proc.exited; // Wait for process to fully exit
+    return output.trim();
+  } finally {
+    // Ensure streams are closed even on error
+    try {
+      proc.stdout.cancel();
+    } catch {
+      /* already closed */
+    }
+    try {
+      proc.stderr.cancel();
+    } catch {
+      /* already closed */
+    }
+    try {
+      proc.kill();
+    } catch {
+      /* already dead */
+    }
+  }
+}
+
+/**
  * Get git context as structured data (v2.0)
  * Returns raw data for verbosity-aware formatting
  */
@@ -235,34 +270,19 @@ export async function getGitContextData(cwd?: string): Promise<GitContextData> {
 
   try {
     // Get current branch
-    const branchProc = Bun.spawn(['git', 'branch', '--show-current'], {
-      cwd: workingDir,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const branchOutput = await new Response(branchProc.stdout).text();
-    result.branch = branchOutput.trim() || null;
+    const branchOutput = await runGitCommand(['branch', '--show-current'], workingDir);
+    result.branch = branchOutput || null;
 
     // Get recent commit messages (last 3)
-    const logProc = Bun.spawn(['git', 'log', '--oneline', '-3'], {
-      cwd: workingDir,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const logOutput = await new Response(logProc.stdout).text();
-    if (logOutput.trim()) {
-      result.commits = logOutput.trim().split('\n');
+    const logOutput = await runGitCommand(['log', '--oneline', '-3'], workingDir);
+    if (logOutput) {
+      result.commits = logOutput.split('\n');
     }
 
     // Get changed files (staged + unstaged)
-    const statusProc = Bun.spawn(['git', 'status', '--short'], {
-      cwd: workingDir,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const statusOutput = await new Response(statusProc.stdout).text();
-    if (statusOutput.trim()) {
-      result.changedFiles = statusOutput.trim().split('\n').slice(0, 10);
+    const statusOutput = await runGitCommand(['status', '--short'], workingDir);
+    if (statusOutput) {
+      result.changedFiles = statusOutput.split('\n').slice(0, 10);
     }
   } catch {
     // Not a git repo or git not available

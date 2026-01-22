@@ -47,7 +47,9 @@ export async function indexRepository(options: IndexerOptions): Promise<IndexRes
   let filesSkipped = 0;
   let symbolsFound = 0;
   let importsFound = 0;
+  const MAX_ERRORS = 100;
   const errors: string[] = [];
+  let errorsCapped = false;
 
   try {
     // Step 1: Scan repository for files
@@ -105,7 +107,9 @@ export async function indexRepository(options: IndexerOptions): Promise<IndexRes
     for (let i = 0; i < totalToProcess; i++) {
       // Check timeout
       if (Date.now() - startTime > timeoutMs) {
-        errors.push(`Timeout after ${timeout}s, indexed ${filesIndexed}/${totalToProcess} files`);
+        if (!errorsCapped && errors.length < MAX_ERRORS) {
+          errors.push(`Timeout after ${timeout}s, indexed ${filesIndexed}/${totalToProcess} files`);
+        }
         break;
       }
 
@@ -139,15 +143,30 @@ export async function indexRepository(options: IndexerOptions): Promise<IndexRes
           importsFound += count;
         }
 
-        // Track parse errors
-        if (result.errors && result.errors.length > 0) {
-          errors.push(...result.errors.map(e => `${file.path}: ${e}`));
+        // Track parse errors (capped to prevent memory issues)
+        if (result.errors && result.errors.length > 0 && !errorsCapped) {
+          for (const e of result.errors) {
+            if (errors.length < MAX_ERRORS) {
+              errors.push(`${file.path}: ${e}`);
+            } else {
+              errors.push(`... and more errors (capped at ${MAX_ERRORS})`);
+              errorsCapped = true;
+              break;
+            }
+          }
         }
 
         filesIndexed++;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`${file.path}: ${msg}`);
+        if (!errorsCapped) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (errors.length < MAX_ERRORS) {
+            errors.push(`${file.path}: ${msg}`);
+          } else {
+            errors.push(`... and more errors (capped at ${MAX_ERRORS})`);
+            errorsCapped = true;
+          }
+        }
       }
     }
 

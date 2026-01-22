@@ -10,6 +10,8 @@ import { closeDb } from './db/index.js';
 import { handleToolCall } from './server/index.js';
 import { getConfig } from './config/index.js';
 import { toolRegistry } from './tools/registry.js';
+import { cleanupOrphanedProcesses } from './jobs/manager.js';
+import { clearAllJobTimeouts } from './jobs/workers.js';
 
 function buildInstructions(): string {
   const config = getConfig();
@@ -72,6 +74,29 @@ Delegate read-only tools to ${model === 'haiku' ? 'Haiku' : 'Sonnet'} sub-agents
 IMPORTANT: When using these tools, spawn a Task agent with model="${model}" to reduce costs.`);
   }
 
+  // Dreamer (Scheduled Tasks) - Clarification Required
+  sections.push(`## Dreamer (Scheduled Tasks) - IMPORTANT
+When using matrix_dreamer to add a scheduled task, you MUST clarify the user's intent:
+
+**BEFORE scheduling, ASK the user:**
+- "Do you want this to run ONCE or RECURRING (daily/weekly/etc)?"
+
+**Why this matters:**
+- "at 1am" or "tonight at 3pm" → Could be one-time OR daily
+- Natural language is converted to cron (which is always recurring)
+- Users often expect one-time execution but get daily recurring tasks
+
+**One-time tasks:**
+- Use \`action: "run"\` for immediate execution
+- Or schedule and immediately remove after first run
+- Warn user that true delayed one-time is not natively supported
+
+**Recurring tasks:**
+- Use \`action: "add"\` with explicit recurring keywords confirmed
+- Examples: "every day at 9am", "daily", "weekly on Monday"
+
+NEVER assume recurring. ALWAYS confirm first.`);
+
   // When to Use Matrix Tools (always included)
   sections.push(`## When to Use Matrix Tools
 
@@ -93,6 +118,12 @@ DON'T USE for:
 }
 
 async function main(): Promise<void> {
+  // Cleanup orphaned jobs from previous runs (prevents zombie processes)
+  const orphansCleaned = cleanupOrphanedProcesses();
+  if (orphansCleaned > 0) {
+    console.error(`[Matrix] Cleaned up ${orphansCleaned} orphaned job(s) from previous session`);
+  }
+
   const instructions = buildInstructions();
 
   const server = new Server(
@@ -144,6 +175,8 @@ async function main(): Promise<void> {
   await server.connect(transport);
 
   const shutdown = () => {
+    // Clear all pending job timeouts to prevent orphan timers
+    clearAllJobTimeouts();
     closeDb();
     process.exit(0);
   };

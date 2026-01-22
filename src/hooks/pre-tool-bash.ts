@@ -81,10 +81,10 @@ async function queryOSV(packageName: string, ecosystem: Ecosystem): Promise<unkn
     return cached;
   }
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
 
+  try {
     const response = await fetch('https://api.osv.dev/v1/query', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -93,8 +93,6 @@ async function queryOSV(packageName: string, ecosystem: Ecosystem): Promise<unkn
       }),
       signal: controller.signal,
     });
-
-    clearTimeout(timeout);
 
     if (!response.ok) return [];
 
@@ -105,6 +103,8 @@ async function queryOSV(packageName: string, ecosystem: Ecosystem): Promise<unkn
     return vulns;
   } catch {
     return [];
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -118,16 +118,14 @@ async function queryBundlephobia(packageName: string): Promise<{ size: number; g
     return cached;
   }
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
 
+  try {
     const response = await fetch(
       `https://bundlephobia.com/api/size?package=${encodeURIComponent(packageName)}`,
       { signal: controller.signal }
     );
-
-    clearTimeout(timeout);
 
     if (!response.ok) return null;
 
@@ -138,6 +136,8 @@ async function queryBundlephobia(packageName: string): Promise<{ size: number; g
     return result;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -151,16 +151,14 @@ async function queryNpmRegistry(packageName: string): Promise<{ deprecated?: str
     return cached;
   }
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
 
+  try {
     const response = await fetch(
       `https://registry.npmjs.org/${encodeURIComponent(packageName)}/latest`,
       { signal: controller.signal }
     );
-
-    clearTimeout(timeout);
 
     if (!response.ok) return null;
 
@@ -171,6 +169,8 @@ async function queryNpmRegistry(packageName: string): Promise<{ deprecated?: str
     return result;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
