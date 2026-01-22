@@ -5,7 +5,6 @@
  */
 
 import type { DreamerInput } from '../../tools/validation.js';
-import type { DreamerTask } from '../types.js';
 import { getAllTasks, getLatestExecution, countExecutionsByStatus } from '../store.js';
 import { cronToHuman, getNextRun, formatTimeUntil } from '../cron/index.js';
 

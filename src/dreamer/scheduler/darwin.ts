@@ -6,7 +6,7 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync, readdirSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { BaseScheduler, SchedulerError } from './base.js';
