@@ -2,6 +2,25 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.1.8] - 2025-01-22
+
+### Intuducing Session Modes
+
+*be intentional, not lazy* 
+
+- **Mode Selection on Start** - Interactive prompt asks user to select session mode
+- **5 Modes Available**:
+  - **Ultrathink** - Full planning, thorough review, deep research
+  - **Quick** - Minimal overhead, skip extras, fast execution
+  - **Docs** - Documentation focus, clean context, no injections
+  - **Debug** - Investigation focus, past failures + blast radius
+  - ⚙**Classic** - Uses your config defaults (backward compatible)
+- **Mode-aware Behavior** - Memory injection, complexity analysis, review suggestions adapt to mode
+- **Mid-session Switching** - Type mode name or number to switch (e.g., "quick", "2")
+- **Session Persistence** - Mode stored in `~/.claude/matrix/sessions/` with 24h TTL
+
+---
+
 ## [2.1.7] - 2025-01-22
 
 

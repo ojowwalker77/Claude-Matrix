@@ -28,7 +28,7 @@ import { spawnSync } from 'child_process';
 import { runMigrations } from '../db/migrate.js';
 import { getDb } from '../db/index.js';
 import { getSchemaVersion } from '../db/migrate.js';
-import { getConfig, getConfigPath, saveConfig, clearCache, DEFAULT_CONFIG } from '../config/index.js';
+import { getConfig, getConfigPath, saveConfig, clearCache } from '../config/index.js';
 import { fingerprintRepo } from '../repo/index.js';
 import { matrixIndexStatus, matrixReindex } from './index-tools.js';
 

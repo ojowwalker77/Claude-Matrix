@@ -6,7 +6,7 @@
 
 import type { DreamerInput } from '../../tools/validation.js';
 import type { ExecutionStatus } from '../types.js';
-import { getAllExecutions, getTask } from '../store.js';
+import { getAllExecutions } from '../store.js';
 import { formatDuration, formatTimeAgo } from '../cron/index.js';
 
 export interface HistoryEntry {

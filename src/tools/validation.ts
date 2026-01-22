@@ -272,7 +272,7 @@ const DreamerActionEnum = Type.Union([
   Type.Literal('history'),
 ]);
 
-const DreamerExecutionStatusEnum = Type.Union([
+const _DreamerExecutionStatusEnum = Type.Union([
   Type.Literal('running'),
   Type.Literal('success'),
   Type.Literal('failure'),

@@ -15,6 +15,7 @@ import {
   readStdin,
   outputJson,
   hooksEnabled,
+  getSessionMode,
   type StopInput,
   type HookOutput,
 } from './index.js';
@@ -182,6 +183,14 @@ export async function run() {
 
     // Read input from stdin
     const input = await readStdin<StopInput>();
+
+    // Check session mode - skip store suggestion in quick/docs modes
+    const mode = getSessionMode(input.session_id);
+    if (mode === 'quick' || mode === 'docs') {
+      // Quick mode: no interruptions
+      // Docs mode: not writing significant solutions
+      process.exit(0);
+    }
 
     // Skip if no transcript path
     if (!input.transcript_path) {
