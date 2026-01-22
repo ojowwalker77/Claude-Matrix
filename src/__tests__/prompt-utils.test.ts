@@ -53,7 +53,7 @@ describe('getGitContextData', () => {
 
     // Should have branch (master or main depending on git version)
     expect(result.branch).not.toBeNull();
-    expect(['main', 'master']).toContain(result.branch);
+    expect(['main', 'master']).toContain(result.branch as string);
 
     // Should have at least one commit
     expect(result.commits.length).toBeGreaterThan(0);
