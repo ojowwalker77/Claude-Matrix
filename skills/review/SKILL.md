@@ -28,7 +28,7 @@ allowed-tools:
 
 # Matrix Code Review
 
-Perform comprehensive, context-aware code review using 4-agent architecture with 95% false positive reduction.
+Perform comprehensive, context-aware code review using 5-agent architecture with 95% false positive reduction.
 
 > **Tip:** This skill runs in a **forked context** for an unbiased perspective - similar to how a human reviewer would approach the code for the first time.
 
@@ -40,7 +40,8 @@ ORCHESTRATOR (parses target, routes, aggregates)
      ├── DETECTION AGENT → security, runtime, breaking, logic flaws
      ├── IMPACT AGENT → blast radius, transitive graph, test coverage
      ├── TRIAGE AGENT → tier assignment, confidence calibration, noise filter
-     └── REMEDIATION AGENT → context-aware fixes, regression checks
+     ├── REMEDIATION AGENT → context-aware fixes, regression checks
+     └── VERIFICATION AGENT → build, test, lint validation
 ```
 
 ## Usage
@@ -55,11 +56,12 @@ Parse user arguments from the skill invocation (text after the trigger phrase).
 ## Modes
 
 ### Default Mode (Comprehensive)
-Full 4-agent review pipeline with maximum index utilization:
+Full 5-agent review pipeline with maximum index utilization:
 - Detection: Security vulns, runtime issues, breaking changes
 - Impact: Transitive blast radius (2-3 levels), service boundaries, test coverage
 - Triage: Tier classification, >80% signal ratio target
 - Remediation: Context-aware fixes matching codebase patterns
+- Verification: Run build, test, lint commands automatically
 
 ### Lazy Mode (Quick)
 Detection agent only:
@@ -69,13 +71,14 @@ Detection agent only:
 
 ## Review Pipeline
 
-Follow the 4-agent orchestration detailed in `references/review-phases.md`:
+Follow the 5-agent orchestration detailed in `references/review-phases.md`:
 
 1. **Orchestrator** - Parse target, dispatch agents, aggregate results
 2. **Detection Agent** - Find security, runtime, breaking, logic issues
 3. **Impact Agent** - Calculate transitive blast radius, test coverage
 4. **Triage Agent** - Classify tiers, calibrate confidence, filter noise
 5. **Remediation Agent** - Generate fixes, check regression risk
+6. **Verification Agent** - Run build, test, lint; report results
 
 **Early exit:** If Detection finds nothing critical, skip Impact/Triage depth.
 
@@ -93,8 +96,9 @@ Follow the 4-agent orchestration detailed in `references/review-phases.md`:
 
 ### Reference Files
 
-- **`references/review-phases.md`** - Orchestrator + 4-agent pipeline
+- **`references/review-phases.md`** - Orchestrator + 5-agent pipeline
 - **`references/agents/detection.md`** - Detection patterns and output format
 - **`references/agents/impact.md`** - Blast radius algorithm
 - **`references/agents/triage.md`** - Tier classification and signal ratio
 - **`references/agents/remediation.md`** - Fix generation and regression checks
+- **`references/agents/verification.md`** - Build/test/lint command detection and execution

@@ -278,7 +278,7 @@ export async function run() {
         });
 
         const confirmation = modeInfo
-          ? `Session mode set to **${modeInfo.emoji} ${modeInfo.label}**. ${modeInfo.description}.`
+          ? `Session mode set to **${modeInfo.label}**. ${modeInfo.description}.`
           : `Session mode set to ${selectedMode}.`;
 
         outputText(`[Matrix] ${confirmation}\n\nNow ready to help. What would you like to work on?`);
@@ -289,7 +289,7 @@ export async function run() {
 
         const oldModeInfo = SESSION_MODES.find(m => m.mode === existingSession.mode);
         const confirmation = modeInfo
-          ? `Switched from ${oldModeInfo?.label ?? existingSession.mode} to **${modeInfo.emoji} ${modeInfo.label}**. ${modeInfo.description}.`
+          ? `Switched from ${oldModeInfo?.label ?? existingSession.mode} to **${modeInfo.label}**. ${modeInfo.description}.`
           : `Switched to ${selectedMode} mode.`;
 
         outputText(`[Matrix] ${confirmation}`);

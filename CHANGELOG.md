@@ -2,7 +2,7 @@
 
 All notable changes to Claude Matrix are documented here.
 
-## [2.1.8] - 2025-01-22
+## [2.1.9] - 2025-01-22
 
 ### Intuducing Session Modes
 
@@ -18,6 +18,16 @@ All notable changes to Claude Matrix are documented here.
 - **Mode-aware Behavior** - Memory injection, complexity analysis, review suggestions adapt to mode
 - **Mid-session Switching** - Type mode name or number to switch (e.g., "quick", "2")
 - **Session Persistence** - Mode stored in `~/.claude/matrix/sessions/` with 24h TTL
+
+
+### Changed
+
+#### Review Skill
+
+- **New Verification Agent** - Automatically runs build, typecheck, test, lint after review
+- **Project Auto-Detection** - Supports package.json, Cargo.toml, go.mod, pyproject.toml, and more
+- **Continue on Failure** - Reports all command results, doesn't stop on first error
+- **Output Summary** - Table format showing pass/fail status and duration per command
 
 ---
 
