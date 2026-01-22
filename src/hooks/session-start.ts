@@ -48,7 +48,7 @@ function getUserName(): string | null {
     const result = spawnSync('git', ['config', 'user.name'], { encoding: 'utf-8' });
     if (result.status === 0 && result.stdout?.trim()) {
       // Get first name only
-      return result.stdout.trim().split(' ')[0];
+      return result.stdout.trim().split(' ')[0] ?? null;
     }
   } catch {
     // Ignore
