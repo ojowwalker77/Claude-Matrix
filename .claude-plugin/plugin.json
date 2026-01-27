@@ -1,7 +1,7 @@
 {
   "name": "matrix",
   "description": "Claude on Rails Tooling System",
-  "version": "2.1.9",
+  "version": "2.2.0",
   "author": {
     "name": "Matrix Contributors"
   },
