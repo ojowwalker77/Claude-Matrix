@@ -13,6 +13,7 @@ import type { SessionContext, SessionMode } from '../types/session.js';
 
 const SESSIONS_DIR = join(homedir(), '.claude', 'matrix', 'sessions');
 const SESSION_TTL_HOURS = 24;
+const SESSION_TTL_MS = SESSION_TTL_HOURS * 60 * 60 * 1000;
 
 /**
  * Ensure sessions directory exists
@@ -21,6 +22,14 @@ function ensureSessionsDir(): void {
   if (!existsSync(SESSIONS_DIR)) {
     mkdirSync(SESSIONS_DIR, { recursive: true });
   }
+}
+
+/**
+ * Check if a session context is expired
+ */
+function isSessionExpired(context: SessionContext): boolean {
+  const startedAt = new Date(context.startedAt).getTime();
+  return Date.now() - startedAt > SESSION_TTL_MS;
 }
 
 /**
@@ -76,13 +85,7 @@ export function getSession(sessionId: string): SessionContext | null {
     const content = readFileSync(path, 'utf-8');
     const context = JSON.parse(content) as SessionContext;
 
-    // Check if session is expired
-    const startedAt = new Date(context.startedAt);
-    const now = new Date();
-    const hoursSinceStart = (now.getTime() - startedAt.getTime()) / (1000 * 60 * 60);
-
-    if (hoursSinceStart > SESSION_TTL_HOURS) {
-      // Clean up expired session
+    if (isSessionExpired(context)) {
       try {
         unlinkSync(path);
       } catch {
@@ -139,7 +142,6 @@ export function cleanupExpiredSessions(): number {
   ensureSessionsDir();
 
   let cleaned = 0;
-  const now = new Date();
 
   try {
     const files = readdirSync(SESSIONS_DIR);
@@ -154,10 +156,8 @@ export function cleanupExpiredSessions(): number {
       try {
         const content = readFileSync(path, 'utf-8');
         const context = JSON.parse(content) as SessionContext;
-        const startedAt = new Date(context.startedAt);
-        const hoursSinceStart = (now.getTime() - startedAt.getTime()) / (1000 * 60 * 60);
 
-        if (hoursSinceStart > SESSION_TTL_HOURS) {
+        if (isSessionExpired(context)) {
           unlinkSync(path);
           cleaned++;
         }
@@ -202,7 +202,6 @@ export function listSessions(): SessionContext[] {
   ensureSessionsDir();
 
   const sessions: SessionContext[] = [];
-  const now = new Date();
 
   try {
     const files = readdirSync(SESSIONS_DIR);
@@ -217,10 +216,8 @@ export function listSessions(): SessionContext[] {
       try {
         const content = readFileSync(path, 'utf-8');
         const context = JSON.parse(content) as SessionContext;
-        const startedAt = new Date(context.startedAt);
-        const hoursSinceStart = (now.getTime() - startedAt.getTime()) / (1000 * 60 * 60);
 
-        if (hoursSinceStart <= SESSION_TTL_HOURS) {
+        if (!isSessionExpired(context)) {
           sessions.push(context);
         }
       } catch {

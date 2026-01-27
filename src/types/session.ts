@@ -76,8 +76,13 @@ export function getModeInfo(mode: SessionMode): ModeInfo | undefined {
 }
 
 /**
+ * Valid session mode values derived from SESSION_MODES
+ */
+const VALID_MODES = new Set<string>(SESSION_MODES.map(m => m.mode));
+
+/**
  * Validate if a string is a valid session mode
  */
 export function isValidSessionMode(mode: string): mode is SessionMode {
-  return ['ultrathink', 'quick', 'docs', 'debug', 'classic'].includes(mode);
+  return VALID_MODES.has(mode);
 }

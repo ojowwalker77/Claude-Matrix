@@ -15,6 +15,7 @@ import {
   matrixIndexStatus,
   matrixReindex,
 } from '../tools/index.js';
+import { matrixGetSolution } from '../tools/recall.js';
 import { matrixWarn } from '../tools/warn.js';
 import { matrixPrompt } from '../tools/prompt.js';
 import { matrixSkillCandidates, matrixLinkSkill } from '../tools/skill-factory.js';
@@ -28,6 +29,8 @@ import {
   type RecallInput,
   type StoreInput,
   type RewardInput,
+  type GetSolutionInput,
+  type SkillInput,
   type FailureInput,
   type WarnInput,
   type PromptInput,
@@ -169,22 +172,39 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         const input = validate<RecallInput>(validators.recall, args);
         const result = await matrixRecall(input);
 
+        // Compact mode returns minimal data (id, problem, similarity, score, successRate)
+        if (input.compact) {
+          return JSON.stringify({
+            query: result.query,
+            solutions: result.solutions.map(s => ({
+              id: s.id,
+              problem: s.problem.slice(0, 100) + (s.problem.length > 100 ? '...' : ''),
+              similarity: s.similarity,
+              score: s.score,
+              successRate: s.successRate,
+            })),
+            totalFound: result.totalFound,
+          });
+        }
+
         // Also search for related failures
         const relatedFailures = await searchFailures(input.query, 2);
+        const includeHints = input.includeHints !== false; // default true
 
         return JSON.stringify({
           ...result,
           relatedFailures: relatedFailures.length > 0 ? relatedFailures : undefined,
-          _hints: buildRecallHints(result.solutions, relatedFailures.length > 0),
+          _hints: includeHints ? buildRecallHints(result.solutions, relatedFailures.length > 0) : undefined,
         });
       }
 
       case 'matrix_store': {
         const input = validate<StoreInput>(validators.store, args);
         const result = await matrixStore(input);
+        const includeHints = input.includeHints !== false; // default true
         return JSON.stringify({
           ...result,
-          _hints: buildStoreHints(input),
+          _hints: includeHints ? buildStoreHints(input) : undefined,
         });
       }
 
@@ -194,12 +214,22 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         return JSON.stringify(result);
       }
 
+      case 'matrix_get_solution': {
+        const input = validate<GetSolutionInput>(validators.getSolution, args);
+        const result = matrixGetSolution(input.solutionId);
+        if (!result) {
+          return JSON.stringify({ error: 'Solution not found: ' + input.solutionId });
+        }
+        return JSON.stringify(result);
+      }
+
       case 'matrix_failure': {
         const input = validate<FailureInput>(validators.failure, args);
         const result = await matrixFailure(input);
+        const includeHints = input.includeHints !== false; // default true
         return JSON.stringify({
           ...result,
-          _hints: buildFailureHints(input),
+          _hints: includeHints ? buildFailureHints(input) : undefined,
         });
       }
 
@@ -292,7 +322,35 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         return JSON.stringify(result);
       }
 
-      // Skill Factory (v2.0)
+      // Skill Factory (v2.0) - Unified tool
+      case 'matrix_skill': {
+        const input = validate<SkillInput>(validators.skill, args);
+        switch (input.action) {
+          case 'candidates': {
+            const result = matrixSkillCandidates({
+              minScore: input.minScore,
+              minUses: input.minUses,
+              limit: input.limit,
+              excludePromoted: input.excludePromoted,
+            });
+            return JSON.stringify(result);
+          }
+          case 'link': {
+            if (!input.solutionId || !input.skillPath) {
+              return JSON.stringify({ error: 'solutionId and skillPath required for link action' });
+            }
+            const result = matrixLinkSkill({
+              solutionId: input.solutionId,
+              skillPath: input.skillPath,
+            });
+            return JSON.stringify(result);
+          }
+          default:
+            return JSON.stringify({ error: 'Unknown action: ' + (input as { action?: string }).action });
+        }
+      }
+
+      // Legacy skill factory tools (deprecated - use matrix_skill instead)
       case 'matrix_skill_candidates': {
         const input = validate<SkillCandidatesInput>(validators.skillCandidates, args);
         const result = matrixSkillCandidates(input);

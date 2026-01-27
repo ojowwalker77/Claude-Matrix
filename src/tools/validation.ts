@@ -97,6 +97,8 @@ export const RecallInputSchema = Type.Object({
   scopeFilter: Type.Optional(ScopeFilterEnum),
   categoryFilter: Type.Optional(CategoryEnum),
   maxComplexity: Type.Optional(Type.Number({ minimum: 1, maximum: 10, description: 'Max complexity filter' })),
+  compact: Type.Optional(Type.Boolean({ description: 'Return compact results (id, problem, similarity, score)' })),
+  includeHints: Type.Optional(Type.Boolean({ description: 'Include usage hints (default: true)' })),
 });
 
 const CodeBlockSchema = Type.Object({
@@ -118,12 +120,17 @@ export const StoreInputSchema = Type.Object({
   codeBlocks: Type.Optional(Type.Array(CodeBlockSchema, { description: 'Code snippets' })),
   relatedSolutions: Type.Optional(Type.Array(Type.String(), { description: 'Related solution IDs' })),
   supersedes: Type.Optional(Type.String({ description: 'Superseded solution ID' })),
+  includeHints: Type.Optional(Type.Boolean({ description: 'Include usage hints (default: true)' })),
 });
 
 export const RewardInputSchema = Type.Object({
   solutionId: Type.String({ description: 'Solution ID from matrix_recall' }),
   outcome: OutcomeEnum,
   notes: Type.Optional(Type.String({ description: 'What worked or needed change' })),
+});
+
+export const GetSolutionInputSchema = Type.Object({
+  solutionId: Type.String({ description: 'Solution ID to fetch' }),
 });
 
 export const FailureInputSchema = Type.Object({
@@ -134,6 +141,7 @@ export const FailureInputSchema = Type.Object({
   fixApplied: Type.String({ description: 'Fix applied' }),
   prevention: Type.Optional(Type.String({ description: 'Prevention strategy' })),
   filesInvolved: Type.Optional(Type.Array(Type.String())),
+  includeHints: Type.Optional(Type.Boolean({ description: 'Include usage hints (default: true)' })),
 });
 
 export const StatusInputSchema = Type.Object({});
@@ -233,6 +241,24 @@ export const LinkSkillInputSchema = Type.Object({
   skillPath: Type.String({ description: 'Skill file path' }),
 });
 
+// Unified skill tool schema
+const SkillActionEnum = Type.Union([
+  Type.Literal('candidates'),
+  Type.Literal('link'),
+]);
+
+export const SkillInputSchema = Type.Object({
+  action: SkillActionEnum,
+  // For "candidates" action
+  minScore: Type.Optional(Type.Number({ minimum: 0, maximum: 1, description: 'Min success rate (candidates)' })),
+  minUses: Type.Optional(Type.Number({ minimum: 1, description: 'Min uses (candidates)' })),
+  limit: Type.Optional(Type.Number({ minimum: 1, maximum: 50, description: 'Max candidates (candidates)' })),
+  excludePromoted: Type.Optional(Type.Boolean({ description: 'Exclude promoted (candidates)' })),
+  // For "link" action
+  solutionId: Type.Optional(Type.String({ description: 'Solution ID to link (link)' })),
+  skillPath: Type.Optional(Type.String({ description: 'Skill file path (link)' })),
+});
+
 // ============================================================================
 // Background Job Schemas
 // ============================================================================
@@ -322,6 +348,7 @@ export const DreamerInputSchema = Type.Object({
 export type RecallInput = Static<typeof RecallInputSchema>;
 export type StoreInput = Static<typeof StoreInputSchema>;
 export type RewardInput = Static<typeof RewardInputSchema>;
+export type GetSolutionInput = Static<typeof GetSolutionInputSchema>;
 export type FailureInput = Static<typeof FailureInputSchema>;
 export type StatusInput = Static<typeof StatusInputSchema>;
 export type WarnInput = Static<typeof WarnInputSchema>;
@@ -337,6 +364,7 @@ export type RepomixInput = Static<typeof RepomixInputSchema>;
 export type DoctorInput = Static<typeof DoctorInputSchema>;
 export type SkillCandidatesInput = Static<typeof SkillCandidatesInputSchema>;
 export type LinkSkillInput = Static<typeof LinkSkillInputSchema>;
+export type SkillInput = Static<typeof SkillInputSchema>;
 export type JobStatusInput = Static<typeof JobStatusInputSchema>;
 export type JobCancelInput = Static<typeof JobCancelInputSchema>;
 export type JobListInput = Static<typeof JobListInputSchema>;
@@ -350,6 +378,7 @@ export const validators = {
   recall: TypeCompiler.Compile(RecallInputSchema),
   store: TypeCompiler.Compile(StoreInputSchema),
   reward: TypeCompiler.Compile(RewardInputSchema),
+  getSolution: TypeCompiler.Compile(GetSolutionInputSchema),
   failure: TypeCompiler.Compile(FailureInputSchema),
   status: TypeCompiler.Compile(StatusInputSchema),
   warn: TypeCompiler.Compile(WarnInputSchema),
@@ -365,6 +394,7 @@ export const validators = {
   doctor: TypeCompiler.Compile(DoctorInputSchema),
   skillCandidates: TypeCompiler.Compile(SkillCandidatesInputSchema),
   linkSkill: TypeCompiler.Compile(LinkSkillInputSchema),
+  skill: TypeCompiler.Compile(SkillInputSchema),
   jobStatus: TypeCompiler.Compile(JobStatusInputSchema),
   jobCancel: TypeCompiler.Compile(JobCancelInputSchema),
   jobList: TypeCompiler.Compile(JobListInputSchema),

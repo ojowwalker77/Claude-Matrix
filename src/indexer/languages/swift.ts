@@ -9,34 +9,7 @@ import { LanguageParser } from './base.js';
 import type { ParseResult, ExtractedSymbol, ExtractedImport, SymbolKind } from '../types.js';
 
 export class SwiftParser extends LanguageParser {
-  parse(filePath: string, content: string): ParseResult {
-    const symbols: ExtractedSymbol[] = [];
-    const imports: ExtractedImport[] = [];
-    const errors: string[] = [];
-
-    try {
-      this.parser.setLanguage(this.language);
-      const tree = this.parser.parse(content);
-
-      if (!tree) {
-        errors.push('Failed to parse file');
-        return { symbols, imports, errors };
-      }
-
-      if (tree.rootNode.hasError) {
-        errors.push('Parse error detected in file');
-      }
-
-      this.extractSymbols(tree.rootNode, symbols);
-      this.extractImports(tree.rootNode, imports);
-    } catch (err) {
-      errors.push(`Parse error: ${err instanceof Error ? err.message : String(err)}`);
-    }
-
-    return { symbols, imports, errors: errors.length > 0 ? errors : undefined };
-  }
-
-  private extractSymbols(rootNode: SyntaxNode, symbols: ExtractedSymbol[]): void {
+  protected extractSymbols(rootNode: SyntaxNode, symbols: ExtractedSymbol[]): void {
     this.walkTree(rootNode, (node) => {
       switch (node.type) {
         case 'class_declaration':
@@ -373,7 +346,7 @@ export class SwiftParser extends LanguageParser {
     );
   }
 
-  private extractImports(rootNode: SyntaxNode, imports: ExtractedImport[]): void {
+  protected extractImports(rootNode: SyntaxNode, imports: ExtractedImport[]): void {
     this.walkTree(rootNode, (node) => {
       if (node.type === 'import_declaration') {
         this.handleImportDeclaration(node, imports);

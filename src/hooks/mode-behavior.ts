@@ -52,76 +52,72 @@ export interface ModeBehavior {
 }
 
 /**
+ * Mode behavior presets - maps mode to behavior settings
+ * Values of -1 mean "use config setting"
+ */
+const MODE_BEHAVIORS: Record<SessionMode, ModeBehavior> = {
+  ultrathink: {
+    memoryInjection: 'full',
+    maxSolutions: 5,
+    maxFailures: 3,
+    runComplexityAnalysis: true,
+    suggestPlanMode: 'always',
+    suggestReview: 'always',
+    indexPriority: 'high',
+    suggestDeepResearch: true,
+    complexityThreshold: 3, // Lower = more aggressive
+  },
+  quick: {
+    memoryInjection: 'light',
+    maxSolutions: 1,
+    maxFailures: 0,
+    runComplexityAnalysis: false,
+    suggestPlanMode: 'never',
+    suggestReview: 'never',
+    indexPriority: 'low',
+    suggestDeepResearch: false,
+    complexityThreshold: 10, // High = rarely triggers
+  },
+  docs: {
+    memoryInjection: 'off',
+    maxSolutions: 0,
+    maxFailures: 0,
+    runComplexityAnalysis: false,
+    suggestPlanMode: 'never',
+    suggestReview: 'never',
+    indexPriority: 'low',
+    suggestDeepResearch: false,
+    complexityThreshold: 10,
+  },
+  debug: {
+    memoryInjection: 'full',
+    maxSolutions: 3,
+    maxFailures: 5, // More failures for debugging context
+    runComplexityAnalysis: true,
+    suggestPlanMode: 'smart', // Only for complex investigations
+    suggestReview: 'always',
+    indexPriority: 'high',
+    suggestDeepResearch: true,
+    complexityThreshold: 4,
+  },
+  classic: {
+    memoryInjection: 'config',
+    maxSolutions: -1,
+    maxFailures: -1,
+    runComplexityAnalysis: true,
+    suggestPlanMode: 'config',
+    suggestReview: 'config',
+    indexPriority: 'config',
+    suggestDeepResearch: true,
+    complexityThreshold: -1,
+  },
+};
+
+/**
  * Get behavior settings for a session mode
  */
 export function getModeBehavior(mode: SessionMode): ModeBehavior {
-  switch (mode) {
-    case 'ultrathink':
-      return {
-        memoryInjection: 'full',
-        maxSolutions: 5,
-        maxFailures: 3,
-        runComplexityAnalysis: true,
-        suggestPlanMode: 'always',
-        suggestReview: 'always',
-        indexPriority: 'high',
-        suggestDeepResearch: true,
-        complexityThreshold: 3, // Lower threshold = more aggressive
-      };
-
-    case 'quick':
-      return {
-        memoryInjection: 'light',
-        maxSolutions: 1,
-        maxFailures: 0,
-        runComplexityAnalysis: false,
-        suggestPlanMode: 'never',
-        suggestReview: 'never',
-        indexPriority: 'low',
-        suggestDeepResearch: false,
-        complexityThreshold: 10, // High threshold = rarely triggers
-      };
-
-    case 'docs':
-      return {
-        memoryInjection: 'off',
-        maxSolutions: 0,
-        maxFailures: 0,
-        runComplexityAnalysis: false,
-        suggestPlanMode: 'never',
-        suggestReview: 'never',
-        indexPriority: 'low',
-        suggestDeepResearch: false,
-        complexityThreshold: 10,
-      };
-
-    case 'debug':
-      return {
-        memoryInjection: 'full',
-        maxSolutions: 3,
-        maxFailures: 5, // More failures for debugging context
-        runComplexityAnalysis: true,
-        suggestPlanMode: 'smart', // Only for complex investigations
-        suggestReview: 'always',
-        indexPriority: 'high',
-        suggestDeepResearch: true,
-        complexityThreshold: 4,
-      };
-
-    case 'classic':
-    default:
-      return {
-        memoryInjection: 'config',
-        maxSolutions: -1, // Use config
-        maxFailures: -1, // Use config
-        runComplexityAnalysis: true,
-        suggestPlanMode: 'config',
-        suggestReview: 'config',
-        indexPriority: 'config',
-        suggestDeepResearch: true,
-        complexityThreshold: -1, // Use config
-      };
-  }
+  return { ...MODE_BEHAVIORS[mode] };
 }
 
 /**

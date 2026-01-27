@@ -13,6 +13,8 @@ import {
   RecallInputSchema,
   StoreInputSchema,
   RewardInputSchema,
+  GetSolutionInputSchema,
+  SkillInputSchema,
   FailureInputSchema,
   StatusInputSchema,
   WarnInputSchema,
@@ -85,6 +87,13 @@ export const TOOLS: Tool[] = [
     description: 'Provide feedback on a recalled solution. Improves future recommendations.',
     annotations: { idempotentHint: true },
     inputSchema: toInputSchema(RewardInputSchema),
+    _meta: { delegable: true, category: 'core' as ToolCategory, visibility: 'always' as VisibilityRule },
+  },
+  {
+    name: 'matrix_get_solution',
+    description: 'Get full solution details by ID. Use after compact recall returns matches.',
+    annotations: { readOnlyHint: true },
+    inputSchema: toInputSchema(GetSolutionInputSchema),
     _meta: { delegable: true, category: 'core' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
   {
@@ -198,6 +207,13 @@ export const TOOLS: Tool[] = [
   // ═══════════════════════════════════════════════════════════════
   // Skill Factory Tools (v2.0) - Always visible
   // ═══════════════════════════════════════════════════════════════
+  {
+    name: 'matrix_skill',
+    description: 'Unified skill management. Actions: "candidates" (list promotable solutions), "link" (link solution to skill file).',
+    inputSchema: toInputSchema(SkillInputSchema),
+    _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
+  },
+  // Legacy aliases (deprecated - use matrix_skill instead)
   {
     name: 'matrix_skill_candidates',
     description: 'List solutions good for promotion to Skills. Returns high success rate solutions.',

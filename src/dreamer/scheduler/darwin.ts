@@ -56,16 +56,11 @@ export class DarwinScheduler extends BaseScheduler {
 
   async register(task: DreamerTask): Promise<void> {
     try {
-      // Ensure LaunchAgents directory exists
+      // Ensure directories exist
       if (!existsSync(this.launchAgentsDir)) {
         mkdirSync(this.launchAgentsDir, { recursive: true });
       }
-
-      // Ensure logs directory exists
       const logDir = getLogsDir();
-      if (!existsSync(logDir)) {
-        mkdirSync(logDir, { recursive: true });
-      }
 
       // Generate and write worktree script if enabled
       if (this.usesWorktree(task)) {
