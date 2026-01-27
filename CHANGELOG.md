@@ -2,6 +2,31 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.2.0] - 2025-01-26
+
+
+### Added
+
+#### Token Optimization
+- **Compact Recall Mode** - `matrix_recall({ compact: true })` returns minimal data
+  - Returns: `{id, problem, similarity, score, successRate}`
+  - Fetch full details with new `matrix_get_solution(id)` tool
+- **Optional Hints** - `includeHints: false` on recall/store/failure skips `_hints` field
+
+#### New Tools
+- **`matrix_get_solution`** - Fetch full solution details by ID after compact recall
+- **`matrix_skill`** - Unified skill management with actions: `candidates`, `link`
+  - Replaces `matrix_skill_candidates` + `matrix_link_skill` (kept as aliases)
+
+### Changed
+
+#### Internal Refactors
+- **Parser Architecture** - Template method pattern for 15 language parsers
+- **Doctor Modularization** - Split into focused check modules
+- **Shared Utilities** - FileIO abstraction and file-suggestion extraction
+
+---
+
 ## [2.1.9] - 2025-01-22
 
 ### Intuducing Session Modes

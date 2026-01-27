@@ -24,11 +24,10 @@ import { getConfig, saveConfig, clearCache } from '../config/index.js';
 import { runMigrations } from '../db/migrate.js';
 import { cleanupExpiredSessions } from '../session/index.js';
 import { SESSION_MODES } from '../types/session.js';
+import { installFileSuggestion } from '../utils/file-suggestion.js';
 
 const CURRENT_VERSION = '1.0.4';
 const CLAUDE_DIR = join(homedir(), '.claude');
-const FILE_SUGGESTION_DEST = join(CLAUDE_DIR, 'file-suggestion.sh');
-const SETTINGS_PATH = join(CLAUDE_DIR, 'settings.json');
 
 /**
  * Get time-appropriate greeting
@@ -67,7 +66,6 @@ function generateModeSelectionContext(): string {
   const userName = getUserName();
   const nameStr = userName ? ` ${userName}` : '';
 
-  // Format options for AskUserQuestion tool
   const options = SESSION_MODES.map(m => ({
     label: m.label,
     description: m.description,
@@ -99,58 +97,7 @@ FAILURE TO CALL AskUserQuestion FIRST BREAKS THE SESSION SYSTEM.
 </CRITICAL>`;
 }
 
-// Embedded file-suggestion.sh content
-const FILE_SUGGESTION_SCRIPT = `#!/bin/bash
-# Custom file suggestion script for Claude Code (installed by Matrix)
-# Uses rg + fzf for fuzzy matching and symlink support
-# Prerequisites: brew install ripgrep jq fzf
-
-QUERY=$(jq -r '.query // ""')
-PROJECT_DIR="\${CLAUDE_PROJECT_DIR:-.}"
-cd "$PROJECT_DIR" || exit 1
-rg --files --follow --hidden . 2>/dev/null | sort -u | fzf --filter "$QUERY" | head -15
-`;
-
-/**
- * Install file-suggestion.sh and update settings.json
- * Returns true if any changes were made
- */
-function installFileSuggestion(): boolean {
-  let changed = false;
-
-  try {
-    // Install the script if not present
-    if (!existsSync(FILE_SUGGESTION_DEST)) {
-      writeFileSync(FILE_SUGGESTION_DEST, FILE_SUGGESTION_SCRIPT, { mode: 0o755 });
-      changed = true;
-    }
-
-    // Update settings.json to use it
-    let settings: Record<string, unknown> = {};
-    if (existsSync(SETTINGS_PATH)) {
-      try {
-        settings = JSON.parse(readFileSync(SETTINGS_PATH, 'utf-8'));
-      } catch {
-        // Invalid JSON, start fresh
-        settings = {};
-      }
-    }
-
-    // Add fileSuggestion if not configured (respects explicit null/false)
-    if (!('fileSuggestion' in settings)) {
-      settings.fileSuggestion = {
-        type: 'command',
-        command: '~/.claude/file-suggestion.sh',
-      };
-      writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2));
-      changed = true;
-    }
-
-    return changed;
-  } catch {
-    return false;
-  }
-}
+// File suggestion installation moved to utils/file-suggestion.ts
 
 /**
  * Check for missing config sections and save if needed
@@ -270,83 +217,70 @@ function findGitRoot(startPath: string): string | null {
 }
 
 /**
+ * Project marker files for indexable languages
+ * Each array represents files that indicate a particular language/framework
+ */
+const PROJECT_MARKERS = [
+  // TypeScript/JavaScript
+  ['package.json', 'tsconfig.json', 'jsconfig.json'],
+  // Python
+  ['pyproject.toml', 'setup.py', 'requirements.txt'],
+  // Go
+  ['go.mod'],
+  // Rust
+  ['Cargo.toml'],
+  // Java/Kotlin (Maven/Gradle)
+  ['pom.xml', 'build.gradle', 'build.gradle.kts'],
+  // Swift
+  ['Package.swift'],
+  // C# (.NET)
+  ['global.json'],
+  // Ruby
+  ['Gemfile'],
+  // PHP
+  ['composer.json'],
+  // Elixir
+  ['mix.exs'],
+  // Zig
+  ['build.zig'],
+];
+
+const CPP_SOURCE_PATTERN = /\.(c|cpp|cc|cxx|h|hpp|hxx)$/i;
+
+/**
+ * Check if directory contains C/C++ source files
+ */
+function hasCppSources(dir: string): boolean {
+  try {
+    return readdirSync(dir).some(f => CPP_SOURCE_PATTERN.test(f));
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Check if directory is an indexable project
  * Supports 15 languages: TypeScript/JavaScript, Python, Go, Rust, Java, Kotlin,
  * Swift, C#, Ruby, PHP, C, C++, Elixir, Zig
  */
 function isIndexableProject(root: string): boolean {
-  // TypeScript/JavaScript
-  if (existsSync(join(root, 'package.json')) ||
-      existsSync(join(root, 'tsconfig.json')) ||
-      existsSync(join(root, 'jsconfig.json'))) {
-    return true;
-  }
-  // Python
-  if (existsSync(join(root, 'pyproject.toml')) ||
-      existsSync(join(root, 'setup.py')) ||
-      existsSync(join(root, 'requirements.txt'))) {
-    return true;
-  }
-  // Go
-  if (existsSync(join(root, 'go.mod'))) {
-    return true;
-  }
-  // Rust
-  if (existsSync(join(root, 'Cargo.toml'))) {
-    return true;
-  }
-  // Java/Kotlin (Maven/Gradle)
-  if (existsSync(join(root, 'pom.xml')) ||
-      existsSync(join(root, 'build.gradle')) ||
-      existsSync(join(root, 'build.gradle.kts'))) {
-    return true;
-  }
-  // Swift
-  if (existsSync(join(root, 'Package.swift'))) {
-    return true;
-  }
-  // C# (.NET)
-  if (existsSync(join(root, 'global.json'))) {
-    return true;
-  }
-  // Ruby
-  if (existsSync(join(root, 'Gemfile'))) {
-    return true;
-  }
-  // PHP
-  if (existsSync(join(root, 'composer.json'))) {
-    return true;
-  }
-  // Elixir
-  if (existsSync(join(root, 'mix.exs'))) {
-    return true;
-  }
-  // Zig
-  if (existsSync(join(root, 'build.zig'))) {
-    return true;
-  }
-  // C/C++ (CMake or Makefile + source files to avoid false positives)
-  if (existsSync(join(root, 'CMakeLists.txt')) ||
-      existsSync(join(root, 'Makefile'))) {
-    // Verify actual C/C++ source files exist to avoid matching non-C/C++ projects
-    try {
-      const files = readdirSync(root);
-      const hasCppSources = files.some(f =>
-        /\.(c|cpp|cc|cxx|h|hpp|hxx)$/i.test(f)
-      );
-      if (hasCppSources) return true;
-      // Also check common src directory
-      const srcDir = join(root, 'src');
-      if (existsSync(srcDir)) {
-        const srcFiles = readdirSync(srcDir);
-        if (srcFiles.some(f => /\.(c|cpp|cc|cxx|h|hpp|hxx)$/i.test(f))) {
-          return true;
-        }
-      }
-    } catch {
-      // If we can't read directories, skip C/C++ detection
+  // Check standard project markers
+  for (const markers of PROJECT_MARKERS) {
+    if (markers.some(marker => existsSync(join(root, marker)))) {
+      return true;
     }
   }
+
+  // C/C++ requires build system + source files to avoid false positives
+  const hasBuildSystem = existsSync(join(root, 'CMakeLists.txt')) ||
+                         existsSync(join(root, 'Makefile'));
+
+  if (hasBuildSystem) {
+    if (hasCppSources(root) || hasCppSources(join(root, 'src'))) {
+      return true;
+    }
+  }
+
   return false;
 }
 

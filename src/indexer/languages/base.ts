@@ -3,9 +3,12 @@
  *
  * Abstract base class for language-specific parsers.
  * Each language extends this to provide symbol and import extraction.
+ *
+ * Template Method Pattern: parse() is implemented here, subclasses
+ * only implement extractSymbols() and extractImports().
  */
 
-import type { Parser, Language, Node as SyntaxNode } from 'web-tree-sitter';
+import type { Parser, Language, Node as SyntaxNode, Tree } from 'web-tree-sitter';
 import type { ParseResult, ExtractedSymbol, ExtractedImport, SymbolKind } from '../types.js';
 
 export abstract class LanguageParser {
@@ -19,8 +22,46 @@ export abstract class LanguageParser {
 
   /**
    * Parse source code and extract symbols/imports
+   * Template method - subclasses implement extractSymbols/extractImports
    */
-  abstract parse(filePath: string, content: string): ParseResult;
+  parse(filePath: string, content: string): ParseResult {
+    const symbols: ExtractedSymbol[] = [];
+    const imports: ExtractedImport[] = [];
+    const errors: string[] = [];
+
+    try {
+      this.parser.setLanguage(this.language);
+      const tree = this.parser.parse(content);
+
+      if (!tree) {
+        errors.push('Failed to parse file');
+        return { symbols, imports, errors };
+      }
+
+      if (tree.rootNode.hasError) {
+        errors.push('Parse error detected in file');
+      }
+
+      this.extractSymbols(tree.rootNode, symbols);
+      this.extractImports(tree.rootNode, imports);
+    } catch (err) {
+      errors.push(`Parse error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    return { symbols, imports, errors: errors.length > 0 ? errors : undefined };
+  }
+
+  /**
+   * Extract symbols from the parsed AST
+   * Implement in subclasses
+   */
+  protected abstract extractSymbols(rootNode: SyntaxNode, symbols: ExtractedSymbol[]): void;
+
+  /**
+   * Extract imports from the parsed AST
+   * Implement in subclasses
+   */
+  protected abstract extractImports(rootNode: SyntaxNode, imports: ExtractedImport[]): void;
 
   /**
    * Get line/column from a syntax node (1-indexed lines, 0-indexed columns)

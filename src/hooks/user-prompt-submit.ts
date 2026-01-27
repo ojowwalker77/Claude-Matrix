@@ -43,6 +43,7 @@ import {
 import { evaluatePromptRules, formatRuleResult } from './rule-engine.js';
 import { getSession, createSession, updateSessionMode } from '../session/index.js';
 import { isValidSessionMode, SESSION_MODES, type SessionMode } from '../types/session.js';
+
 import {
   shouldInjectMemory,
   shouldRunComplexityAnalysis,

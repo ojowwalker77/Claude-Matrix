@@ -9,36 +9,8 @@ import { LanguageParser } from './base.js';
 import type { ParseResult, ExtractedSymbol, ExtractedImport } from '../types.js';
 
 export class RustParser extends LanguageParser {
-  parse(filePath: string, content: string): ParseResult {
-    const symbols: ExtractedSymbol[] = [];
-    const imports: ExtractedImport[] = [];
-    const errors: string[] = [];
-
-    try {
-      this.parser.setLanguage(this.language);
-      const tree = this.parser.parse(content);
-
-      if (!tree) {
-        errors.push('Failed to parse file');
-        return { symbols, imports, errors };
-      }
-
-      if (tree.rootNode.hasError) {
-        errors.push('Parse error detected in file');
-      }
-
-      this.extractSymbols(tree.rootNode, content, symbols);
-      this.extractImports(tree.rootNode, content, imports);
-    } catch (err) {
-      errors.push(`Parse error: ${err instanceof Error ? err.message : String(err)}`);
-    }
-
-    return { symbols, imports, errors: errors.length > 0 ? errors : undefined };
-  }
-
-  private extractSymbols(
+  protected extractSymbols(
     rootNode: SyntaxNode,
-    content: string,
     symbols: ExtractedSymbol[],
     scope?: string
   ): void {
@@ -77,7 +49,7 @@ export class RustParser extends LanguageParser {
           return false;
 
         case 'mod_item':
-          this.handleModItem(node, symbols, content);
+          this.handleModItem(node, symbols);
           return false;
       }
       return true;
@@ -278,7 +250,7 @@ export class RustParser extends LanguageParser {
     );
   }
 
-  private handleModItem(node: SyntaxNode, symbols: ExtractedSymbol[], content: string): void {
+  private handleModItem(node: SyntaxNode, symbols: ExtractedSymbol[]): void {
     const nameNode = this.getChildByField(node, 'name');
     if (!nameNode) return;
 
@@ -295,13 +267,12 @@ export class RustParser extends LanguageParser {
     // Recursively extract from module body
     const bodyNode = this.getChildByType(node, 'declaration_list');
     if (bodyNode) {
-      this.extractSymbols(bodyNode, content, symbols, name);
+      this.extractSymbols(bodyNode, symbols, name);
     }
   }
 
-  private extractImports(
+  protected extractImports(
     rootNode: SyntaxNode,
-    content: string,
     imports: ExtractedImport[]
   ): void {
     this.walkTree(rootNode, (node) => {

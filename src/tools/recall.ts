@@ -38,6 +38,52 @@ interface RecallResult {
   totalFound: number;
 }
 
+/**
+ * Get full solution details by ID
+ * Used when compact recall returns a match and full details are needed
+ */
+export function matrixGetSolution(solutionId: string): SolutionMatch | null {
+  const db = getDb();
+
+  const row = db.query(`
+    SELECT id, repo_id, problem, solution, scope, tags, score, uses, successes, failures,
+           category, complexity, prerequisites, anti_patterns, code_blocks, related_solutions
+    FROM solutions WHERE id = ?
+  `).get(solutionId) as {
+    id: string; repo_id: string | null; problem: string;
+    solution: string; scope: string; tags: string; score: number; uses: number;
+    successes: number; failures: number; category: string | null; complexity: number | null;
+    prerequisites: string | null; anti_patterns: string | null; code_blocks: string | null;
+    related_solutions: string | null;
+  } | null;
+
+  if (!row) return null;
+
+  // Check if superseded
+  const supersededRow = db.query(`SELECT id FROM solutions WHERE supersedes = ?`).get(solutionId) as { id: string } | null;
+
+  const totalOutcomes = row.successes + row.failures;
+  const successRate = totalOutcomes > 0 ? row.successes / totalOutcomes : 0.5;
+
+  const match: SolutionMatch = {
+    id: row.id, problem: row.problem, solution: row.solution, scope: row.scope,
+    tags: JSON.parse(row.tags || '[]'),
+    similarity: 1, // Not from search
+    score: row.score, uses: row.uses,
+    successRate: Math.round(successRate * 100) / 100,
+  };
+
+  if (row.category) match.category = row.category as SolutionCategory;
+  if (row.complexity !== null) match.complexity = row.complexity;
+  if (row.prerequisites) { const p = JSON.parse(row.prerequisites); if (p.length) match.prerequisites = p; }
+  if (row.anti_patterns) { const a = JSON.parse(row.anti_patterns); if (a.length) match.antiPatterns = a; }
+  if (row.code_blocks) { const c = JSON.parse(row.code_blocks); if (c.length) match.codeBlocks = c; }
+  if (row.related_solutions) { const r = JSON.parse(row.related_solutions); if (r.length) match.relatedSolutions = r; }
+  if (supersededRow) match.supersededBy = supersededRow.id;
+
+  return match;
+}
+
 export async function matrixRecall(input: RecallInput): Promise<RecallResult> {
   const db = getDb();
   const limit = input.limit ?? 5;
