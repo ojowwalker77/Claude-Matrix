@@ -2,6 +2,14 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.2.1] - 2025-01-29
+
+### Added
+- **Swift & SwiftUI Skill** (`/swift-swiftui`) - iOS/macOS dev patterns, @Observable, MVVM/TCA, SwiftData
+- **Effect-TS Skill** (`/effect-ts`) - Typed errors, layers, concurrency, Schema, fp-ts migration
+
+---
+
 ## [2.2.0] - 2025-01-26
 
 
