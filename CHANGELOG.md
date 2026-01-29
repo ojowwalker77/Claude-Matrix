@@ -5,31 +5,8 @@ All notable changes to Claude Matrix are documented here.
 ## [2.2.1] - 2025-01-29
 
 ### Added
-
-#### Framework-Specific Skills
-- **Swift & SwiftUI Expert** (`/swift-swiftui`) - Comprehensive iOS/macOS development guidance
-  - Modern state management with `@Observable` (iOS 17+)
-  - Property wrapper decision tree (@State, @Binding, @Bindable, @Environment)
-  - Architecture patterns (MVVM, TCA, Clean Architecture)
-  - NavigationStack and programmatic navigation
-  - Performance optimization (List vs LazyVStack, lazy loading)
-  - Swift concurrency (async/await, actors, MainActor)
-  - Testing strategies (Swift Testing, ViewInspector, XCUITest)
-  - Accessibility (VoiceOver, Dynamic Type)
-  - SwiftData persistence patterns
-  - 16 documented anti-patterns with fixes
-
-- **Effect-TS Expert** (`/effect-ts`) - Functional TypeScript with typed errors
-  - Core Effect type and Effect.gen syntax
-  - Error handling (typed errors vs defects, recovery patterns)
-  - Dependency injection (Context.Tag, Effect.Service, Layer composition)
-  - Concurrency (Fiber, Ref, Queue, Semaphore, Deferred)
-  - Schema validation and branded types
-  - Stream processing patterns
-  - Configuration management (ConfigProvider, .env)
-  - Testing with Vitest and mock layers
-  - fp-ts migration guide
-  - 12 documented anti-patterns with fixes
+- **Swift & SwiftUI Skill** (`/swift-swiftui`) - iOS/macOS dev patterns, @Observable, MVVM/TCA, SwiftData
+- **Effect-TS Skill** (`/effect-ts`) - Typed errors, layers, concurrency, Schema, fp-ts migration
 
 ---
 
