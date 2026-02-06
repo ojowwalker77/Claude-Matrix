@@ -61,8 +61,10 @@ interface ImportGraphData {
   outgoing: Map<string, Set<string>>;
   /** file_path -> Set of file_paths that import it */
   incoming: Map<string, Set<string>>;
-  /** All known file paths */
+  /** All known file paths (full repo, used for resolution) */
   allFiles: Set<string>;
+  /** Files within the analysis scope (filtered by pathPrefix) */
+  scopeFiles: Set<string>;
 }
 
 /**
@@ -92,7 +94,7 @@ function resolveImportPath(
   for (const part of sourcePath.split('/')) {
     if (part === '.' || part === '') continue;
     if (part === '..') {
-      segments.pop();
+      if (segments.length > 0) segments.pop();
     } else {
       segments.push(part);
     }
@@ -126,31 +128,36 @@ function resolveImportPath(
 function buildImportGraph(repoId: string, pathPrefix?: string): ImportGraphData {
   const db = getDb();
 
-  // Get all indexed files
-  let fileQuery = 'SELECT id, file_path FROM repo_files WHERE repo_id = ?';
-  const fileParams: (string | number)[] = [repoId];
-  if (pathPrefix) {
-    fileQuery += ' AND file_path LIKE ?';
-    fileParams.push(`${pathPrefix}%`);
-  }
-
-  const files = db.query(fileQuery).all(...fileParams) as Array<{ id: number; file_path: string }>;
+  // Load ALL files for import resolution (unfiltered) to prevent
+  // false positives from cross-boundary imports failing to resolve
+  const allFileRows = db.query('SELECT id, file_path FROM repo_files WHERE repo_id = ?')
+    .all(repoId) as Array<{ id: number; file_path: string }>;
 
   const allFiles = new Set<string>();
   const fileIdToPath = new Map<number, string>();
-  for (const f of files) {
+  for (const f of allFileRows) {
     allFiles.add(f.file_path);
     fileIdToPath.set(f.id, f.file_path);
   }
 
-  // Get all imports from these files
+  // Determine analysis scope (filtered by pathPrefix)
+  const scopeFiles = new Set<string>();
+  if (pathPrefix) {
+    for (const f of allFiles) {
+      if (f.startsWith(pathPrefix)) scopeFiles.add(f);
+    }
+  } else {
+    for (const f of allFiles) scopeFiles.add(f);
+  }
+
+  // Get imports from scope files only (outgoing edges)
   const imports = db.query(`
     SELECT i.file_id, i.source_path
     FROM imports i
     JOIN repo_files f ON i.file_id = f.id
     WHERE f.repo_id = ?
     ${pathPrefix ? 'AND f.file_path LIKE ?' : ''}
-  `).all(...fileParams) as Array<{ file_id: number; source_path: string }>;
+  `).all(...(pathPrefix ? [repoId, `${pathPrefix}%`] : [repoId])) as Array<{ file_id: number; source_path: string }>;
 
   // Build adjacency lists
   const outgoing = new Map<string, Set<string>>();
@@ -165,6 +172,7 @@ function buildImportGraph(repoId: string, pathPrefix?: string): ImportGraphData 
     const fromFile = fileIdToPath.get(imp.file_id);
     if (!fromFile) continue;
 
+    // Resolve against ALL files (not just scope) for accurate cross-boundary resolution
     const resolved = resolveImportPath(fromFile, imp.source_path, allFiles);
     if (!resolved) continue;
 
@@ -172,7 +180,7 @@ function buildImportGraph(repoId: string, pathPrefix?: string): ImportGraphData 
     incoming.get(resolved)?.add(fromFile);
   }
 
-  return { outgoing, incoming, allFiles };
+  return { outgoing, incoming, allFiles, scopeFiles };
 }
 
 // ============================================================================
@@ -211,7 +219,6 @@ export function findDeadExports(
         kind: exp.kind,
         file: exp.file,
         line: exp.line,
-        signature: undefined, // findExports doesn't return signature
       });
     }
   }
@@ -239,13 +246,13 @@ export function findOrphanedFiles(
 
   const orphaned: OrphanedFile[] = [];
 
-  for (const filePath of graph.allFiles) {
+  for (const filePath of graph.scopeFiles) {
     if (orphaned.length >= limit) break;
 
     // Skip entry points
     if (isEntryPoint(filePath)) continue;
 
-    // Check incoming edges
+    // Check incoming edges (from ALL files, not just scope)
     const importers = graph.incoming.get(filePath);
     if (importers && importers.size > 0) continue;
 
@@ -299,7 +306,7 @@ export function findCircularDeps(
 
   return {
     cycles: cycles.map(c => ({
-      cycle: [...c, c[0]!], // close the loop for display
+      cycle: c.length > 0 ? [...c, c[0]!] : [],
       length: c.length,
     })),
     summary: {
@@ -417,7 +424,8 @@ function normalizeRotation(cycle: string[]): string {
 function buildEntryPointMatcher(extraPatterns: string[]): (filePath: string) => boolean {
   // Default entry point patterns (as regex sources)
   const defaultPatterns = [
-    /(?:^|\/)(index|main|app|server)\.(ts|tsx|js|jsx|mjs)$/,
+    /(?:^|\/)(index)\.(ts|tsx|js|jsx|mjs)$/,
+    /^(main|app|server)\.(ts|tsx|js|jsx|mjs)$/,
     /(?:^|\/)bin\//,
     /(?:^|\/)scripts\//,
     /\.config\.(ts|js|mjs|cjs)$/,
@@ -434,7 +442,7 @@ function buildEntryPointMatcher(extraPatterns: string[]): (filePath: string) => 
   const extraRegexes = extraPatterns.map(pattern => {
     const escaped = pattern
       .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-      .replace(/\*/g, '.*');
+      .replace(/\*/g, '[^/]*');
     return new RegExp(escaped);
   });
 

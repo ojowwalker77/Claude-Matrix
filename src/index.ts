@@ -133,31 +133,15 @@ async function main(): Promise<void> {
     { name: 'matrix', version: VERSION },
     {
       capabilities: {
-        tools: {
-          // Enable list_changed notifications for dynamic tool visibility
-          listChanged: true,
-        },
+        tools: {},
       },
       instructions,
     }
   );
 
-  // Initialize tool registry with current working directory
-  // This detects project type and determines initial tool visibility
   toolRegistry.initialize(process.cwd());
 
-  // Register callback to emit list_changed when tools change
-  toolRegistry.onContextChange((_context, toolsChanged) => {
-    if (toolsChanged) {
-      // Notify client that the tool list has changed
-      server.sendToolListChanged().catch((err) => {
-        // Log but don't crash - client may not support notifications
-        console.error('[Matrix] Failed to send tool list changed notification:', err);
-      });
-    }
-  });
-
-  // Return dynamically filtered tools based on project context
+  // Return all available tools
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: toolRegistry.getAvailableTools(),
   }));

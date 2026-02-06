@@ -52,13 +52,18 @@ export function bufferToEmbedding(buffer: Buffer | Uint8Array): Float32Array {
 }
 
 // Generic embedding similarity search (batch processing to avoid memory issues)
+const ALLOWED_TABLES = ['solutions', 'failures'] as const;
+const ALLOWED_COLUMNS = ['problem_embedding', 'error_embedding'] as const;
+
 function searchSimilarByEmbedding(
-  table: string,
-  embeddingColumn: string,
+  table: (typeof ALLOWED_TABLES)[number],
+  embeddingColumn: (typeof ALLOWED_COLUMNS)[number],
   queryEmbedding: Float32Array,
   limit: number,
   minScore: number
 ): Array<{ id: string; similarity: number }> {
+  if (!(ALLOWED_TABLES as readonly string[]).includes(table)) throw new Error(`Invalid table: ${table}`);
+  if (!(ALLOWED_COLUMNS as readonly string[]).includes(embeddingColumn)) throw new Error(`Invalid column: ${embeddingColumn}`);
   const db = getDb();
   const BATCH_SIZE = 1000;
   let offset = 0;
