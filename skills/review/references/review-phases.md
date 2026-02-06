@@ -99,8 +99,16 @@ For each file:
 2. Scan for RUNTIME issues (uncaught promises, null access)
 3. Check for BREAKING changes (removed exports, changed signatures)
 4. Identify LOGIC flaws (dead code, unreachable branches)
+5. Run HYGIENE scan (nuke pipeline):
+   a. matrix_find_dead_code on changed file scope
+   b. matrix_find_circular_deps on changed file scope
+   c. Per-file: unused imports, console.log, commented-out code,
+      unnecessary comments, stale TODOs
+   d. Package-level: unused deps, overengineered deps
+   e. Mark each finding as introduced vs pre-existing via git diff
 
 Early exit check: if no critical/high findings, reduce Impact depth
+Note: Hygiene findings are always collected (no early exit for hygiene)
 ```
 
 ### Step 2: Impact Agent
@@ -201,6 +209,24 @@ const users = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
 Loop executes individual queries instead of batch fetch.
 
 **Suggested Fix:** Use `WHERE id IN (...)` with collected IDs
+
+---
+
+## Hygiene
+
+### Introduced (new in this change)
+
+| # | Type | File | Line | Description | Confidence |
+|---|------|------|------|-------------|------------|
+| 1 | [CONSOLE.LOG] | src/api/users.ts:67 | 67 | `console.log('debug:', user)` | 92% |
+| 2 | [UNUSED IMPORT] | src/api/users.ts:3 | 3 | `formatDate` imported but not used | 90% |
+
+### Pre-existing (in touched files)
+
+| # | Type | File | Line | Description | Confidence |
+|---|------|------|------|-------------|------------|
+| 1 | [STALE TODO] | src/api/users.ts:12 | 12 | `// TODO: add pagination` (8mo old) | 75% |
+| 2 | [DEAD EXPORT] | src/utils/format.ts:42 | 42 | `formatLegacyDate` has zero callers | 85% |
 
 ---
 

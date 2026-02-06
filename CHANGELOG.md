@@ -13,11 +13,24 @@ All notable changes to Claude Matrix are documented here.
 - **SubagentStop hook** - Removed (no-op).
 - **Auto-install file suggestion** - No longer silently modifies `~/.claude/settings.json` on session start.
 - **`minimal` verbosity level** - Two levels (`full`/`compact`) is enough.
+- **Repomix tool** - Replaced by `/matrix:clone-repo` skill (just clones to `temp/`, no dependency needed).
+- **Skill Factory tools** - Removed `matrix_skill`, `matrix_skill_candidates`, `matrix_link_skill` and all related code.
+- **Export skill** - Merged into `/matrix:list` (say "export" or "backup" to save JSON).
 
 ### Added
+- **Nuke Skill** (`/matrix:nuke`) - Comprehensive codebase hygiene analysis across 11 categories:
+  - **Structural detection** (via new MCP tools): dead exports, orphaned files, circular dependencies
+  - **Generative detection** (AI judgment): unnecessary comments, commented-out code, console.log leftovers, overengineered deps, copy-paste duplication, stale TODOs
+  - **4 modes**: `scan` (report only, default), `this` (single file), `safe` (high confidence only), `aggressive` (medium+)
+  - **Confidence-tiered output**: HIGH (>90%), MEDIUM (70-90%), LOW (<70%) with safety rules to prevent false positives
+  - **4-agent architecture**: Structural, Dependency, Generative, Triage
+- **`matrix_find_dead_code`** MCP tool - Finds exported symbols with zero callers and orphaned files with no importers. Queries the code index DB directly.
+- **`matrix_find_circular_deps`** MCP tool - Builds import graph from the index and runs DFS cycle detection. Returns all circular dependency chains.
 - **TaskCompleted hook** - Detects significant completed tasks and suggests storing the solution via `matrix_store`.
+- **Clone Repo skill** (`/matrix:clone-repo`) - Shallow clone external repos to `temp/` for exploration.
 
 ### Changed
+- **Review Skill** - Detection Agent now includes full hygiene (nuke) scan on changed files. Distinguishes between issues **introduced** by the change vs **pre-existing** in touched files. Introduced console.logs → Tier 1, introduced unused imports/dead exports → Tier 2, pre-existing TODOs/comments → Tier 3.
 - **Dynamic version** - MCP server version now synced from `package.json` instead of hardcoded.
 - **Memory safety** - Regex pattern cache capped at 200 entries to prevent unbounded growth.
 

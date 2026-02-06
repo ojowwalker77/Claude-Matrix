@@ -12,7 +12,6 @@ import {
   StoreInputSchema,
   RewardInputSchema,
   GetSolutionInputSchema,
-  SkillInputSchema,
   FailureInputSchema,
   StatusInputSchema,
   WarnInputSchema,
@@ -24,14 +23,13 @@ import {
   GetImportsInputSchema,
   IndexStatusInputSchema,
   ReindexInputSchema,
-  RepomixInputSchema,
   DoctorInputSchema,
-  SkillCandidatesInputSchema,
-  LinkSkillInputSchema,
   JobStatusInputSchema,
   JobCancelInputSchema,
   JobListInputSchema,
   DreamerInputSchema,
+  FindDeadCodeInputSchema,
+  FindCircularDepsInputSchema,
 } from './validation.js';
 
 // TypeBox schemas ARE JSON Schema - we just need to cast them for MCP's type system
@@ -51,7 +49,7 @@ export type ToolCategory =
   | 'warn'        // Warning system tools
   | 'index'       // Code index query tools
   | 'index-mgmt'  // Index management tools (status, reindex)
-  | 'utility';    // Utilities (prompt, doctor, repomix)
+  | 'utility';    // Utilities (prompt, doctor)
 
 /**
  * Visibility rules for dynamic tool display
@@ -131,13 +129,6 @@ export const TOOLS: Tool[] = [
     _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
   {
-    name: 'matrix_repomix',
-    description: 'Pack external repositories for context. Phase 1: suggest files. Phase 2 (with confirmedFiles): pack them.',
-    annotations: { readOnlyHint: true, openWorldHint: true },
-    inputSchema: toInputSchema(RepomixInputSchema),
-    _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
-  },
-  {
     name: 'matrix_doctor',
     description: 'Run diagnostics and auto-fix Matrix plugin issues. Checks database, config, hooks, and index health. If issues cannot be auto-fixed, provides GitHub issue template.',
     annotations: { readOnlyHint: false, idempotentHint: true },
@@ -201,30 +192,19 @@ export const TOOLS: Tool[] = [
     inputSchema: toInputSchema(GetImportsInputSchema),
     _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
-
-  // ═══════════════════════════════════════════════════════════════
-  // Skill Factory Tools (v2.0) - Always visible
-  // ═══════════════════════════════════════════════════════════════
   {
-    name: 'matrix_skill',
-    description: 'Unified skill management. Actions: "candidates" (list promotable solutions), "link" (link solution to skill file).',
-    inputSchema: toInputSchema(SkillInputSchema),
-    _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
-  },
-  // Legacy aliases (deprecated - use matrix_skill instead)
-  {
-    name: 'matrix_skill_candidates',
-    description: 'List solutions good for promotion to Skills. Returns high success rate solutions.',
+    name: 'matrix_find_dead_code',
+    description: 'Find dead code: exported symbols with zero callers, orphaned files with no importers. Queries the code index for structural dead code detection.',
     annotations: { readOnlyHint: true },
-    inputSchema: toInputSchema(SkillCandidatesInputSchema),
-    _meta: { delegable: true, category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
+    inputSchema: toInputSchema(FindDeadCodeInputSchema),
+    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
   {
-    name: 'matrix_link_skill',
-    description: 'Link a solution to a Skill file. Marks as promoted.',
-    annotations: { idempotentHint: true },
-    inputSchema: toInputSchema(LinkSkillInputSchema),
-    _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
+    name: 'matrix_find_circular_deps',
+    description: 'Detect circular import dependencies by building an import graph and running cycle detection. Returns all import cycles found in the codebase.',
+    annotations: { readOnlyHint: true },
+    inputSchema: toInputSchema(FindCircularDepsInputSchema),
+    _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
 
   // ═══════════════════════════════════════════════════════════════

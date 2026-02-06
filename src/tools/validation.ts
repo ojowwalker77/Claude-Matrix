@@ -87,6 +87,16 @@ const PromptModeEnum = Type.Union([
 ]);
 
 // ============================================================================
+// Analysis Enums
+// ============================================================================
+
+const DeadCodeCategoryEnum = Type.Union([
+  Type.Literal('dead_exports'),
+  Type.Literal('orphaned_files'),
+  Type.Literal('all'),
+]);
+
+// ============================================================================
 // Tool Input Schemas
 // ============================================================================
 
@@ -214,49 +224,22 @@ export const ReindexInputSchema = Type.Object({
   async: Type.Optional(Type.Boolean({ description: 'Run in background, returns jobId for polling' })),
 });
 
-export const RepomixInputSchema = Type.Object({
-  target: Type.String({ description: 'GitHub owner/repo or local path' }),
-  query: Type.String({ description: 'What to search for' }),
-  branch: Type.Optional(Type.String({ description: 'Git branch' })),
-  confirmedFiles: Type.Optional(Type.Array(Type.String(), { description: 'Files to pack (Phase 2)' })),
-  maxTokens: Type.Optional(Type.Number({ description: 'Max output tokens' })),
-  maxFiles: Type.Optional(Type.Number({ description: 'Max files to suggest' })),
-  cacheTTLHours: Type.Optional(Type.Number({ description: 'Cache TTL hours' })),
-});
-
 export const DoctorInputSchema = Type.Object({
   autoFix: Type.Optional(Type.Boolean({ description: 'Auto-fix issues' })),
 });
 
-// v2.0 Skill Factory Schemas
-export const SkillCandidatesInputSchema = Type.Object({
-  minScore: Type.Optional(Type.Number({ minimum: 0, maximum: 1, description: 'Min success rate' })),
-  minUses: Type.Optional(Type.Number({ minimum: 1, description: 'Min uses' })),
-  limit: Type.Optional(Type.Number({ minimum: 1, maximum: 50, description: 'Max candidates' })),
-  excludePromoted: Type.Optional(Type.Boolean({ description: 'Exclude promoted' })),
+export const FindDeadCodeInputSchema = Type.Object({
+  category: Type.Optional(DeadCodeCategoryEnum),
+  path: Type.Optional(Type.String({ description: 'Limit analysis to path prefix (e.g., "src/")' })),
+  entryPoints: Type.Optional(Type.Array(Type.String(), { description: 'Known entry point globs to exclude' })),
+  limit: Type.Optional(Type.Number({ description: 'Max results per category (default: 100)' })),
+  repoPath: Type.Optional(Type.String({ description: repoPathDesc })),
 });
 
-export const LinkSkillInputSchema = Type.Object({
-  solutionId: Type.String({ description: 'Solution ID to link' }),
-  skillPath: Type.String({ description: 'Skill file path' }),
-});
-
-// Unified skill tool schema
-const SkillActionEnum = Type.Union([
-  Type.Literal('candidates'),
-  Type.Literal('link'),
-]);
-
-export const SkillInputSchema = Type.Object({
-  action: SkillActionEnum,
-  // For "candidates" action
-  minScore: Type.Optional(Type.Number({ minimum: 0, maximum: 1, description: 'Min success rate (candidates)' })),
-  minUses: Type.Optional(Type.Number({ minimum: 1, description: 'Min uses (candidates)' })),
-  limit: Type.Optional(Type.Number({ minimum: 1, maximum: 50, description: 'Max candidates (candidates)' })),
-  excludePromoted: Type.Optional(Type.Boolean({ description: 'Exclude promoted (candidates)' })),
-  // For "link" action
-  solutionId: Type.Optional(Type.String({ description: 'Solution ID to link (link)' })),
-  skillPath: Type.Optional(Type.String({ description: 'Skill file path (link)' })),
+export const FindCircularDepsInputSchema = Type.Object({
+  path: Type.Optional(Type.String({ description: 'Limit analysis to path prefix' })),
+  maxDepth: Type.Optional(Type.Number({ description: 'Max cycle depth to detect (default: 10)' })),
+  repoPath: Type.Optional(Type.String({ description: repoPathDesc })),
 });
 
 // ============================================================================
@@ -352,15 +335,13 @@ export type SearchSymbolsInput = Static<typeof SearchSymbolsInputSchema>;
 export type GetImportsInput = Static<typeof GetImportsInputSchema>;
 export type IndexStatusInput = Static<typeof IndexStatusInputSchema>;
 export type ReindexInput = Static<typeof ReindexInputSchema>;
-export type RepomixInput = Static<typeof RepomixInputSchema>;
 export type DoctorInput = Static<typeof DoctorInputSchema>;
-export type SkillCandidatesInput = Static<typeof SkillCandidatesInputSchema>;
-export type LinkSkillInput = Static<typeof LinkSkillInputSchema>;
-export type SkillInput = Static<typeof SkillInputSchema>;
 export type JobStatusInput = Static<typeof JobStatusInputSchema>;
 export type JobCancelInput = Static<typeof JobCancelInputSchema>;
 export type JobListInput = Static<typeof JobListInputSchema>;
 export type DreamerInput = Static<typeof DreamerInputSchema>;
+export type FindDeadCodeInput = Static<typeof FindDeadCodeInputSchema>;
+export type FindCircularDepsInput = Static<typeof FindCircularDepsInputSchema>;
 
 // ============================================================================
 // Compiled Validators
@@ -382,15 +363,13 @@ export const validators = {
   getImports: TypeCompiler.Compile(GetImportsInputSchema),
   indexStatus: TypeCompiler.Compile(IndexStatusInputSchema),
   reindex: TypeCompiler.Compile(ReindexInputSchema),
-  repomix: TypeCompiler.Compile(RepomixInputSchema),
   doctor: TypeCompiler.Compile(DoctorInputSchema),
-  skillCandidates: TypeCompiler.Compile(SkillCandidatesInputSchema),
-  linkSkill: TypeCompiler.Compile(LinkSkillInputSchema),
-  skill: TypeCompiler.Compile(SkillInputSchema),
   jobStatus: TypeCompiler.Compile(JobStatusInputSchema),
   jobCancel: TypeCompiler.Compile(JobCancelInputSchema),
   jobList: TypeCompiler.Compile(JobListInputSchema),
   dreamer: TypeCompiler.Compile(DreamerInputSchema),
+  findDeadCode: TypeCompiler.Compile(FindDeadCodeInputSchema),
+  findCircularDeps: TypeCompiler.Compile(FindCircularDepsInputSchema),
 } as const;
 
 // ============================================================================

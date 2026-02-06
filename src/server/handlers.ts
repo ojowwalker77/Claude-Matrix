@@ -14,12 +14,12 @@ import {
   matrixGetImports,
   matrixIndexStatus,
   matrixReindex,
+  matrixFindDeadCode,
+  matrixFindCircularDeps,
 } from '../tools/index.js';
 import { matrixGetSolution } from '../tools/recall.js';
 import { matrixWarn } from '../tools/warn.js';
 import { matrixPrompt } from '../tools/prompt.js';
-import { matrixSkillCandidates, matrixLinkSkill } from '../tools/skill-factory.js';
-import { packRepository, formatResult } from '../repomix/index.js';
 import { getJob, cancelJob, listJobs, createJob, spawnBackgroundJob } from '../jobs/index.js';
 import { matrixDreamer } from '../dreamer/index.js';
 import {
@@ -30,7 +30,6 @@ import {
   type StoreInput,
   type RewardInput,
   type GetSolutionInput,
-  type SkillInput,
   type FailureInput,
   type WarnInput,
   type PromptInput,
@@ -41,14 +40,13 @@ import {
   type GetImportsInput,
   type IndexStatusInput,
   type ReindexInput,
-  type RepomixInput,
   type DoctorInput,
-  type SkillCandidatesInput,
-  type LinkSkillInput,
   type JobStatusInput,
   type JobCancelInput,
   type JobListInput,
   type DreamerInput,
+  type FindDeadCodeInput,
+  type FindCircularDepsInput,
 } from '../tools/validation.js';
 
 /**
@@ -283,6 +281,18 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         return JSON.stringify(result);
       }
 
+      case 'matrix_find_dead_code': {
+        const input = validate<FindDeadCodeInput>(validators.findDeadCode, args);
+        const result = matrixFindDeadCode(input);
+        return JSON.stringify(result);
+      }
+
+      case 'matrix_find_circular_deps': {
+        const input = validate<FindCircularDepsInput>(validators.findCircularDeps, args);
+        const result = matrixFindCircularDeps(input);
+        return JSON.stringify(result);
+      }
+
       case 'matrix_index_status': {
         const input = validate<IndexStatusInput>(validators.indexStatus, args);
         const result = matrixIndexStatus(input);
@@ -308,58 +318,10 @@ export async function handleToolCall(name: string, args: Record<string, unknown>
         return JSON.stringify(result);
       }
 
-      // Repomix Integration
-      case 'matrix_repomix': {
-        const input = validate<RepomixInput>(validators.repomix, args);
-        const result = await packRepository(input);
-        return formatResult(result);
-      }
-
       // Diagnostics
       case 'matrix_doctor': {
         const input = validate<DoctorInput>(validators.doctor, args);
         const result = await matrixDoctor(input);
-        return JSON.stringify(result);
-      }
-
-      // Skill Factory (v2.0) - Unified tool
-      case 'matrix_skill': {
-        const input = validate<SkillInput>(validators.skill, args);
-        switch (input.action) {
-          case 'candidates': {
-            const result = matrixSkillCandidates({
-              minScore: input.minScore,
-              minUses: input.minUses,
-              limit: input.limit,
-              excludePromoted: input.excludePromoted,
-            });
-            return JSON.stringify(result);
-          }
-          case 'link': {
-            if (!input.solutionId || !input.skillPath) {
-              return JSON.stringify({ error: 'solutionId and skillPath required for link action' });
-            }
-            const result = matrixLinkSkill({
-              solutionId: input.solutionId,
-              skillPath: input.skillPath,
-            });
-            return JSON.stringify(result);
-          }
-          default:
-            return JSON.stringify({ error: 'Unknown action: ' + (input as { action?: string }).action });
-        }
-      }
-
-      // Legacy skill factory tools (deprecated - use matrix_skill instead)
-      case 'matrix_skill_candidates': {
-        const input = validate<SkillCandidatesInput>(validators.skillCandidates, args);
-        const result = matrixSkillCandidates(input);
-        return JSON.stringify(result);
-      }
-
-      case 'matrix_link_skill': {
-        const input = validate<LinkSkillInput>(validators.linkSkill, args);
-        const result = matrixLinkSkill(input);
         return JSON.stringify(result);
       }
 
