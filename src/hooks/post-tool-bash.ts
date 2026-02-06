@@ -14,10 +14,20 @@ import {
   readStdin,
   hooksEnabled,
   parsePackageCommand,
-  type PostToolUseInput,
+  type HookInput,
 } from './index.js';
 import { getDb } from '../db/client.js';
 import { fingerprintRepo, getOrCreateRepo } from '../repo/index.js';
+
+interface PostToolBashInput extends HookInput {
+  tool_name: string;
+  tool_input: Record<string, unknown>;
+  tool_response: {
+    stdout?: string;
+    stderr?: string;
+    exitCode?: number;
+  };
+}
 
 export async function run() {
   try {
@@ -27,7 +37,7 @@ export async function run() {
     }
 
     // Read input from stdin
-    const input = await readStdin<PostToolUseInput>();
+    const input = await readStdin<PostToolBashInput>();
 
     // Only log successful executions
     const exitCode = input.tool_response?.exitCode;

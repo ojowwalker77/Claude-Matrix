@@ -8,15 +8,22 @@ import { homedir } from 'os';
 export { cosineSimilarity, EMBEDDING_DIM } from './utils.js';
 
 const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
+const MAX_INPUT_CHARS = 2000;
 
 // Model cache directory - defaults to ~/.claude/matrix/models
 const MODELS_DIR = process.env['MATRIX_MODELS'] || join(homedir(), '.claude', 'matrix', 'models');
 
-let embedder: unknown = null;
-let loadingPromise: Promise<unknown> | null = null;
+// Minimal typed interface for the transformers pipeline
+type EmbeddingPipeline = (
+  text: string,
+  opts: { pooling: string; normalize: boolean }
+) => Promise<{ data: ArrayLike<number> }>;
+
+let embedder: EmbeddingPipeline | null = null;
+let loadingPromise: Promise<EmbeddingPipeline> | null = null;
 let transformersError: string | null = null;
 
-async function loadEmbedder(): Promise<unknown> {
+async function loadEmbedder(): Promise<EmbeddingPipeline> {
   if (embedder) return embedder;
   if (transformersError) throw new Error(transformersError);
   if (loadingPromise) return loadingPromise;
@@ -32,7 +39,7 @@ async function loadEmbedder(): Promise<unknown> {
 
     loadingPromise = pipeline('feature-extraction', MODEL_NAME, {
       quantized: true,
-    });
+    }) as Promise<EmbeddingPipeline>;
 
     embedder = await loadingPromise;
     loadingPromise = null;
@@ -49,15 +56,13 @@ export async function getEmbedding(text: string): Promise<Float32Array> {
   const model = await loadEmbedder();
 
   // Truncate very long texts (model has 256 token limit)
-  const truncated = text.slice(0, 2000);
+  const truncated = text.slice(0, MAX_INPUT_CHARS);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const output = await (model as any)(truncated, {
+  const output = await model(truncated, {
     pooling: 'mean',
     normalize: true,
   });
 
-  // output.data is Float32Array
   return new Float32Array(output.data);
 }
 
@@ -67,9 +72,8 @@ export async function getEmbeddings(texts: string[]): Promise<Float32Array[]> {
   const results: Float32Array[] = [];
 
   for (const text of texts) {
-    const truncated = text.slice(0, 2000);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const output = await (model as any)(truncated, {
+    const truncated = text.slice(0, MAX_INPUT_CHARS);
+    const output = await model(truncated, {
       pooling: 'mean',
       normalize: true,
     });

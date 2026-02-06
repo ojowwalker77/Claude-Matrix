@@ -118,7 +118,6 @@ function findMissingConfigSections(config: ReturnType<typeof getConfig>): string
   if (!config.hooks?.promptAnalysis) missing.push('hooks.promptAnalysis');
   if (!config.hooks?.promptAnalysis?.memoryInjection) missing.push('hooks.promptAnalysis.memoryInjection');
   if (!config.hooks?.permissions) missing.push('hooks.permissions');
-  if (!config.hooks?.preCompact) missing.push('hooks.preCompact');
   if (!config.hooks?.sensitiveFiles) missing.push('hooks.sensitiveFiles');
   if (!config.hooks?.stop) missing.push('hooks.stop');
   if (!config.hooks?.packageAuditor) missing.push('hooks.packageAuditor');

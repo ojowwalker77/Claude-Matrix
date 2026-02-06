@@ -2,6 +2,27 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.2.2] - 2026-02-06
+
+### Removed
+- **Session Modes** - Removed the entire session mode system (ultrathink/quick/docs/debug/classic). Simplicity wins.
+- **UserPromptSubmit hook** - Removed per-prompt overhead. Claude Code already provides git context and CLAUDE.md natively.
+- **PreCompact hook** - Was a dead hook (couldn't output anything). Removed.
+- **Stop hook** - Replaced by the lighter TaskCompleted hook.
+- **PostToolUse:Matrix hook** - Removed nanny suggestions after matrix tool calls.
+- **SubagentStop hook** - Removed (no-op).
+- **Auto-install file suggestion** - No longer silently modifies `~/.claude/settings.json` on session start.
+- **`minimal` verbosity level** - Two levels (`full`/`compact`) is enough.
+
+### Added
+- **TaskCompleted hook** - Detects significant completed tasks and suggests storing the solution via `matrix_store`.
+
+### Changed
+- **Dynamic version** - MCP server version now synced from `package.json` instead of hardcoded.
+- **Memory safety** - Regex pattern cache capped at 200 entries to prevent unbounded growth.
+
+---
+
 ## [2.2.1] - 2025-01-29
 
 ### Added

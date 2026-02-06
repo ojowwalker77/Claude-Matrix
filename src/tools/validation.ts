@@ -298,14 +298,6 @@ const DreamerActionEnum = Type.Union([
   Type.Literal('history'),
 ]);
 
-const _DreamerExecutionStatusEnum = Type.Union([
-  Type.Literal('running'),
-  Type.Literal('success'),
-  Type.Literal('failure'),
-  Type.Literal('timeout'),
-  Type.Literal('skipped'),
-]);
-
 const WorktreeConfigSchema = Type.Object({
   enabled: Type.Optional(Type.Boolean({ description: 'Run in isolated git worktree' })),
   basePath: Type.Optional(Type.String({ description: 'Worktree base directory' })),

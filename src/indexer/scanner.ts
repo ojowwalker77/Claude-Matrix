@@ -44,24 +44,6 @@ const DEFAULT_EXCLUDES = [
   'out',             // Various build outputs
 ];
 
-// Default file patterns to exclude (reserved for future use)
-const _DEFAULT_EXCLUDE_PATTERNS = [
-  '*.min.js',
-  '*.bundle.js',
-  '*.d.ts',           // skip declaration files (generated)
-  '*.test.ts',        // skip test files (optional)
-  '*.spec.ts',
-  '*.test.tsx',
-  '*.spec.tsx',
-  '*.pyc',            // Python bytecode
-  '*.pyo',
-  '*.class',          // Java bytecode
-  '*.o',              // Object files
-  '*.a',              // Archives
-  '*.so',             // Shared objects
-  '*.dylib',          // macOS dynamic libs
-];
-
 export interface ScanOptions {
   repoRoot: string;
   excludePatterns?: string[];

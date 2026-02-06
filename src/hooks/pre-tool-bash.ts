@@ -21,7 +21,6 @@ import {
   parsePackageCommand,
   getCachedResponse,
   setCachedResponse,
-  shouldSuggestReview,
   type PreToolUseInput,
   type HookOutput,
   type Ecosystem,
@@ -299,10 +298,7 @@ export async function run() {
     const gitReviewConfig = config.hooks.gitCommitReview;
     const commitCheck = isCommitCommand(command);
 
-    // Check session mode - skip review suggestion in quick/docs modes
-    const suggestReview = shouldSuggestReview(input.session_id);
-
-    if (suggestReview && gitReviewConfig?.suggestOnCommit && commitCheck.isCommit) {
+    if (gitReviewConfig?.suggestOnCommit && commitCheck.isCommit) {
       const mode = gitReviewConfig.defaultMode ?? 'default';
       const vcsName = commitCheck.vcs === 'jj' ? 'Jujutsu' : 'Git';
       const modeArg = mode === 'lazy' ? ' lazy' : '';

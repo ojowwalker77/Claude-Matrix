@@ -3,9 +3,7 @@
  *
  * Uses TypeBox schemas from validation.ts as the single source of truth.
  * JSON Schema is automatically generated for MCP compatibility.
- *
- * Tool visibility is controlled by the ToolRegistry based on project context.
- * Categories and visibility rules determine when tools appear in the tool list.
+ * All tools are always visible (dynamic visibility was removed).
  */
 
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';

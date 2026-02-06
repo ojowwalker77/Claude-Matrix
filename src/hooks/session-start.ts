@@ -22,80 +22,10 @@ import { createHash } from 'crypto';
 import { spawnSync } from 'child_process';
 import { getConfig, saveConfig, clearCache } from '../config/index.js';
 import { runMigrations } from '../db/migrate.js';
-import { cleanupExpiredSessions } from '../session/index.js';
-import { SESSION_MODES } from '../types/session.js';
-import { installFileSuggestion } from '../utils/file-suggestion.js';
+
 
 const CURRENT_VERSION = '1.0.4';
 const CLAUDE_DIR = join(homedir(), '.claude');
-
-/**
- * Get time-appropriate greeting
- */
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
-/**
- * Try to get user's name from git config or environment
- */
-function getUserName(): string | null {
-  try {
-    const result = spawnSync('git', ['config', 'user.name'], { encoding: 'utf-8' });
-    if (result.status === 0 && result.stdout?.trim()) {
-      // Get first name only
-      return result.stdout.trim().split(' ')[0] ?? null;
-    }
-  } catch {
-    // Ignore
-  }
-
-  // Try environment
-  return process.env.USER || process.env.USERNAME || null;
-}
-
-/**
- * Generate the session mode selection context for Claude
- * Formatted to trigger AskUserQuestion tool usage
- */
-function generateModeSelectionContext(): string {
-  const greeting = getGreeting();
-  const userName = getUserName();
-  const nameStr = userName ? ` ${userName}` : '';
-
-  const options = SESSION_MODES.map(m => ({
-    label: m.label,
-    description: m.description,
-  }));
-
-  return `<CRITICAL priority="HIGHEST">
-## SESSION MODE SELECTION - BLOCKING REQUIREMENT
-
-This is a NEW SESSION. You MUST call AskUserQuestion BEFORE any other action.
-
-DO NOT:
-- Answer the user's question first
-- Read files first
-- Make any other tool calls first
-
-DO:
-1. Call AskUserQuestion with EXACTLY these parameters
-2. Wait for selection
-3. Then proceed with user's request
-
-Question: "${greeting}${nameStr}! Which Matrix flow for this session?"
-Header: "Session Mode"
-Options:
-${options.map((o, i) => `  ${i + 1}. label: "${o.label}" | description: "${o.description}"`).join('\n')}
-
-After selection, their choice (1-5 or mode name) will be detected automatically.
-
-FAILURE TO CALL AskUserQuestion FIRST BREAKS THE SESSION SYSTEM.
-</CRITICAL>`;
-}
 
 // File suggestion installation moved to utils/file-suggestion.ts
 
@@ -401,9 +331,6 @@ export async function run() {
     // Ensure config has all v2.0+ sections (auto-upgrades old configs)
     ensureConfigComplete();
 
-    // Install file-suggestion.sh and update settings.json (silent)
-    installFileSuggestion();
-
     // Run indexer for supported projects (if enabled)
     const config = getConfig();
     if (config.indexing.enabled) {
@@ -413,22 +340,6 @@ export async function run() {
         const repoId = generateRepoId(repoRoot);
         await runIndexer(repoRoot, repoId, config.indexing);
       }
-    }
-
-    // Clean up expired sessions (truly non-blocking via setImmediate)
-    setImmediate(() => {
-      try {
-        cleanupExpiredSessions();
-      } catch {
-        // Ignore cleanup errors
-      }
-    });
-
-    // Output session mode selection prompt if enabled
-    if (config.sessionModes?.promptOnStart) {
-      const modeContext = generateModeSelectionContext();
-      // Output to stdout - this gets injected into Claude's context
-      console.log(modeContext);
     }
 
     process.exit(0);

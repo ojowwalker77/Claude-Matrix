@@ -12,6 +12,9 @@ import { getConfig } from './config/index.js';
 import { toolRegistry } from './tools/registry.js';
 import { cleanupOrphanedProcesses } from './jobs/manager.js';
 import { clearAllJobTimeouts } from './jobs/workers.js';
+import pkg from '../package.json';
+
+const VERSION: string = pkg.version;
 
 function buildInstructions(): string {
   const config = getConfig();
@@ -127,7 +130,7 @@ async function main(): Promise<void> {
   const instructions = buildInstructions();
 
   const server = new Server(
-    { name: 'matrix', version: '2.0.0' },
+    { name: 'matrix', version: VERSION },
     {
       capabilities: {
         tools: {

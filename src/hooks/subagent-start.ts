@@ -34,7 +34,7 @@ function buildSubagentGuidance(agentType: string): string[] {
 
   // Matrix Index preference
   if (toolSearch.preferMatrixIndex) {
-    if (verbosity === 'compact' || verbosity === 'minimal') {
+    if (verbosity === 'compact') {
       guidance.push(
         '[Matrix] Prefer matrix_find_definition, matrix_search_symbols over Grep for code search'
       );
@@ -52,7 +52,7 @@ function buildSubagentGuidance(agentType: string): string[] {
 
   // Context7 preference
   if (toolSearch.preferContext7) {
-    if (verbosity === 'compact' || verbosity === 'minimal') {
+    if (verbosity === 'compact') {
       guidance.push(
         '[Matrix] Prefer Context7 (resolve-library-id + query-docs) over WebSearch for library docs'
       );
@@ -75,10 +75,9 @@ function buildSubagentGuidance(agentType: string): string[] {
         'Use matrix_recall to check for existing solutions before implementing new ones.',
         'Use matrix_index_status to check if code index is available for this repository.'
       );
-    } else if (verbosity === 'compact') {
+    } else {
       guidance.push('[Matrix] Check matrix_recall for existing solutions');
     }
-    // minimal: skip agent-specific guidance
   }
 
   return guidance;
@@ -122,10 +121,7 @@ export async function run() {
 
     // Optional: show terminal message in verbose mode
     if (toolSearch.verbose) {
-      const verbosity = getVerbosity();
-      if (verbosity !== 'minimal') {
-        output.systemMessage = `[Matrix] Injected guidance for ${input.agent_type || 'unknown'} subagent`;
-      }
+      output.systemMessage = `[Matrix] Injected guidance for ${input.agent_type || 'unknown'} subagent`;
     }
 
     outputJson(output);

@@ -21,17 +21,6 @@ export interface PermissionsConfig {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// PreCompact Hook Config
-// ═══════════════════════════════════════════════════════════════
-export interface PreCompactConfig {
-  enabled: boolean;
-  behavior: 'suggest' | 'auto-save' | 'disabled';
-  autoSaveThreshold: number;
-  logToFile: boolean;
-  showNotification: boolean;
-}
-
-// ═══════════════════════════════════════════════════════════════
 // Sensitive Files Hook Config
 // ═══════════════════════════════════════════════════════════════
 export interface SensitiveFilesConfig {
@@ -113,20 +102,6 @@ export interface GitCommitReviewConfig {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Session Modes Config (v2.1 - Constitution-inspired)
-// ═══════════════════════════════════════════════════════════════
-export type SessionMode = 'ultrathink' | 'quick' | 'docs' | 'debug' | 'classic';
-
-export interface SessionModesConfig {
-  /** Show mode selection prompt on session start */
-  promptOnStart: boolean;
-  /** Default mode when prompt is disabled or skipped */
-  defaultMode: SessionMode;
-  /** Remember user's last choice and use as default */
-  rememberLastChoice: boolean;
-}
-
-// ═══════════════════════════════════════════════════════════════
 // Dreamer Config (Scheduled Task Automation)
 // ═══════════════════════════════════════════════════════════════
 export interface DreamerWorktreeConfig {
@@ -159,7 +134,7 @@ export type RuleAction = 'block' | 'warn' | 'allow';
 // ═══════════════════════════════════════════════════════════════
 // Hook Verbosity (v2.0)
 // ═══════════════════════════════════════════════════════════════
-export type VerbosityLevel = 'full' | 'compact' | 'minimal';
+export type VerbosityLevel = 'full' | 'compact';
 
 export interface UserRule {
   name: string;
@@ -191,7 +166,6 @@ export interface HooksConfig {
 
   // New nested configs
   permissions: PermissionsConfig;
-  preCompact: PreCompactConfig;
   sensitiveFiles: SensitiveFilesConfig;
   stop: StopHookConfig;
   packageAuditor: PackageAuditorConfig;
@@ -254,8 +228,6 @@ export interface MatrixConfig {
   };
   /** Dreamer scheduled task automation settings */
   dreamer: DreamerConfig;
-  /** Session modes configuration (v2.1) */
-  sessionModes: SessionModesConfig;
 }
 
 function getDownloadsDirectory(): string {
@@ -309,15 +281,6 @@ export const DEFAULT_CONFIG: MatrixConfig = {
       },
       neverAutoApprove: ['matrix_store', 'matrix_warn', 'matrix_failure', 'matrix_link_skill'],
       additionalAutoApprove: [],
-    },
-
-    // ─── PreCompact hook ───
-    preCompact: {
-      enabled: true,
-      behavior: 'suggest' as const,
-      autoSaveThreshold: 6,
-      logToFile: true,
-      showNotification: false,
     },
 
     // ─── Sensitive Files (PreToolUse:Read hook) ───
@@ -413,11 +376,10 @@ export const DEFAULT_CONFIG: MatrixConfig = {
       ],
     },
 
-    // ─── Hook Verbosity (v2.0) ───
+    // ─── Hook Verbosity ───
     // Controls token overhead of hook outputs
     // 'full': Verbose multi-line format
     // 'compact': Single-line formats (~80% token reduction) - DEFAULT
-    // 'minimal': Near-silent, only critical blockers shown
     verbosity: 'compact' as VerbosityLevel,
   },
   indexing: {
@@ -447,11 +409,6 @@ export const DEFAULT_CONFIG: MatrixConfig = {
       defaultTimeout: 300,  // 5 minutes
       defaultSkipPermissions: false,
     },
-  },
-  sessionModes: {
-    promptOnStart: true,           // Show mode picker on session start
-    defaultMode: 'classic' as SessionMode,  // Fallback if prompt disabled
-    rememberLastChoice: false,     // Don't bias toward last choice
   },
 };
 
