@@ -279,7 +279,7 @@ export const DEFAULT_CONFIG: MatrixConfig = {
         matrixRead: true,    // matrix_recall, status, find_definition, etc.
         context7: true,      // resolve-library-id, query-docs
       },
-      neverAutoApprove: ['matrix_store', 'matrix_warn', 'matrix_failure', 'matrix_link_skill'],
+      neverAutoApprove: ['matrix_store', 'matrix_warn', 'matrix_failure'],
       additionalAutoApprove: [],
     },
 

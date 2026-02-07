@@ -12,7 +12,7 @@
  *   - Context7: resolve-library-id, query-docs
  *
  * Requires permission:
- *   - matrix_store, matrix_warn, matrix_failure, matrix_link_skill
+ *   - matrix_store, matrix_warn, matrix_failure
  *
  * Exit codes:
  *   0 = Success (JSON output processed)
@@ -56,10 +56,8 @@ const MATRIX_READ_TOOLS = new Set([
   'mcp__plugin_matrix_matrix__matrix_index_status',
   'mcp__plugin_matrix_matrix__matrix_reindex',
   // Utility (read-only)
-  'mcp__plugin_matrix_matrix__matrix_repomix',
   'mcp__plugin_matrix_matrix__matrix_prompt',
   'mcp__plugin_matrix_matrix__matrix_doctor',
-  'mcp__plugin_matrix_matrix__matrix_skill_candidates',
 ]);
 
 const CONTEXT7_TOOLS = new Set([

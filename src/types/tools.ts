@@ -20,9 +20,6 @@ export type {
   GetImportsInput,
   IndexStatusInput,
   ReindexInput,
-  RepomixInput,
-  SkillCandidatesInput,  // v2.0: Skill factory
-  LinkSkillInput,        // v2.0: Skill factory
 } from '../tools/validation.js';
 
 // Re-export warn result types (for hooks)
