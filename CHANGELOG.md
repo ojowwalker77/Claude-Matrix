@@ -4,19 +4,6 @@ All notable changes to Claude Matrix are documented here.
 
 ## [2.2.2] - 2026-02-06
 
-### Removed
-- **Session Modes** - Removed the entire session mode system (ultrathink/quick/docs/debug/classic). Simplicity wins.
-- **UserPromptSubmit hook** - Removed per-prompt overhead. Claude Code already provides git context and CLAUDE.md natively.
-- **PreCompact hook** - Was a dead hook (couldn't output anything). Removed.
-- **Stop hook** - Replaced by the lighter TaskCompleted hook.
-- **PostToolUse:Matrix hook** - Removed nanny suggestions after matrix tool calls.
-- **SubagentStop hook** - Removed (no-op).
-- **Auto-install file suggestion** - No longer silently modifies `~/.claude/settings.json` on session start.
-- **`minimal` verbosity level** - Two levels (`full`/`compact`) is enough.
-- **Repomix tool** - Replaced by `/matrix:clone-repo` skill (just clones to `temp/`, no dependency needed).
-- **Skill Factory tools** - Removed `matrix_skill`, `matrix_skill_candidates`, `matrix_link_skill` and all related code.
-- **Export skill** - Merged into `/matrix:list` (say "export" or "backup" to save JSON).
-
 ### Added
 - **Nuke Skill** (`/matrix:nuke`) - Comprehensive codebase hygiene analysis across 11 categories:
   - **Structural detection** (via new MCP tools): dead exports, orphaned files, circular dependencies
@@ -33,6 +20,19 @@ All notable changes to Claude Matrix are documented here.
 - **Review Skill** - Detection Agent now includes full hygiene (nuke) scan on changed files. Distinguishes between issues **introduced** by the change vs **pre-existing** in touched files. Introduced console.logs → Tier 1, introduced unused imports/dead exports → Tier 2, pre-existing TODOs/comments → Tier 3.
 - **Dynamic version** - MCP server version now synced from `package.json` instead of hardcoded.
 - **Memory safety** - Regex pattern cache capped at 200 entries to prevent unbounded growth.
+
+### Removed
+- **Session Modes** - Removed the entire session mode system (ultrathink/quick/docs/debug/classic). Simplicity wins.
+- **UserPromptSubmit hook** - Removed per-prompt overhead. Claude Code already provides git context and CLAUDE.md natively.
+- **PreCompact hook** - Was a dead hook (couldn't output anything). Removed.
+- **Stop hook** - Replaced by the lighter TaskCompleted hook.
+- **PostToolUse:Matrix hook** - Removed nanny suggestions after matrix tool calls.
+- **SubagentStop hook** - Removed (no-op).
+- **Auto-install file suggestion** - No longer silently modifies `~/.claude/settings.json` on session start.
+- **`minimal` verbosity level** - Two levels (`full`/`compact`) is enough.
+- **Repomix tool** - Replaced by `/matrix:clone-repo` skill (just clones to `temp/`, no dependency needed).
+- **Skill Factory tools** - Removed `matrix_skill`, `matrix_skill_candidates`, `matrix_link_skill` and all related code.
+- **Export skill** - Merged into `/matrix:list` (say "export" or "backup" to save JSON).
 
 ---
 
