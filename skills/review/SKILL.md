@@ -11,6 +11,9 @@ allowed-tools:
   - mcp__plugin_matrix_matrix__matrix_list_exports
   - mcp__plugin_matrix_matrix__matrix_get_imports
   - mcp__plugin_matrix_matrix__matrix_index_status
+  # Matrix Nuke (Hygiene Analysis)
+  - mcp__plugin_matrix_matrix__matrix_find_dead_code
+  - mcp__plugin_matrix_matrix__matrix_find_circular_deps
   # Matrix Memory
   - mcp__plugin_matrix_matrix__matrix_recall
   - mcp__plugin_matrix_matrix__matrix_store
@@ -37,7 +40,7 @@ Perform comprehensive, context-aware code review using 5-agent architecture with
 ```
 ORCHESTRATOR (parses target, routes, aggregates)
      │
-     ├── DETECTION AGENT → security, runtime, breaking, logic flaws
+     ├── DETECTION AGENT → security, runtime, breaking, logic flaws, hygiene (nuke)
      ├── IMPACT AGENT → blast radius, transitive graph, test coverage
      ├── TRIAGE AGENT → tier assignment, confidence calibration, noise filter
      ├── REMEDIATION AGENT → context-aware fixes, regression checks
@@ -57,7 +60,7 @@ Parse user arguments from the skill invocation (text after the trigger phrase).
 
 ### Default Mode (Comprehensive)
 Full 5-agent review pipeline with maximum index utilization:
-- Detection: Security vulns, runtime issues, breaking changes
+- Detection: Security vulns, runtime issues, breaking changes, **hygiene (nuke scan)**
 - Impact: Transitive blast radius (2-3 levels), service boundaries, test coverage
 - Triage: Tier classification, >80% signal ratio target
 - Remediation: Context-aware fixes matching codebase patterns

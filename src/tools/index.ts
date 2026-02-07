@@ -14,5 +14,7 @@ export {
   matrixGetImports,
   matrixIndexStatus,
   matrixReindex,
+  matrixFindDeadCode,
+  matrixFindCircularDeps,
 } from './index-tools.js';
 export { TOOLS } from './schemas.js';

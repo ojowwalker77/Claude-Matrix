@@ -7,7 +7,7 @@
 import { getDb } from '../db/client.js';
 import { getConfig } from '../config/index.js';
 
-// Re-export complexity evaluation (Haiku-powered)
+// Re-export complexity evaluation (local pattern-based)
 export { estimateComplexity, needsMatrixRecall, type ComplexityResult } from './complexity.js';
 
 /**
@@ -19,29 +19,11 @@ export interface HookInput {
   cwd: string;
 }
 
-export interface UserPromptSubmitInput extends HookInput {
-  prompt: string;
-}
-
 export interface PreToolUseInput extends HookInput {
   tool_name: string;
   tool_input: Record<string, unknown>;
 }
 
-export interface PostToolUseInput extends HookInput {
-  tool_name: string;
-  tool_input: Record<string, unknown>;
-  tool_response: {
-    stdout?: string;
-    stderr?: string;
-    exitCode?: number;
-    content?: unknown;
-  };
-}
-
-export interface StopInput extends HookInput {
-  stop_hook_active: boolean;
-}
 
 /**
  * SubagentStart hook input (Claude Code 2.0.43+)
@@ -53,15 +35,6 @@ export interface SubagentStartInput extends HookInput {
   hook_event_name: 'SubagentStart';
 }
 
-/**
- * SubagentStop hook input (Claude Code 2.0.42+)
- * Fires when a subagent completes
- */
-export interface SubagentStopInput extends HookInput {
-  agent_id: string;
-  agent_transcript_path: string;
-  stop_hook_active?: boolean;
-}
 
 /**
  * PermissionRequest decision structure
@@ -79,12 +52,12 @@ export interface PermissionDecision {
 export interface HookOutput {
   hookSpecificOutput?: {
     hookEventName?: string;
-    // PreToolUse / UserPromptSubmit
+    // PreToolUse
     permissionDecision?: 'allow' | 'deny' | 'ask';
     permissionDecisionReason?: string;
     // PermissionRequest
     decision?: PermissionDecision;
-    // PostToolUse / UserPromptSubmit
+    // PostToolUse
     additionalContext?: string;
   };
   decision?: 'continue' | 'block';
@@ -102,14 +75,6 @@ export interface PermissionRequestInput extends HookInput {
   tool_name: string;
   tool_input: Record<string, unknown>;
   tool_use_id: string;
-}
-
-/**
- * PreCompact hook input
- */
-export interface PreCompactInput extends HookInput {
-  trigger: 'manual' | 'auto';
-  custom_instructions: string;
 }
 
 /**
@@ -141,9 +106,6 @@ export function outputText(text: string): void {
 export function log(message: string): void {
   console.error(message);
 }
-
-/** @deprecated Use log() instead */
-export const logError = log;
 
 /**
  * Get hooks configuration
@@ -292,7 +254,6 @@ export {
   type SolutionData,
   type FailureData,
   type ComplexityData,
-  type Assumption,
 } from './format-helpers.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -305,28 +266,3 @@ export {
   cleanupOldExecutions,
 } from './once.js';
 
-// ═══════════════════════════════════════════════════════════════
-// Re-exports for Session Modes (v2.1 - Constitution-inspired)
-// ═══════════════════════════════════════════════════════════════
-export {
-  getSession,
-  getSessionMode,
-  createSession,
-  updateSessionMode,
-  deleteSession,
-} from '../session/index.js';
-
-export {
-  getModeBehavior,
-  getEffectiveBehavior,
-  shouldInjectMemory,
-  shouldRunComplexityAnalysis,
-  shouldSuggestPlanMode,
-  shouldSuggestReview,
-  getComplexityThreshold,
-  getMaxSolutions,
-  getMaxFailures,
-  formatModeContext,
-} from './mode-behavior.js';
-
-export type { SessionMode, SessionContext } from '../types/session.js';

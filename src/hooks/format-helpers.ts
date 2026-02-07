@@ -1,11 +1,10 @@
 /**
- * Format Helpers - Verbosity-Aware Formatting (v2.0)
+ * Format Helpers - Verbosity-Aware Formatting
  *
  * Provides compact, token-efficient formatting for hook outputs.
- * Supports three verbosity levels:
+ * Supports two verbosity levels:
  * - 'full': Verbose multi-line format (backward compatible)
  * - 'compact': Single-line formats (~80% token reduction)
- * - 'minimal': Near-silent, only critical blockers
  */
 
 import { getConfig, type VerbosityLevel } from '../config/index.js';
@@ -90,10 +89,6 @@ export function formatGitContext(
     return null;
   }
 
-  if (level === 'minimal') {
-    return null; // No git context in minimal mode
-  }
-
   if (level === 'compact') {
     // Compact: [Git: main | +3 commits | 5 files changed]
     const parts: string[] = [];
@@ -131,7 +126,7 @@ export function formatCodeIndexContext(
 ): string | null {
   const level = verbosity ?? getVerbosity();
 
-  if (level === 'minimal' || results.length === 0) {
+  if (results.length === 0) {
     return null;
   }
 
@@ -169,13 +164,6 @@ export function formatMatrixContext(
 
   if (solutions.length === 0 && failures.length === 0) {
     return null;
-  }
-
-  if (level === 'minimal') {
-    // Minimal: Only show if there are critical blockers (high-relevance failures)
-    const criticalFailures = failures.filter(f => f.similarity > 0.8);
-    if (criticalFailures.length === 0) return null;
-    return `[MEM warn] ${criticalFailures.map(f => f.id).join(', ')}`;
   }
 
   if (level === 'compact') {
@@ -255,10 +243,6 @@ export function formatPromptContext(
   verbosity?: VerbosityLevel
 ): string | null {
   const level = verbosity ?? getVerbosity();
-
-  if (level === 'minimal') {
-    return null; // No prompt context in minimal mode
-  }
 
   const highConfidenceAssumptions = assumptions.filter(a => a.confidence > 0.7);
 

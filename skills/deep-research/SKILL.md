@@ -9,7 +9,6 @@ allowed-tools:
   - mcp__plugin_matrix_context7__resolve-library-id
   - mcp__plugin_matrix_context7__query-docs
   - mcp__plugin_matrix_matrix__matrix_recall
-  - mcp__plugin_matrix_matrix__matrix_repomix
   - mcp__plugin_matrix_matrix__matrix_store
   - Write
   - Read

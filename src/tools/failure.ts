@@ -1,5 +1,5 @@
-import { getDb, embeddingToBuffer } from '../db/client.js';
-import { getEmbedding, EMBEDDING_DIM } from '../embeddings/local.js';
+import { getDb, embeddingToBuffer, bufferToEmbedding } from '../db/client.js';
+import { getEmbedding, EMBEDDING_DIM, cosineSimilarity } from '../embeddings/local.js';
 import { createHash, randomUUID } from 'crypto';
 
 interface FailureInput {
@@ -116,7 +116,6 @@ export async function searchFailures(errorMessage: string, limit: number = 3): P
   similarity: number;
 }>> {
   const db = getDb();
-  const { bufferToEmbedding, cosineSimilarity } = await import('../db/client.js');
 
   const queryEmbedding = await getEmbedding(errorMessage);
 

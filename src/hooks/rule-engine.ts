@@ -22,7 +22,8 @@ export interface RuleEvaluationResult {
   warnings: string[];
 }
 
-// Cache compiled regex patterns
+// Cache compiled regex patterns (capped to prevent unbounded growth)
+const MAX_CACHED_PATTERNS = 200;
 const compiledPatterns = new Map<string, RegExp>();
 
 /**
@@ -35,6 +36,12 @@ function getPattern(pattern: string): RegExp | null {
 
   try {
     const regex = new RegExp(pattern, 'i');
+
+    // Evict all entries when cache exceeds limit (patterns are cheap to recompile)
+    if (compiledPatterns.size >= MAX_CACHED_PATTERNS) {
+      compiledPatterns.clear();
+    }
+
     compiledPatterns.set(pattern, regex);
     return regex;
   } catch {

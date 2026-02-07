@@ -402,12 +402,15 @@ export function calculateConfidence(
  * Run silent prompt analysis (non-interactive, for hooks)
  *
  * Returns analysis without blocking or asking questions.
- * Used by UserPromptSubmit hook to gather context before complexity assessment.
- * Supports verbosity-aware formatting (v2.0).
+ * Used by UserPromptSubmit hook for shortcut/ambiguity detection.
+ *
+ * Note: Git context and CLAUDE.md parsing removed — Claude Code already
+ * provides both natively. This eliminates 3 subprocess spawns + file I/O
+ * per prompt.
  */
 export async function analyzePromptSilent(
   prompt: string,
-  cwd?: string
+  _cwd?: string
 ): Promise<SilentAnalysisResult> {
   // Check for shortcuts first
   const shortcut = detectShortcut(prompt);
@@ -423,49 +426,14 @@ export async function analyzePromptSilent(
     };
   }
 
-  // Gather context in parallel (use structured data for verbosity-aware formatting)
-  const [claudeMdContext, gitData] = await Promise.all([
-    Promise.resolve(loadClaudeMdContext(cwd)),
-    getGitContextData(cwd),
-  ]);
-
   // Analyze ambiguity (for warning, not blocking)
   const ambiguity = analyzeAmbiguity(prompt);
-
-  // Generate assumptions (still needs legacy git context format)
-  const legacyGitContext: string[] = [];
-  if (gitData.branch) legacyGitContext.push(`[Git Branch] ${gitData.branch}`);
-  if (gitData.commits.length > 0) legacyGitContext.push(`[Recent Commits] ${gitData.commits.join('; ')}`);
-  if (gitData.changedFiles.length > 0) legacyGitContext.push(`[Changed Files] ${gitData.changedFiles.join('; ')}`);
-
-  const assumptions = generateAssumptions(prompt, claudeMdContext, legacyGitContext);
-
-  // Calculate confidence (without memory context yet - that's done later)
-  const confidence = calculateConfidence(prompt, ambiguity, assumptions, []);
-
-  // Format context using verbosity-aware helpers (v2.0)
-  const verbosity = getVerbosity();
-  const contextParts: (string | null)[] = [];
-
-  // Git context (verbosity-aware)
-  contextParts.push(formatGitContext(gitData, verbosity));
-
-  // Prompt context: CLAUDE.md + assumptions (verbosity-aware)
-  const assumptionData = assumptions.map(a => ({
-    assumption: a.assumption,
-    confidence: a.confidence,
-  }));
-  contextParts.push(formatPromptContext(claudeMdContext, assumptionData, verbosity));
-
-  // Assemble final context
-  const assembled = assembleContext(contextParts, verbosity);
-  const contextInjected = assembled ? [assembled] : [];
 
   return {
     shortcut,
     ambiguity,
-    confidence,
-    assumptions,
-    contextInjected,
+    confidence: 70, // Base confidence — detailed scoring moved to matrix_prompt tool
+    assumptions: [],
+    contextInjected: [],
   };
 }

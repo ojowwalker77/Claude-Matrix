@@ -20,6 +20,12 @@ import {
   getFileImports,
   findCallers,
 } from '../indexer/store.js';
+import {
+  analyzeDeadCode,
+  findCircularDeps,
+  type DeadCodeResult,
+  type CircularDepsResult,
+} from '../indexer/analysis.js';
 import { indexRepository } from '../indexer/index.js';
 import type { SymbolKind, DefinitionResult, ExportResult, IndexStatus } from '../indexer/types.js';
 import { detectProjectTypes, getNotIndexableMessage } from '../utils/project-detection.js';
@@ -338,6 +344,83 @@ export function matrixFindCallers(input: FindCallersInput): FindCallersResult {
     found: true,
     callers,
     definitionFile,
+  };
+}
+
+// Dead code analysis input types
+export interface FindDeadCodeInput {
+  category?: 'dead_exports' | 'orphaned_files' | 'all';
+  path?: string;
+  entryPoints?: string[];
+  limit?: number;
+  repoPath?: string;
+}
+
+export interface FindDeadCodeResult {
+  indexed: boolean;
+  result?: DeadCodeResult;
+  message?: string;
+}
+
+export interface FindCircularDepsInput {
+  path?: string;
+  maxDepth?: number;
+  repoPath?: string;
+}
+
+export interface FindCircularDepsResult {
+  indexed: boolean;
+  result?: CircularDepsResult;
+  message?: string;
+}
+
+/**
+ * Find dead code: exports with zero callers, orphaned files
+ */
+export function matrixFindDeadCode(input: FindDeadCodeInput): FindDeadCodeResult {
+  const repo = getRepoInfo(input.repoPath);
+  if (!repo.success) {
+    return {
+      indexed: false,
+      message: repo.message,
+    };
+  }
+
+  const result = analyzeDeadCode(
+    repo.id,
+    input.category ?? 'all',
+    input.path,
+    input.entryPoints,
+    input.limit ?? 100,
+  );
+
+  return {
+    indexed: true,
+    result,
+  };
+}
+
+/**
+ * Find circular import dependencies
+ */
+export function matrixFindCircularDeps(input: FindCircularDepsInput): FindCircularDepsResult {
+  const repo = getRepoInfo(input.repoPath);
+  if (!repo.success) {
+    return {
+      indexed: false,
+      message: repo.message,
+    };
+  }
+
+  const result = findCircularDeps(
+    repo.id,
+    input.path,
+    input.maxDepth ?? 10,
+  );
+
+  return {
+    indexed: true,
+    result,
   };
 }
 

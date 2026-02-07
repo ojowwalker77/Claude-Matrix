@@ -34,6 +34,7 @@ Criteria (any of):
 - Security: severity critical OR high
 - Runtime: severity critical
 - Breaking: any breaking change to public API
+- Hygiene: console.log/debug INTRODUCED in this diff (confidence >= 90%)
 - Confidence >= 90%
 
 Always show these findings in review output.
@@ -46,6 +47,8 @@ Criteria (any of):
 - Runtime: severity high OR medium
 - Architecture: significant pattern violations
 - Performance: clear regression
+- Hygiene (introduced): unused imports, dead exports, commented-out code, circular deps
+- Hygiene (pre-existing): console.log leftovers, circular deps
 - Confidence >= 70%
 
 Show unless signal ratio > 85% already.
@@ -57,6 +60,7 @@ Criteria (any of):
 - Style/formatting issues
 - Opinionated suggestions (e.g., "consider using X")
 - Micro-optimizations with no measurable impact
+- Hygiene (pre-existing): stale TODOs, unnecessary comments, overengineered deps, duplication
 - Confidence < 70%
 - Low severity + low confidence combination
 
@@ -116,6 +120,8 @@ function calibrateConfidence(finding: DetectionFinding, impact: ImpactGraph): nu
 | Similar past issue confirmed | +10% |
 | File has FP history | -15% |
 | In test file | -10% |
+| Hygiene: introduced by this change | +20% |
+| Hygiene: pre-existing in touched file | -10% |
 
 ---
 
@@ -155,6 +161,10 @@ function assignTier(finding: DetectionFinding, impact: ImpactGraph): TriagedFind
   if (finding.type === 'breaking') {
     return { ...finding, tier: 1, calibratedConfidence: calibrated, showInOutput: true };
   }
+  // Hygiene: introduced console.log/debug with high confidence → Tier 1
+  if (finding.type === 'hygiene' && finding.introduced && calibrated >= 90) {
+    return { ...finding, tier: 1, calibratedConfidence: calibrated, showInOutput: true };
+  }
   if (calibrated >= 90) {
     return { ...finding, tier: 1, calibratedConfidence: calibrated, showInOutput: true };
   }
@@ -165,6 +175,10 @@ function assignTier(finding: DetectionFinding, impact: ImpactGraph): TriagedFind
   }
   if (isOpinion(finding)) {
     return { ...finding, tier: 3, calibratedConfidence: calibrated, showInOutput: false, suppressionReason: 'opinion' };
+  }
+  // Hygiene: pre-existing low-impact items → Tier 3
+  if (finding.type === 'hygiene' && !finding.introduced && isLowImpactHygiene(finding)) {
+    return { ...finding, tier: 3, calibratedConfidence: calibrated, showInOutput: false, suppressionReason: 'pre-existing hygiene' };
   }
   if (calibrated < 70) {
     return { ...finding, tier: 3, calibratedConfidence: calibrated, showInOutput: false, suppressionReason: 'low confidence' };
@@ -264,3 +278,39 @@ function enforceSignalRatio(findings: TriagedFinding[], target = 0.8): TriagedFi
   return findings;
 }
 ```
+
+---
+
+## Hygiene Classification
+
+### `isLowImpactHygiene(finding)`
+
+Pre-existing hygiene findings that are low-impact for a code review:
+
+```typescript
+function isLowImpactHygiene(finding: DetectionFinding): boolean {
+  const lowImpactPatterns = [
+    'stale_todo',
+    'unnecessary_comment',
+    'overengineered_dep',
+    'copy_paste_duplication',
+  ];
+  return lowImpactPatterns.includes(finding.pattern);
+}
+```
+
+### Hygiene Tier Quick Reference
+
+| Pattern | Introduced | Pre-existing |
+|---------|-----------|-------------|
+| Console.log/debug | Tier 1 (92%) | Tier 2 (70%) |
+| Unused import | Tier 2 (90%) | Tier 2 (75%) |
+| Dead export | Tier 2 (85%) | Tier 2 (75%) |
+| Circular dep | Tier 2 (100%) | Tier 2 (100%) |
+| Commented-out code | Tier 2 (72%) | Tier 3 (60%) |
+| Orphaned file | Tier 2 (80%) | Tier 2 (70%) |
+| Unused package | Tier 3 (75%) | Tier 3 (65%) |
+| Stale TODO | n/a (new = not stale) | Tier 3 (65-80%) |
+| Unnecessary comment | Tier 3 (70%) | Tier 3 (60%) |
+| Overengineered dep | Tier 3 (70%) | Tier 3 (60%) |
+| Duplication | Tier 2 (65%) | Tier 3 (55%) |

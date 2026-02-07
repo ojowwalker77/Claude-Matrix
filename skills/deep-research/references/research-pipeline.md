@@ -25,9 +25,8 @@ Collect information from multiple sources in parallel:
 - Search for relevant past solutions and patterns
 - Include related failures to avoid
 
-### 4. GitHub Repositories (`matrix_repomix`)
-- For implementation patterns, fetch relevant code from authoritative repos
-- Use Phase 1 to get file suggestions, confirm with user before packing
+### 4. GitHub Repositories
+- For implementation patterns, use `/matrix:clone-repo` to clone and explore authoritative repos
 
 ### 5. Additional Sources (for exhaustive depth)
 - GitHub Issues/Discussions via `gh` CLI

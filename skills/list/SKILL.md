@@ -1,37 +1,32 @@
 ---
 name: Matrix List
-description: This skill should be used when the user asks to "list matrix solutions", "show matrix stats", "display memory contents", "view matrix status", "show failures", "list warnings", or needs to see Matrix memory statistics.
+description: This skill should be used when the user asks to "list matrix solutions", "show matrix stats", "display memory contents", "view matrix status", "show failures", "list warnings", "export matrix data", "backup matrix", "export solutions", or needs to see or export Matrix memory.
 user-invocable: true
 agent: haiku
 allowed-tools:
   - mcp__plugin_matrix_matrix__matrix_status
   - mcp__plugin_matrix_matrix__matrix_warn
+  - Write
 ---
 
-# Matrix List
+# Matrix List & Export
 
-Display Matrix memory contents and statistics.
+Display or export Matrix memory contents and statistics.
 
-Use the `matrix_status` MCP tool to retrieve comprehensive information and present it to the user.
+## List (default)
 
-## Default View (no arguments)
+Use `matrix_status` to retrieve information and present it to the user.
 
-Display:
-- **Statistics**: Total solutions, failures recorded, warnings count
-- **By Scope**: Solutions breakdown (global/stack/repo)
-- **Recent Activity**: Last 5 solutions
-- **Top Performers**: Solutions with highest success rates
-- **Database**: Size and health status
+- **No arguments**: Show statistics, scope breakdown, recent solutions, top performers
+- **"stats"**: Focus on statistics only
+- **"failures"**: Focus on recorded failures
+- **"warnings"**: Use `matrix_warn` with action "list" to show warnings
+- **"solutions"**: Show detailed solutions list
 
-## Argument-Based Filtering
+## Export
 
-Parse user arguments from the skill invocation. When Claude Code loads this skill, the user's additional text after the trigger phrase is available for parsing.
+When the user says "export" or "backup":
 
-Based on user input, adjust the listing:
-- Contains "stats" or "statistics" - focus on statistics only
-- Contains "failure" - focus on recorded failures
-- Contains "warn" - use `matrix_warn` tool with action "list" to show warnings
-- Contains "solutions" - show detailed solutions list
-- Otherwise - show comprehensive overview
-
-Format the output as a clear, organized summary that helps the user understand their accumulated knowledge.
+1. Use `matrix_status` to get all data
+2. Format as JSON
+3. Use `Write` to save to the specified path (or default to `matrix-export.json`)

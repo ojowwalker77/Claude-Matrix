@@ -58,7 +58,7 @@ export function checkHooks(): DiagnosticCheck {
 }
 
 /**
- * Check subagent hooks configuration (SubagentStart, SubagentStop)
+ * Check subagent hooks configuration (SubagentStart)
  */
 export function checkSubagentHooks(): DiagnosticCheck {
   try {

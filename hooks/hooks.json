@@ -11,17 +11,6 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh user-prompt-submit",
-            "timeout": 600
-          }
-        ]
-      }
-    ],
     "PermissionRequest": [
       {
         "matcher": "Read|Glob|Grep|WebFetch|WebSearch",
@@ -106,38 +95,6 @@
             "timeout": 10
           }
         ]
-      },
-      {
-        "matcher": "mcp__plugin_matrix_matrix__matrix_recall|mcp__plugin_matrix_matrix__matrix_store|mcp__plugin_matrix_matrix__matrix_failure|mcp__plugin_matrix_matrix__matrix_reward",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh post-tool-matrix",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh pre-compact",
-            "timeout": 600
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh stop-session",
-            "timeout": 60
-          }
-        ]
       }
     ],
     "SubagentStart": [
@@ -151,12 +108,12 @@
         ]
       }
     ],
-    "SubagentStop": [
+    "TaskCompleted": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh subagent-stop",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/run-hooks.sh task-completed",
             "timeout": 10
           }
         ]

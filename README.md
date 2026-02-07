@@ -4,7 +4,7 @@
 <img width="1107" height="861" alt="Screenshot 2026-01-19 at 10 53 42" src="https://github.com/user-attachments/assets/8226a695-0fda-44ff-b4e1-16d5ab2fd28c" />
 
 
-[![Version](https://img.shields.io/badge/v2.1.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/v2.2.2-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 <sub>Community plugin for Claude Code • Not affiliated with Anthropic</sub>
@@ -24,15 +24,6 @@ Requires [Bun](https://bun.sh) v1.0+ and Claude Code v2.0+. Verify with `/matrix
 
 > **macOS and Linux only.** Windows is not supported. Windows users must use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) or fork the repo and adapt paths manually.
 
-## Quick Start 
-
-- With Sessions Modes (new in v2.1.9) this process is so much easier, choose your session intention, Claude will follow along with optimized workflow!
-
-<img width="1095" height="586" alt="image" src="https://github.com/user-attachments/assets/8ad4af7f-065b-42ed-93c9-192c337f423d" />
-
-
----
-
 ## What You Get
 
 | Feature | What It Does |
@@ -44,8 +35,8 @@ Requires [Bun](https://bun.sh) v1.0+ and Claude Code v2.0+. Verify with `/matrix
 | **Dreamer** | Schedule tasks — daily reviews, weekly audits, automated commits |
 | **Code Review** | 5-phase analysis with blast radius and impact mapping |
 | **Deep Research** | Multi-source aggregation into polished markdown |
+| **Nuke** | Codebase hygiene analysis — dead code, orphaned files, stale TODOs |
 | **Context7** | Always-current library documentation |
-| **Skill Factory** | Promote solutions to reusable Claude Code Skills |
 
 ---
 
@@ -80,11 +71,10 @@ Matrix runs automatically in the background:
 | Trigger | Action |
 |---------|--------|
 | Session starts | Index code, initialize memory |
-| You send a prompt | Inject relevant memories |
 | Before `npm install` | Check CVEs, deprecation, bundle size |
 | Before editing file | Warn if file has known issues |
 | Before `git commit` | Suggest code review |
-| Session ends | Offer to save notable solutions |
+| Task completed | Offer to save notable solutions |
 
 ---
 
@@ -122,10 +112,8 @@ Schedule Claude tasks with native OS schedulers (launchd/crontab):
 | `/matrix:list` | View solutions, stats, warnings |
 | `/matrix:warn` | Manage file/package warnings |
 | `/matrix:reindex` | Rebuild code index |
-| `/matrix:repomix` | Pack external repos for context |
-| `/matrix:export` | Export database |
-| `/matrix:skill-candidates` | View promotable solutions |
-| `/matrix:create-skill` | Create skill from solution |
+| `/matrix:nuke` | Codebase hygiene analysis |
+| `/matrix:clone-repo` | Clone external repos for exploration |
 
 ---
 
@@ -143,7 +131,7 @@ Config at `~/.claude/matrix/matrix.config`:
 }
 ```
 
-**Verbosity:** `full` (~500 tokens) · `compact` (~80, recommended) · `minimal` (~20)
+**Verbosity:** `full` (~500 tokens) · `compact` (~80, recommended)
 
 **Model Delegation:** Routes simple ops to Haiku for ~40-50% cost savings.
 

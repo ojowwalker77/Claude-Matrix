@@ -12,6 +12,9 @@ import { getConfig } from './config/index.js';
 import { toolRegistry } from './tools/registry.js';
 import { cleanupOrphanedProcesses } from './jobs/manager.js';
 import { clearAllJobTimeouts } from './jobs/workers.js';
+import pkg from '../package.json';
+
+const VERSION: string = pkg.version;
 
 function buildInstructions(): string {
   const config = getConfig();
@@ -127,34 +130,18 @@ async function main(): Promise<void> {
   const instructions = buildInstructions();
 
   const server = new Server(
-    { name: 'matrix', version: '2.0.0' },
+    { name: 'matrix', version: VERSION },
     {
       capabilities: {
-        tools: {
-          // Enable list_changed notifications for dynamic tool visibility
-          listChanged: true,
-        },
+        tools: {},
       },
       instructions,
     }
   );
 
-  // Initialize tool registry with current working directory
-  // This detects project type and determines initial tool visibility
   toolRegistry.initialize(process.cwd());
 
-  // Register callback to emit list_changed when tools change
-  toolRegistry.onContextChange((_context, toolsChanged) => {
-    if (toolsChanged) {
-      // Notify client that the tool list has changed
-      server.sendToolListChanged().catch((err) => {
-        // Log but don't crash - client may not support notifications
-        console.error('[Matrix] Failed to send tool list changed notification:', err);
-      });
-    }
-  });
-
-  // Return dynamically filtered tools based on project context
+  // Return all available tools
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: toolRegistry.getAvailableTools(),
   }));

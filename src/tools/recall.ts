@@ -1,5 +1,5 @@
-import { getDb, bufferToEmbedding, cosineSimilarity } from '../db/client.js';
-import { getEmbedding, EMBEDDING_DIM } from '../embeddings/local.js';
+import { getDb, bufferToEmbedding } from '../db/client.js';
+import { getEmbedding, EMBEDDING_DIM, cosineSimilarity } from '../embeddings/local.js';
 import { fingerprintRepo, getOrCreateRepo, getRepoEmbedding, getAllReposWithEmbeddings } from '../repo/index.js';
 import type { SolutionCategory, CodeBlock } from '../types/db.js';
 

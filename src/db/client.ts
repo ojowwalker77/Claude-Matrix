@@ -51,15 +51,19 @@ export function bufferToEmbedding(buffer: Buffer | Uint8Array): Float32Array {
   return new Float32Array(buffer.buffer, buffer.byteOffset, buffer.length / 4);
 }
 
-// Re-export for backwards compatibility
-export { cosineSimilarity };
+// Generic embedding similarity search (batch processing to avoid memory issues)
+const ALLOWED_TABLES = ['solutions', 'failures'] as const;
+const ALLOWED_COLUMNS = ['problem_embedding', 'error_embedding'] as const;
 
-// Search similar solutions by embedding (batch processing to avoid memory issues)
-export function searchSimilarSolutions(
+function searchSimilarByEmbedding(
+  table: (typeof ALLOWED_TABLES)[number],
+  embeddingColumn: (typeof ALLOWED_COLUMNS)[number],
   queryEmbedding: Float32Array,
-  limit: number = 10,
-  minScore: number = 0.3
+  limit: number,
+  minScore: number
 ): Array<{ id: string; similarity: number }> {
+  if (!(ALLOWED_TABLES as readonly string[]).includes(table)) throw new Error(`Invalid table: ${table}`);
+  if (!(ALLOWED_COLUMNS as readonly string[]).includes(embeddingColumn)) throw new Error(`Invalid column: ${embeddingColumn}`);
   const db = getDb();
   const BATCH_SIZE = 1000;
   let offset = 0;
@@ -67,16 +71,16 @@ export function searchSimilarSolutions(
 
   while (true) {
     const rows = db.query(`
-      SELECT id, problem_embedding FROM solutions
-      WHERE problem_embedding IS NOT NULL
+      SELECT id, ${embeddingColumn} FROM ${table}
+      WHERE ${embeddingColumn} IS NOT NULL
       LIMIT ? OFFSET ?
-    `).all(BATCH_SIZE, offset) as Array<{ id: string; problem_embedding: Uint8Array }>;
+    `).all(BATCH_SIZE, offset) as Array<{ id: string; [key: string]: unknown }>;
 
     if (rows.length === 0) break;
 
     for (const row of rows) {
       try {
-        const embedding = bufferToEmbedding(row.problem_embedding);
+        const embedding = bufferToEmbedding(row[embeddingColumn] as Uint8Array);
         if (embedding.length !== EMBEDDING_DIM) continue;
         const similarity = cosineSimilarity(queryEmbedding, embedding);
 
@@ -95,43 +99,18 @@ export function searchSimilarSolutions(
   return results.slice(0, limit);
 }
 
-// Search similar failures by embedding (batch processing to avoid memory issues)
+export function searchSimilarSolutions(
+  queryEmbedding: Float32Array,
+  limit: number = 10,
+  minScore: number = 0.3
+): Array<{ id: string; similarity: number }> {
+  return searchSimilarByEmbedding('solutions', 'problem_embedding', queryEmbedding, limit, minScore);
+}
+
 export function searchSimilarFailures(
   queryEmbedding: Float32Array,
   limit: number = 5,
   minScore: number = 0.5
 ): Array<{ id: string; similarity: number }> {
-  const db = getDb();
-  const BATCH_SIZE = 1000;
-  let offset = 0;
-  const results: Array<{ id: string; similarity: number }> = [];
-
-  while (true) {
-    const rows = db.query(`
-      SELECT id, error_embedding FROM failures
-      WHERE error_embedding IS NOT NULL
-      LIMIT ? OFFSET ?
-    `).all(BATCH_SIZE, offset) as Array<{ id: string; error_embedding: Uint8Array }>;
-
-    if (rows.length === 0) break;
-
-    for (const row of rows) {
-      try {
-        const embedding = bufferToEmbedding(row.error_embedding);
-        if (embedding.length !== EMBEDDING_DIM) continue;
-        const similarity = cosineSimilarity(queryEmbedding, embedding);
-
-        if (similarity >= minScore) {
-          results.push({ id: row.id, similarity });
-        }
-      } catch {
-        continue;
-      }
-    }
-
-    offset += BATCH_SIZE;
-  }
-
-  results.sort((a, b) => b.similarity - a.similarity);
-  return results.slice(0, limit);
+  return searchSimilarByEmbedding('failures', 'error_embedding', queryEmbedding, limit, minScore);
 }

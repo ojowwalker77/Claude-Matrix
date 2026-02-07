@@ -376,11 +376,6 @@ matrix_recall({
 2. Old solution marked but preserved
 3. New solution starts fresh at 0.5
 
-### Promotion (Optional)
-1. High-performing solutions identified via `matrix_skill_candidates`
-2. Converted to Claude Code skills via `matrix_create_skill`
-3. Solution marked as `promoted_to_skill`
-
 ---
 
 ## Best Practices

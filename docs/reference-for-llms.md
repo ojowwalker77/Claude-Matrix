@@ -10,7 +10,7 @@ Claude Matrix is a plugin for Claude Code that adds:
 - **Persistent memory** with semantic search (solutions, failures)
 - **Code indexing** for 15 languages
 - **Automatic hooks** for permissions, security, context injection
-- **External repo packing** via Repomix
+- **Codebase hygiene** via Nuke (dead code, orphans, circular deps)
 - **Library docs** via Context7
 - **Diagnostics** with auto-fix
 
@@ -42,8 +42,7 @@ Claude-Matrix/
 │   │   ├── warn.ts                 # matrix_warn (v2.0: consolidated)
 │   │   ├── prompt.ts               # matrix_prompt
 │   │   ├── doctor.ts               # matrix_doctor
-│   │   ├── index-tools.ts          # Code index tools + find_callers
-│   │   └── skill-factory.ts        # matrix_skill_candidates, matrix_link_skill (v2.0)
+│   │   └── index-tools.ts          # Code index tools + find_callers + dead code + circular deps
 │   ├── server/
 │   │   └── handlers.ts             # Tool dispatch handler
 │   ├── hooks/
@@ -51,15 +50,14 @@ Claude-Matrix/
 │   │   ├── format-helpers.ts       # Verbosity-aware formatters (v2.0)
 │   │   ├── rule-engine.ts          # User-configurable rules (v2.0)
 │   │   ├── session-start.ts        # Initialize DB, index code
-│   │   ├── user-prompt-submit.ts   # Analyze prompts, inject memories
 │   │   ├── permission-request.ts   # Auto-approve read-only tools
 │   │   ├── pre-tool-read.ts        # Sensitive file detection
 │   │   ├── pre-tool-bash.ts        # Package auditing
 │   │   ├── pre-tool-edit.ts        # File warnings (cursed files)
-│   │   ├── pre-compact.ts          # Session analysis before compaction
 │   │   ├── post-tool-bash.ts       # Log installs
 │   │   ├── prompt-utils.ts         # Prompt analysis utilities
-│   │   └── stop-session.ts         # Offer to save solutions
+│   │   ├── subagent-start.ts       # Inject Matrix guidance for subagents
+│   │   └── task-completed.ts       # Offer to save notable solutions
 │   ├── indexer/
 │   │   ├── index.ts                # Main indexer
 │   │   ├── parser.ts               # tree-sitter parsing
@@ -68,8 +66,6 @@ Claude-Matrix/
 │   ├── repo/
 │   │   ├── fingerprint.ts          # Detect project type
 │   │   └── store.ts                # Repo CRUD
-│   ├── repomix/
-│   │   └── index.ts                # External repo packing
 │   ├── research/                   # Deep research (v2.0)
 │   │   ├── index.ts                # Research orchestration
 │   │   ├── types.ts                # Research types
@@ -78,17 +74,15 @@ Claude-Matrix/
 │       └── index.ts                # User configuration + verbosity + rules
 ├── hooks/
 │   └── hooks.json                  # Claude Code hook definitions
-├── commands/                       # Slash commands (10 in v2.0)
-│   ├── list.md                     # /matrix:list (enhanced)
-│   ├── warn.md                     # /matrix:warn
-│   ├── export.md                   # /matrix:export
-│   ├── reindex.md                  # /matrix:reindex
-│   ├── repomix.md                  # /matrix:repomix
-│   ├── doctor.md                   # /matrix:doctor
-│   ├── review.md                   # /matrix:review (v2.0)
-│   ├── deep-research.md            # /matrix:deep-research (v2.0)
-│   ├── skill-candidates.md         # /matrix:skill-candidates (v2.0)
-│   └── create-skill.md             # /matrix:create-skill (v2.0)
+├── skills/                         # Slash commands (skills format)
+│   ├── list/                       # /matrix:list (includes export)
+│   ├── warn/                       # /matrix:warn
+│   ├── reindex/                    # /matrix:reindex
+│   ├── doctor/                     # /matrix:doctor
+│   ├── review/                     # /matrix:review
+│   ├── deep-research/              # /matrix:deep-research
+│   ├── nuke/                       # /matrix:nuke (v2.2.2)
+│   └── clone-repo/                 # /matrix:clone-repo
 ├── docs/
 │   └── proposals/                  # v2.0 architecture proposals
 ├── scripts/
@@ -102,7 +96,7 @@ Claude-Matrix/
 
 ---
 
-## MCP Tools (18 total)
+## MCP Tools (18 total, v2.2.2)
 
 ### Memory Tools
 
@@ -133,41 +127,33 @@ Claude-Matrix/
 | `matrix_get_imports` | Get imports for a file | `readOnlyHint`, `delegable` |
 | `matrix_index_status` | Get index status | `readOnlyHint`, `delegable` |
 | `matrix_reindex` | Trigger reindexing | `idempotentHint`, `delegable` |
-
-### Skill Factory Tools (v2.0)
-
-| Tool | Purpose | Annotations |
-|------|---------|-------------|
-| `matrix_skill_candidates` | Find solutions ready for skill promotion | `readOnlyHint`, `delegable` |
-| `matrix_link_skill` | Link solution to created skill | `idempotentHint` |
+| `matrix_find_dead_code` | Find exported symbols with zero callers and orphaned files (v2.2.2) | `readOnlyHint`, `delegable` |
+| `matrix_find_circular_deps` | Build import graph and detect circular dependency chains (v2.2.2) | `readOnlyHint`, `delegable` |
 
 ### Other Tools
 
 | Tool | Purpose | Annotations |
 |------|---------|-------------|
 | `matrix_prompt` | Analyze prompt for ambiguity | `readOnlyHint` |
-| `matrix_repomix` | Pack external repos (two-phase) | `readOnlyHint`, `openWorldHint` |
 | `matrix_doctor` | Run diagnostics and auto-fix | `idempotentHint` |
 
 ### Delegable Tools (for Haiku sub-agents)
 
-These 11 tools are marked with `_meta.delegable: true`:
+These 12 tools are marked with `_meta.delegable: true`:
 ```
 matrix_recall, matrix_reward, matrix_status
 matrix_warn (all actions)
 matrix_find_definition, matrix_find_callers, matrix_search_symbols
 matrix_list_exports, matrix_get_imports
 matrix_index_status, matrix_reindex
-matrix_skill_candidates
+matrix_find_dead_code, matrix_find_circular_deps
 ```
 
 **Not delegable** (require Opus reasoning):
 - `matrix_store` - needs judgment on what to store
 - `matrix_failure` - needs root cause analysis
 - `matrix_prompt` - meta-analysis of prompts
-- `matrix_repomix` - complex two-phase flow
 - `matrix_doctor` - diagnostics interpretation
-- `matrix_link_skill` - needs skill creation context
 
 ---
 
@@ -296,13 +282,12 @@ Defined in `hooks/hooks.json`:
 |------|---------|--------------|
 | `SessionStart` | Session begins | Init DB, auto-create config, index code (15 languages) |
 | `PermissionRequest` | Tool permission asked | Auto-approve read-only tools (configurable) |
-| `UserPromptSubmit` | User sends message | Analyze complexity, inject relevant memories, detect code nav |
 | `PreToolUse:Read` | Before reading file | Detect sensitive files (.env, keys, secrets) |
 | `PreToolUse:Bash` | Before shell command | Audit packages (CVEs, deprecation, size) |
 | `PreToolUse:Edit` | Before file edit | Check for file warnings (cursed files) |
-| `PreCompact` | Before context compaction | Analyze session, extract insights, suggest saving |
 | `PostToolUse:Bash` | After shell command | Log package installations |
-| `Stop` | Session ends | Offer to save significant solutions |
+| `SubagentStart` | Subagent spawns | Inject Matrix guidance (prefer index tools, Context7) |
+| `TaskCompleted` | Task finishes | Suggest storing notable solutions |
 
 ### Hook Configuration
 
@@ -335,12 +320,6 @@ Each hook can be configured in `~/.claude/matrix/matrix.config`:
       },
       "customPatterns": [],
       "allowList": [".env.example", ".env.template"]
-    },
-    "preCompact": {
-      "enabled": true,
-      "behavior": "suggest",   // suggest, auto-save, disabled
-      "autoSaveThreshold": 6,
-      "logToFile": true
     },
     "packageAuditor": {
       "enabled": true,
@@ -399,11 +378,9 @@ File: `~/.claude/matrix/matrix.config` (auto-created on first run)
     "complexityThreshold": 5,
     "permissions": { ... },
     "sensitiveFiles": { ... },
-    "preCompact": { ... },
     "packageAuditor": { ... },
     "cursedFiles": { ... },
-    "promptAnalysis": { ... },
-    "stop": { ... }
+    "promptAnalysis": { ... }
   },
   "indexing": {
     "enabled": true,
@@ -594,7 +571,6 @@ export class YourLangParser extends LanguageParser {
 | OSV.dev | CVE database | Package auditing |
 | npm registry | Package metadata | Deprecation check |
 | Bundlephobia | Bundle size | Size warnings |
-| GitHub API | Repo cloning | Repomix |
 | Context7 | Library docs | Auto-redirect from WebFetch |
 
 ---
@@ -603,15 +579,13 @@ export class YourLangParser extends LanguageParser {
 
 ### Token Savings
 - Compact JSON output (~10-15% reduction)
-- Two-phase Repomix (index free, pack on confirm)
-- Haiku-delegable tools for simple operations (13 tools)
+- Haiku-delegable tools for simple operations (12 tools)
 
 ### MCP Annotations
-All 18 tools have official hints:
-- `readOnlyHint` - No side effects (11 tools)
-- `idempotentHint` - Safe to retry (6 tools)
+All tools have official hints:
+- `readOnlyHint` - No side effects
+- `idempotentHint` - Safe to retry
 - `destructiveHint` - Deletes data (1 tool)
-- `openWorldHint` - External API calls (1 tool)
 
 ### MCP Server Instructions
 Surfaced to LLM via `_meta.instructions`:
@@ -621,19 +595,18 @@ Surfaced to LLM via `_meta.instructions`:
 
 ---
 
-## Slash Commands
+## Skills (Slash Commands)
 
-| Command | Handler |
+| Command | Purpose |
 |---------|---------|
-| `/matrix:search <query>` | `commands/search.md` |
-| `/matrix:list` | `commands/list.md` |
-| `/matrix:stats` | `commands/stats.md` |
-| `/matrix:warn` | `commands/warn.md` |
-| `/matrix:export` | `commands/export.md` |
-| `/matrix:verify` | `commands/verify.md` |
-| `/matrix:reindex` | `commands/reindex.md` |
-| `/matrix:repomix` | `commands/repomix.md` |
-| `/matrix:doctor` | `commands/doctor.md` |
+| `/matrix:review` | 5-phase code review with impact analysis |
+| `/matrix:deep-research` | Multi-source research aggregation |
+| `/matrix:nuke` | Codebase hygiene analysis (dead code, orphans, circular deps) |
+| `/matrix:doctor` | Diagnostics + auto-fix |
+| `/matrix:list` | View solutions, stats, warnings (includes export) |
+| `/matrix:warn` | Manage file/package warnings |
+| `/matrix:reindex` | Rebuild code index |
+| `/matrix:clone-repo` | Clone external repos for exploration |
 
 ---
 
@@ -645,8 +618,6 @@ Surfaced to LLM via `_meta.instructions`:
 ├── matrix.config          # Configuration file (auto-created)
 ├── models/                # Embedding model cache (~23MB)
 ├── grammars/              # Tree-sitter WASM files (~1-2MB each)
-├── repomix-cache/         # Cached repo packs
-├── session-analysis.jsonl # PreCompact session logs
 └── .initialized           # Version marker
 ```
 
