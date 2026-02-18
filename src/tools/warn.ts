@@ -160,41 +160,36 @@ async function matrixWarnAdd(input: WarnAddInput): Promise<WarnAddResult> {
   const severity = input.severity || 'warn';
   const ecosystem = input.type === 'package' ? (input.ecosystem || null) : null;
 
-  try {
-    // Try to insert, handle unique constraint
+  // Check for existing warning first (handles NULL-aware matching that UNIQUE constraints can't)
+  const existing = db.query(`
+    SELECT id FROM warnings
+    WHERE type = ? AND target = ?
+      AND (ecosystem = ? OR (ecosystem IS NULL AND ? IS NULL))
+      AND (repo_id = ? OR (repo_id IS NULL AND ? IS NULL))
+  `).get(input.type, input.target, ecosystem, ecosystem, repoId, repoId) as { id: string } | null;
+
+  if (existing) {
     db.query(`
-      INSERT INTO warnings (id, type, target, ecosystem, reason, severity, repo_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, input.type, input.target, ecosystem, input.reason, severity, repoId);
+      UPDATE warnings SET reason = ?, severity = ? WHERE id = ?
+    `).run(input.reason, severity, existing.id);
 
     return {
-      id,
-      status: 'added',
-      message: `Warning added for ${input.type} "${input.target}"`,
+      id: existing.id,
+      status: 'updated',
+      message: `Warning updated for ${input.type} "${input.target}"`,
     };
-  } catch (err: any) {
-    // Handle unique constraint violation - update existing
-    if (err.message?.includes('UNIQUE constraint failed')) {
-      db.query(`
-        UPDATE warnings
-        SET reason = ?, severity = ?
-        WHERE type = ? AND target = ? AND (ecosystem = ? OR (ecosystem IS NULL AND ? IS NULL)) AND (repo_id = ? OR (repo_id IS NULL AND ? IS NULL))
-      `).run(input.reason, severity, input.type, input.target, ecosystem, ecosystem, repoId, repoId);
-
-      // Get the existing ID
-      const existing = db.query(`
-        SELECT id FROM warnings
-        WHERE type = ? AND target = ? AND (ecosystem = ? OR (ecosystem IS NULL AND ? IS NULL)) AND (repo_id = ? OR (repo_id IS NULL AND ? IS NULL))
-      `).get(input.type, input.target, ecosystem, ecosystem, repoId, repoId) as { id: string } | null;
-
-      return {
-        id: existing?.id || id,
-        status: 'updated',
-        message: `Warning updated for ${input.type} "${input.target}"`,
-      };
-    }
-    throw err;
   }
+
+  db.query(`
+    INSERT INTO warnings (id, type, target, ecosystem, reason, severity, repo_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, input.type, input.target, ecosystem, input.reason, severity, repoId);
+
+  return {
+    id,
+    status: 'added',
+    message: `Warning added for ${input.type} "${input.target}"`,
+  };
 }
 
 /**
