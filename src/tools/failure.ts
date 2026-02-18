@@ -157,7 +157,8 @@ export async function searchFailures(errorMessage: string, limit: number = 3): P
           similarity: Math.round(similarity * 1000) / 1000,
         });
       }
-    } catch {
+    } catch (e) {
+      console.error('Matrix: embedding decode error in failure search', e);
       continue;
     }
   }
