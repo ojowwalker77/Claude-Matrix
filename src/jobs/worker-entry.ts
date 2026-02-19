@@ -20,7 +20,13 @@ async function main() {
   const workerName = args[0]!;
   const jobId = args[1]!;
   const inputJson = args[2];
-  const input = inputJson ? JSON.parse(inputJson) : {};
+  let input: Record<string, unknown> = {};
+  if (inputJson) {
+    try { input = JSON.parse(inputJson); } catch (e) {
+      console.error(`Worker: invalid input JSON: ${e instanceof Error ? e.message : e}`);
+      process.exit(1);
+    }
+  }
 
   try {
     switch (workerName) {

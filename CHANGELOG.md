@@ -2,6 +2,19 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.2.3] - 2026-02-18
+
+### Added
+- **Dreamer Skill** (`/matrix:dreamer`) - Slash command access to the scheduled task system (add, list, run, remove, status, logs, history). Includes one-time vs recurring clarification requirement.
+
+### Fixed
+- **Silent catch blocks** - Added `console.error` logging to embedding decode errors in `recall.ts`, `failure.ts`, and `client.ts`. Previously all errors were swallowed, making debugging impossible.
+- **Unsafe JSON.parse** - Wrapped 12 unprotected `JSON.parse` calls with `safeJsonParse` helper across recall, dreamer types, job manager, and worker entry. One corrupted DB row no longer crashes the entire operation.
+- **Warn upsert race condition** - Replaced INSERT/catch-UNIQUE/UPDATE pattern with check-first approach, eliminating the race window and the `catch (err: any)` antipattern.
+- **Embedding retry** - Model loading now retries up to 3 times before permanently disabling embeddings. A single network hiccup no longer kills semantic search for the session.
+
+---
+
 ## [2.2.2] - 2026-02-06
 
 ### Added

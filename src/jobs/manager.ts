@@ -13,6 +13,10 @@
 import { getDb } from '../db/index.js';
 import { clearJobTimeout } from './workers.js';
 
+function safeJsonParse<T>(json: string | null | undefined, fallback: T): T {
+  try { return json ? JSON.parse(json) : fallback; } catch { return fallback; }
+}
+
 export type JobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
 
 export interface Job {
@@ -103,8 +107,8 @@ export function getJob(jobId: string): Job | null {
     status: row.status,
     progressPercent: row.progress_percent,
     progressMessage: row.progress_message,
-    input: row.input ? JSON.parse(row.input) : null,
-    result: row.result ? JSON.parse(row.result) : null,
+    input: safeJsonParse(row.input, null),
+    result: safeJsonParse(row.result, null),
     error: row.error,
     pid: row.pid,
     createdAt: row.created_at,
@@ -234,8 +238,8 @@ export function listJobs(status?: JobStatus, limit = 50): Job[] {
     status: row.status,
     progressPercent: row.progress_percent,
     progressMessage: row.progress_message,
-    input: row.input ? JSON.parse(row.input) : null,
-    result: row.result ? JSON.parse(row.result) : null,
+    input: safeJsonParse(row.input, null),
+    result: safeJsonParse(row.result, null),
     error: row.error,
     pid: row.pid,
     createdAt: row.created_at,

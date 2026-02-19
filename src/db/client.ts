@@ -87,7 +87,8 @@ function searchSimilarByEmbedding(
         if (similarity >= minScore) {
           results.push({ id: row.id, similarity });
         }
-      } catch {
+      } catch (e) {
+        console.error('Matrix: similarity search error', e);
         continue;
       }
     }

@@ -54,22 +54,30 @@ Claude-Matrix/
 │   │   ├── pre-tool-read.ts        # Sensitive file detection
 │   │   ├── pre-tool-bash.ts        # Package auditing
 │   │   ├── pre-tool-edit.ts        # File warnings (cursed files)
+│   │   ├── pre-tool-web.ts         # Intercept docs lookups → Context7
 │   │   ├── post-tool-bash.ts       # Log installs
 │   │   ├── prompt-utils.ts         # Prompt analysis utilities
 │   │   ├── subagent-start.ts       # Inject Matrix guidance for subagents
 │   │   └── task-completed.ts       # Offer to save notable solutions
 │   ├── indexer/
 │   │   ├── index.ts                # Main indexer
+│   │   ├── analysis.ts             # Dead code + circular dependency detection
 │   │   ├── parser.ts               # tree-sitter parsing
 │   │   ├── store.ts                # Index storage + find_callers
 │   │   └── languages/              # Language-specific extractors (15 langs)
+│   ├── dreamer/                    # Scheduled task automation
+│   │   ├── index.ts                # Dreamer exports
+│   │   ├── store.ts                # Task persistence
+│   │   ├── types.ts                # Task types
+│   │   ├── cron/                   # Cron parsing + humanizer
+│   │   ├── scheduler/              # Native OS schedulers (launchd, crontab)
+│   │   └── actions/                # add, list, run, remove, status, logs, history
+│   ├── jobs/                       # Background job system
+│   │   ├── manager.ts              # Job lifecycle management
+│   │   └── workers.ts              # Job execution + timeouts
 │   ├── repo/
 │   │   ├── fingerprint.ts          # Detect project type
 │   │   └── store.ts                # Repo CRUD
-│   ├── research/                   # Deep research (v2.0)
-│   │   ├── index.ts                # Research orchestration
-│   │   ├── types.ts                # Research types
-│   │   └── formatter.ts            # Markdown output formatter
 │   └── config/
 │       └── index.ts                # User configuration + verbosity + rules
 ├── hooks/
@@ -82,11 +90,9 @@ Claude-Matrix/
 │   ├── review/                     # /matrix:review
 │   ├── deep-research/              # /matrix:deep-research
 │   ├── nuke/                       # /matrix:nuke (v2.2.2)
-│   └── clone-repo/                 # /matrix:clone-repo
-├── docs/
-│   └── proposals/                  # v2.0 architecture proposals
+│   ├── clone-repo/                 # /matrix:clone-repo
+│   └── dreamer/                    # /matrix:dreamer (scheduled tasks)
 ├── scripts/
-│   ├── build.ts                    # Build script
 │   ├── run-hooks.sh                # Hook runner
 │   └── run-mcp.sh                  # MCP server runner
 └── .claude-plugin/
@@ -96,7 +102,7 @@ Claude-Matrix/
 
 ---
 
-## MCP Tools (18 total, v2.2.2)
+## MCP Tools (22 total, v2.2.2)
 
 ### Memory Tools
 
@@ -107,6 +113,7 @@ Claude-Matrix/
 | `matrix_reward` | Feedback on solution (success/partial/failure) | `idempotentHint`, `delegable` |
 | `matrix_failure` | Record an error and its fix | `idempotentHint` |
 | `matrix_status` | Get memory statistics | `readOnlyHint`, `delegable` |
+| `matrix_get_solution` | Fetch full solution details by ID | `readOnlyHint`, `delegable` |
 
 ### Warning Tool (v2.0 - Consolidated)
 
@@ -129,6 +136,15 @@ Claude-Matrix/
 | `matrix_reindex` | Trigger reindexing | `idempotentHint`, `delegable` |
 | `matrix_find_dead_code` | Find exported symbols with zero callers and orphaned files (v2.2.2) | `readOnlyHint`, `delegable` |
 | `matrix_find_circular_deps` | Build import graph and detect circular dependency chains (v2.2.2) | `readOnlyHint`, `delegable` |
+
+### Scheduling & Jobs
+
+| Tool | Purpose | Annotations |
+|------|---------|-------------|
+| `matrix_dreamer` | Schedule and manage automated Claude tasks | — |
+| `matrix_job_status` | Get status of a background job | `readOnlyHint`, `delegable` |
+| `matrix_job_cancel` | Cancel a running background job | — |
+| `matrix_job_list` | List background jobs by status | `readOnlyHint`, `delegable` |
 
 ### Other Tools
 
@@ -284,7 +300,8 @@ Defined in `hooks/hooks.json`:
 | `PermissionRequest` | Tool permission asked | Auto-approve read-only tools (configurable) |
 | `PreToolUse:Read` | Before reading file | Detect sensitive files (.env, keys, secrets) |
 | `PreToolUse:Bash` | Before shell command | Audit packages (CVEs, deprecation, size) |
-| `PreToolUse:Edit` | Before file edit | Check for file warnings (cursed files) |
+| `PreToolUse:Edit/Write` | Before file edit | Check for file warnings (cursed files) |
+| `PreToolUse:WebFetch/WebSearch` | Before web lookup | Intercept library docs → Context7 |
 | `PostToolUse:Bash` | After shell command | Log package installations |
 | `SubagentStart` | Subagent spawns | Inject Matrix guidance (prefer index tools, Context7) |
 | `TaskCompleted` | Task finishes | Suggest storing notable solutions |
@@ -458,9 +475,8 @@ bun install
 - Edit `src/config/index.ts` for default settings
 - Edit `hooks/hooks.json` to enable/disable hooks
 
-4. Build & Test:
+4. Test:
 ```bash
-bun run build
 bun test
 bun run lint
 ```
@@ -607,6 +623,7 @@ Surfaced to LLM via `_meta.instructions`:
 | `/matrix:warn` | Manage file/package warnings |
 | `/matrix:reindex` | Rebuild code index |
 | `/matrix:clone-repo` | Clone external repos for exploration |
+| `/matrix:dreamer` | Schedule and manage automated Claude tasks |
 
 ---
 
