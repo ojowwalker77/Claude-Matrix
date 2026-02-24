@@ -140,6 +140,10 @@ export interface SchedulerStatus {
 // Conversion Helpers
 // ============================================================================
 
+function safeJsonParse<T>(json: string | null | undefined, fallback: T): T {
+  try { return json ? JSON.parse(json) : fallback; } catch { return fallback; }
+}
+
 /**
  * Convert database row to DreamerTask
  */
@@ -154,13 +158,13 @@ export function rowToTask(row: DreamerTaskRow): DreamerTask {
     command: row.command,
     workingDirectory: row.working_directory,
     timeout: row.timeout,
-    env: JSON.parse(row.env || '{}'),
+    env: safeJsonParse(row.env, {}),
     skipPermissions: row.skip_permissions === 1,
     worktreeEnabled: row.worktree_enabled === 1,
     worktreeBasePath: row.worktree_base_path ?? undefined,
     worktreeBranchPrefix: row.worktree_branch_prefix,
     worktreeRemote: row.worktree_remote,
-    tags: JSON.parse(row.tags || '[]'),
+    tags: safeJsonParse(row.tags, []),
     repoId: row.repo_id ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

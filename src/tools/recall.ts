@@ -3,6 +3,21 @@ import { getEmbedding, EMBEDDING_DIM, cosineSimilarity } from '../embeddings/loc
 import { fingerprintRepo, getOrCreateRepo, getRepoEmbedding, getAllReposWithEmbeddings } from '../repo/index.js';
 import type { SolutionCategory, CodeBlock } from '../types/db.js';
 
+function safeJsonParse<T>(json: string | null | undefined, fallback: T): T {
+  if (!json) return fallback;
+  try { return JSON.parse(json); } catch { return fallback; }
+}
+
+function assignIfPresent<K extends keyof SolutionMatch>(
+  match: SolutionMatch, key: K, json: string | null, fallback: SolutionMatch[K]
+): void {
+  if (!json) return;
+  const parsed = safeJsonParse(json, fallback);
+  if (Array.isArray(parsed) && parsed.length > 0) {
+    match[key] = parsed as SolutionMatch[K];
+  }
+}
+
 interface RecallInput {
   query: string;
   limit?: number;
@@ -67,7 +82,7 @@ export function matrixGetSolution(solutionId: string): SolutionMatch | null {
 
   const match: SolutionMatch = {
     id: row.id, problem: row.problem, solution: row.solution, scope: row.scope,
-    tags: JSON.parse(row.tags || '[]'),
+    tags: safeJsonParse(row.tags, []),
     similarity: 1, // Not from search
     score: row.score, uses: row.uses,
     successRate: Math.round(successRate * 100) / 100,
@@ -75,10 +90,10 @@ export function matrixGetSolution(solutionId: string): SolutionMatch | null {
 
   if (row.category) match.category = row.category as SolutionCategory;
   if (row.complexity !== null) match.complexity = row.complexity;
-  if (row.prerequisites) { const p = JSON.parse(row.prerequisites); if (p.length) match.prerequisites = p; }
-  if (row.anti_patterns) { const a = JSON.parse(row.anti_patterns); if (a.length) match.antiPatterns = a; }
-  if (row.code_blocks) { const c = JSON.parse(row.code_blocks); if (c.length) match.codeBlocks = c; }
-  if (row.related_solutions) { const r = JSON.parse(row.related_solutions); if (r.length) match.relatedSolutions = r; }
+  assignIfPresent(match, 'prerequisites', row.prerequisites, []);
+  assignIfPresent(match, 'antiPatterns', row.anti_patterns, []);
+  assignIfPresent(match, 'codeBlocks', row.code_blocks, []);
+  assignIfPresent(match, 'relatedSolutions', row.related_solutions, []);
   if (supersededRow) match.supersededBy = supersededRow.id;
 
   return match;
@@ -142,7 +157,7 @@ export async function matrixRecall(input: RecallInput): Promise<RecallResult> {
     try {
       embedding = bufferToEmbedding(row.problem_embedding);
       if (embedding.length !== EMBEDDING_DIM) continue;
-    } catch { continue; }
+    } catch (e) { console.error('Matrix: embedding decode error in recall', e); continue; }
 
     let similarity = cosineSimilarity(queryEmbedding, embedding);
     let contextBoost: 'same_repo' | 'similar_stack' | undefined;
@@ -166,7 +181,7 @@ export async function matrixRecall(input: RecallInput): Promise<RecallResult> {
 
       const match: SolutionMatch = {
         id: row.id, problem: row.problem, solution: row.solution, scope: row.scope,
-        tags: JSON.parse(row.tags || '[]'),
+        tags: safeJsonParse(row.tags, []),
         similarity: Math.round(similarity * 1000) / 1000,
         score: row.score, uses: row.uses,
         successRate: Math.round(successRate * 100) / 100,
@@ -175,10 +190,10 @@ export async function matrixRecall(input: RecallInput): Promise<RecallResult> {
 
       if (row.category) match.category = row.category as SolutionCategory;
       if (row.complexity !== null) match.complexity = row.complexity;
-      if (row.prerequisites) { const p = JSON.parse(row.prerequisites); if (p.length) match.prerequisites = p; }
-      if (row.anti_patterns) { const a = JSON.parse(row.anti_patterns); if (a.length) match.antiPatterns = a; }
-      if (row.code_blocks) { const c = JSON.parse(row.code_blocks); if (c.length) match.codeBlocks = c; }
-      if (row.related_solutions) { const r = JSON.parse(row.related_solutions); if (r.length) match.relatedSolutions = r; }
+      assignIfPresent(match, 'prerequisites', row.prerequisites, []);
+      assignIfPresent(match, 'antiPatterns', row.anti_patterns, []);
+      assignIfPresent(match, 'codeBlocks', row.code_blocks, []);
+      assignIfPresent(match, 'relatedSolutions', row.related_solutions, []);
       const supersededBy = supersededByMap.get(row.id);
       if (supersededBy) match.supersededBy = supersededBy;
 

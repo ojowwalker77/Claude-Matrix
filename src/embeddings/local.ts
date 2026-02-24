@@ -22,6 +22,8 @@ type EmbeddingPipeline = (
 let embedder: EmbeddingPipeline | null = null;
 let loadingPromise: Promise<EmbeddingPipeline> | null = null;
 let transformersError: string | null = null;
+let loadAttempts = 0;
+const MAX_LOAD_ATTEMPTS = 3;
 
 async function loadEmbedder(): Promise<EmbeddingPipeline> {
   if (embedder) return embedder;
@@ -43,12 +45,21 @@ async function loadEmbedder(): Promise<EmbeddingPipeline> {
 
     embedder = await loadingPromise;
     loadingPromise = null;
+    loadAttempts = 0;
 
     return embedder;
   } catch (err) {
+    loadingPromise = null;
+    loadAttempts++;
     const msg = err instanceof Error ? err.message : String(err);
-    transformersError = `Embeddings unavailable: ${msg}. Run 'bun install' with network access to fix.`;
-    throw new Error(transformersError);
+
+    if (loadAttempts >= MAX_LOAD_ATTEMPTS) {
+      transformersError = `Embeddings unavailable after ${MAX_LOAD_ATTEMPTS} attempts: ${msg}. Run 'bun install' with network access to fix.`;
+      throw new Error(transformersError);
+    }
+
+    console.error(`Matrix: embedding model load failed (attempt ${loadAttempts}/${MAX_LOAD_ATTEMPTS}): ${msg}`);
+    throw new Error(`Embeddings temporarily unavailable: ${msg}`);
   }
 }
 
