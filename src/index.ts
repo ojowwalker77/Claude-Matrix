@@ -175,6 +175,10 @@ async function main(): Promise<void> {
 
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
+
+  // When Claude Code exits, stdin closes — shut down cleanly instead of lingering
+  process.stdin.on('end', shutdown);
+  process.stdin.on('close', shutdown);
 }
 
 main().catch((error) => {

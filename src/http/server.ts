@@ -26,20 +26,33 @@ export function startDashboard(): ReturnType<typeof Bun.serve> | null {
   const config = getConfig();
   if (!config.dashboard?.enabled) return null;
 
-  const { port, host } = config.dashboard;
+  const host = config.dashboard.host;
+  const preferredPort = config.dashboard.port;
 
-  const server = Bun.serve({
-    port,
-    hostname: host,
-    fetch: handleRequest,
-    error(err: Error) {
-      console.error('[Dashboard] HTTP error:', err.message);
-      return new Response('Internal Server Error', { status: 500 });
-    },
-  });
+  // Try preferred port first, then fall back to OS-assigned port
+  for (const tryPort of [preferredPort, 0]) {
+    try {
+      const server = Bun.serve({
+        port: tryPort,
+        hostname: host,
+        fetch: handleRequest,
+        error(err: Error) {
+          console.error('[Dashboard] HTTP error:', err.message);
+          return new Response('Internal Server Error', { status: 500 });
+        },
+      });
 
-  console.error(`[Matrix] Dashboard → http://${host}:${port}`);
-  return server;
+      console.error(`[Matrix] Dashboard → http://${host}:${server.port}`);
+      return server;
+    } catch {
+      if (tryPort !== 0) {
+        console.error(`[Matrix] Port ${tryPort} in use, trying random port…`);
+      }
+    }
+  }
+
+  console.error('[Matrix] Dashboard failed to start — no available port');
+  return null;
 }
 
 // ── Request dispatcher ──────────────────────────────────────────────────
