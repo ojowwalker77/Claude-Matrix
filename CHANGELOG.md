@@ -2,6 +2,14 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.3.1] - 2026-03-02
+
+### Fixed
+- **Dashboard port conflict crashes plugin** - `Bun.serve()` threw a fatal error when the configured port was in use, taking down the entire MCP server. Now falls back to an OS-assigned random port.
+- **Dashboard server lingers after Claude Code exits** - Added `stdin` end/close listeners to trigger clean shutdown when the parent process disconnects.
+
+---
+
 ## [2.3.0] - 2026-03-02
 
 ### Added
