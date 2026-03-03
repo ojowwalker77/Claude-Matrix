@@ -251,6 +251,8 @@ CREATE INDEX IF NOT EXISTS idx_symbols_repo ON symbols(repo_id);
 CREATE INDEX IF NOT EXISTS idx_symbols_file ON symbols(file_id);
 CREATE INDEX IF NOT EXISTS idx_symbols_kind ON symbols(kind);
 CREATE INDEX IF NOT EXISTS idx_symbols_exported ON symbols(exported);
+CREATE INDEX IF NOT EXISTS idx_symbols_name_repo ON symbols(repo_id, name);
+CREATE INDEX IF NOT EXISTS idx_symbols_repo_exported ON symbols(repo_id, exported);
 CREATE INDEX IF NOT EXISTS idx_imports_file ON imports(file_id);
 CREATE INDEX IF NOT EXISTS idx_imports_source ON imports(source_path);
 CREATE INDEX IF NOT EXISTS idx_imports_name ON imports(imported_name);

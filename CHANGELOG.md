@@ -2,6 +2,23 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.3.0] - 2026-03-02
+
+### Added
+- **Web Dashboard** - Full-featured browser UI served from the MCP server on port 4444
+  - **Overview** - Stat cards with SVG icons, bar charts (category, score, tags), scope pie chart
+  - **Solutions** - Filterable table by category/scope, inline score bars, delete actions
+  - **Failures** - Error table with type badges, root cause, occurrence counts
+  - **Warnings** - Warning table with severity/ecosystem badges
+  - **Repos & Index** - Indexed repo list with language/file/symbol counts, one-click reindex
+  - **Background Jobs** - Job table with status badges, progress bars, cancel actions
+  - **Dreamer** - Scheduled tasks and execution history tables
+  - **Config** - All 20 config sections editable in-browser with live save to `~/.claude/matrix/matrix.config`
+  - **Design system** mirrors claude-website: `#000` background, `#22c55e` green accent, Inter + JetBrains Mono fonts, 16px border-radius cards
+- **RunMD Skill** (`/matrix:runmd`) - Execute shell code blocks from markdown files using [runmd](https://github.com/ojowwalker77/runmd). Supports headless mode for CI/CD, selective block execution (`--blocks`), fail-fast, and `.env` variable substitution.
+
+---
+
 ## [2.2.3] - 2026-02-18
 
 ### Added

@@ -228,6 +228,15 @@ export interface MatrixConfig {
   };
   /** Dreamer scheduled task automation settings */
   dreamer: DreamerConfig;
+  /** Local HTTP dashboard settings */
+  dashboard: {
+    /** Enable the local dashboard HTTP server */
+    enabled: boolean;
+    /** TCP port to listen on (default: 4444) */
+    port: number;
+    /** Host to bind — 127.0.0.1 keeps it loopback-only */
+    host: string;
+  };
 }
 
 function getDownloadsDirectory(): string {
@@ -409,6 +418,11 @@ export const DEFAULT_CONFIG: MatrixConfig = {
       defaultTimeout: 300,  // 5 minutes
       defaultSkipPermissions: false,
     },
+  },
+  dashboard: {
+    enabled: true,
+    port: 4444,
+    host: '127.0.0.1',
   },
 };
 

@@ -37,9 +37,9 @@ function getPattern(pattern: string): RegExp | null {
   try {
     const regex = new RegExp(pattern, 'i');
 
-    // Evict all entries when cache exceeds limit (patterns are cheap to recompile)
+    // Evict oldest entry when cache is full (LRU-lite: Maps iterate in insertion order)
     if (compiledPatterns.size >= MAX_CACHED_PATTERNS) {
-      compiledPatterns.clear();
+      compiledPatterns.delete(compiledPatterns.keys().next().value!);
     }
 
     compiledPatterns.set(pattern, regex);

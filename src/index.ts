@@ -12,6 +12,7 @@ import { getConfig } from './config/index.js';
 import { toolRegistry } from './tools/registry.js';
 import { cleanupOrphanedProcesses } from './jobs/manager.js';
 import { clearAllJobTimeouts } from './jobs/workers.js';
+import { startDashboard } from './http/index.js';
 import pkg from '../package.json';
 
 const VERSION: string = pkg.version;
@@ -161,9 +162,13 @@ async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
+  // Start local HTTP dashboard alongside MCP (non-blocking, separate server)
+  const dashboardServer = startDashboard();
+
   const shutdown = () => {
     // Clear all pending job timeouts to prevent orphan timers
     clearAllJobTimeouts();
+    dashboardServer?.stop(true);
     closeDb();
     process.exit(0);
   };

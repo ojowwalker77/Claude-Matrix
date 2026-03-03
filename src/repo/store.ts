@@ -15,6 +15,15 @@ interface RepoRow {
   fingerprint_embedding: Uint8Array | null;
 }
 
+// Process-lifetime caches — repos change rarely within a session
+const repoEmbeddingCache = new Map<string, Float32Array | null>();
+let allReposCache: Array<{ id: string; embedding: Float32Array }> | null = null;
+
+function invalidateRepoCache(): void {
+  repoEmbeddingCache.clear();
+  allReposCache = null;
+}
+
 export function getRepoByPath(path: string): RepoRow | null {
   const db = getDb();
   return db.query('SELECT * FROM repos WHERE path = ?').get(path) as RepoRow | null;
@@ -26,13 +35,24 @@ export function getRepoById(id: string): RepoRow | null {
 }
 
 export function getRepoEmbedding(repoId: string): Float32Array | null {
+  if (repoEmbeddingCache.has(repoId)) {
+    return repoEmbeddingCache.get(repoId) ?? null;
+  }
   const repo = getRepoById(repoId);
-  if (!repo?.fingerprint_embedding) return null;
+  if (!repo?.fingerprint_embedding) {
+    repoEmbeddingCache.set(repoId, null);
+    return null;
+  }
   try {
     const embedding = bufferToEmbedding(repo.fingerprint_embedding as unknown as Buffer);
-    if (embedding.length !== EMBEDDING_DIM) return null;
+    if (embedding.length !== EMBEDDING_DIM) {
+      repoEmbeddingCache.set(repoId, null);
+      return null;
+    }
+    repoEmbeddingCache.set(repoId, embedding);
     return embedding;
   } catch {
+    repoEmbeddingCache.set(repoId, null);
     return null;
   }
 }
@@ -81,6 +101,7 @@ export async function getOrCreateRepo(detected: DetectedRepo): Promise<string> {
         embBuffer,
         existing.id
       );
+      invalidateRepoCache();
     }
 
     return existing.id;
@@ -106,11 +127,14 @@ export async function getOrCreateRepo(detected: DetectedRepo): Promise<string> {
     detected.testFramework,
     embBuffer
   );
+  invalidateRepoCache();
 
   return id;
 }
 
 export function getAllReposWithEmbeddings(): Array<{ id: string; embedding: Float32Array }> {
+  if (allReposCache) return allReposCache;
+
   const db = getDb();
   const rows = db.query(`
     SELECT id, fingerprint_embedding FROM repos WHERE fingerprint_embedding IS NOT NULL
@@ -126,5 +150,6 @@ export function getAllReposWithEmbeddings(): Array<{ id: string; embedding: Floa
       continue;
     }
   }
+  allReposCache = results;
   return results;
 }
