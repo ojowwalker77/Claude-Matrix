@@ -46,19 +46,16 @@ export function upsertFile(
 ): number {
   const db = getDb();
 
-  // Try to update first
-  const updateResult = db.query(`
+  // Try to update first, RETURNING id avoids a second round-trip
+  const updated = db.query(`
     UPDATE repo_files
     SET mtime = ?, hash = ?, indexed_at = datetime('now')
     WHERE repo_id = ? AND file_path = ?
-  `).run(mtime, hash ?? null, repoId, filePath);
+    RETURNING id
+  `).get(mtime, hash ?? null, repoId, filePath) as { id: number } | null;
 
-  if (updateResult.changes > 0) {
-    // Get the existing file ID
-    const row = db.query(`
-      SELECT id FROM repo_files WHERE repo_id = ? AND file_path = ?
-    `).get(repoId, filePath) as { id: number } | null;
-    return row?.id ?? 0;
+  if (updated) {
+    return updated.id;
   }
 
   // Insert new file
@@ -278,35 +275,26 @@ export function findExports(
 export function getIndexStatus(repoId: string, repoName: string): IndexStatus {
   const db = getDb();
 
-  // Get file count
-  const fileCount = db.query(`
-    SELECT COUNT(*) as count FROM repo_files WHERE repo_id = ?
-  `).get(repoId) as { count: number };
-
-  // Get symbol count
-  const symbolCount = db.query(`
-    SELECT COUNT(*) as count FROM symbols WHERE repo_id = ?
-  `).get(repoId) as { count: number };
-
-  // Get import count
-  const importCount = db.query(`
-    SELECT COUNT(*) as count FROM imports i
-    JOIN repo_files f ON i.file_id = f.id
-    WHERE f.repo_id = ?
-  `).get(repoId) as { count: number };
-
-  // Get last indexed time
-  const lastIndexed = db.query(`
-    SELECT MAX(indexed_at) as last FROM repo_files WHERE repo_id = ?
-  `).get(repoId) as { last: string | null };
+  const stats = db.query(`
+    SELECT
+      (SELECT COUNT(*) FROM repo_files WHERE repo_id = ?) AS file_count,
+      (SELECT COUNT(*) FROM symbols WHERE repo_id = ?) AS symbol_count,
+      (SELECT COUNT(*) FROM imports i JOIN repo_files f ON i.file_id = f.id WHERE f.repo_id = ?) AS import_count,
+      (SELECT MAX(indexed_at) FROM repo_files WHERE repo_id = ?) AS last_indexed
+  `).get(repoId, repoId, repoId, repoId) as {
+    file_count: number;
+    symbol_count: number;
+    import_count: number;
+    last_indexed: string | null;
+  };
 
   return {
     repoName,
     repoId,
-    filesIndexed: fileCount.count,
-    symbolCount: symbolCount.count,
-    importCount: importCount.count,
-    lastIndexed: lastIndexed.last,
+    filesIndexed: stats.file_count,
+    symbolCount: stats.symbol_count,
+    importCount: stats.import_count,
+    lastIndexed: stats.last_indexed,
     staleFiles: 0, // Will be calculated by diff
   };
 }

@@ -4,7 +4,7 @@ import { homedir } from 'os';
 import { SCHEMA_SQL } from './schema.js';
 
 // Schema version - increment when schema changes
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 // Migration definitions - each migration upgrades from (version - 1) to version
 const migrations: Record<number, string> = {
@@ -174,6 +174,14 @@ const migrations: Record<number, string> = {
     CREATE INDEX IF NOT EXISTS idx_hook_executions_session ON hook_executions(session_id);
     CREATE INDEX IF NOT EXISTS idx_background_jobs_status ON background_jobs(status);
     CREATE INDEX IF NOT EXISTS idx_background_jobs_tool ON background_jobs(tool_name);
+  `,
+
+  // v7 -> v8: Composite indexes for faster symbol lookups
+  8: `
+    -- Speeds up searchSymbols: WHERE repo_id = ? AND name LIKE ?
+    CREATE INDEX IF NOT EXISTS idx_symbols_name_repo ON symbols(repo_id, name);
+    -- Speeds up listExports: WHERE repo_id = ? AND exported = 1
+    CREATE INDEX IF NOT EXISTS idx_symbols_repo_exported ON symbols(repo_id, exported);
   `,
 };
 
