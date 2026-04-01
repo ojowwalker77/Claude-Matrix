@@ -115,8 +115,6 @@ function findMissingConfigSections(config: ReturnType<typeof getConfig>): string
   const missing: string[] = [];
 
   if (!config.hooks) missing.push('hooks');
-  if (!config.hooks?.promptAnalysis) missing.push('hooks.promptAnalysis');
-  if (!config.hooks?.promptAnalysis?.memoryInjection) missing.push('hooks.promptAnalysis.memoryInjection');
   if (!config.hooks?.permissions) missing.push('hooks.permissions');
   if (!config.hooks?.sensitiveFiles) missing.push('hooks.sensitiveFiles');
   if (!config.hooks?.stop) missing.push('hooks.stop');
@@ -126,10 +124,6 @@ function findMissingConfigSections(config: ReturnType<typeof getConfig>): string
   if (!config.indexing) missing.push('indexing');
   if (!config.toolSearch) missing.push('toolSearch');
   if (!config.delegation) missing.push('delegation');
-  if (!config.dreamer) missing.push('dreamer');
-  if (!config.dreamer?.worktree) missing.push('dreamer.worktree');
-  if (!config.dreamer?.execution) missing.push('dreamer.execution');
-
   return missing;
 }
 

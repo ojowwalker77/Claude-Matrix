@@ -6,7 +6,7 @@
 
 import type { Node as SyntaxNode } from 'web-tree-sitter';
 import { LanguageParser } from './base.js';
-import type { ParseResult, ExtractedSymbol, ExtractedImport, SymbolKind } from '../types.js';
+import type { ExtractedSymbol, ExtractedImport, SymbolKind } from '../types.js';
 
 export class SwiftParser extends LanguageParser {
   protected extractSymbols(rootNode: SyntaxNode, symbols: ExtractedSymbol[]): void {

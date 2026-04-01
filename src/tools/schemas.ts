@@ -15,7 +15,6 @@ import {
   FailureInputSchema,
   StatusInputSchema,
   WarnInputSchema,
-  PromptInputSchema,
   FindDefinitionInputSchema,
   FindCallersInputSchema,
   ListExportsInputSchema,
@@ -24,10 +23,6 @@ import {
   IndexStatusInputSchema,
   ReindexInputSchema,
   DoctorInputSchema,
-  JobStatusInputSchema,
-  JobCancelInputSchema,
-  JobListInputSchema,
-  DreamerInputSchema,
   FindDeadCodeInputSchema,
   FindCircularDepsInputSchema,
 } from './validation.js';
@@ -122,13 +117,6 @@ export const TOOLS: Tool[] = [
   // Utility Tools - Always visible
   // ═══════════════════════════════════════════════════════════════
   {
-    name: 'matrix_prompt',
-    description: 'Analyze and optimize a prompt. Detects ambiguity, infers context, returns optimized prompt or asks clarification questions.',
-    annotations: { readOnlyHint: true },
-    inputSchema: toInputSchema(PromptInputSchema),
-    _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
-  },
-  {
     name: 'matrix_doctor',
     description: 'Run diagnostics and auto-fix Matrix plugin issues. Checks database, config, hooks, and index health. If issues cannot be auto-fixed, provides GitHub issue template.',
     annotations: { readOnlyHint: false, idempotentHint: true },
@@ -207,39 +195,4 @@ export const TOOLS: Tool[] = [
     _meta: { delegable: true, category: 'index' as ToolCategory, visibility: 'always' as VisibilityRule },
   },
 
-  // ═══════════════════════════════════════════════════════════════
-  // Background Job Tools - Always visible
-  // ═══════════════════════════════════════════════════════════════
-  {
-    name: 'matrix_job_status',
-    description: 'Get the status and progress of a background job. Use to poll for completion after starting an async operation.',
-    annotations: { readOnlyHint: true },
-    inputSchema: toInputSchema(JobStatusInputSchema),
-    _meta: { delegable: true, category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
-  },
-  {
-    name: 'matrix_job_cancel',
-    description: 'Cancel a running or queued background job.',
-    annotations: { destructiveHint: true },
-    inputSchema: toInputSchema(JobCancelInputSchema),
-    _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
-  },
-  {
-    name: 'matrix_job_list',
-    description: 'List background jobs. Filter by status to see queued, running, or completed jobs.',
-    annotations: { readOnlyHint: true },
-    inputSchema: toInputSchema(JobListInputSchema),
-    _meta: { delegable: true, category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
-  },
-
-  // ═══════════════════════════════════════════════════════════════
-  // Dreamer - Scheduled Task Automation (v2.1)
-  // ═══════════════════════════════════════════════════════════════
-  {
-    name: 'matrix_dreamer',
-    description: 'Schedule and manage automated Claude tasks. Actions: "add" (create task - RECURRING by default, confirm with user first!), "list" (show all tasks), "run" (execute immediately), "remove" (delete task), "status" (system health), "logs" (view output), "history" (execution records). IMPORTANT: Before using "add", ASK user if they want ONE-TIME or RECURRING - natural language like "at 1am" becomes daily cron by default. Uses native OS schedulers (launchd on macOS, crontab on Linux).',
-    annotations: { idempotentHint: false },
-    inputSchema: toInputSchema(DreamerInputSchema),
-    _meta: { category: 'utility' as ToolCategory, visibility: 'always' as VisibilityRule },
-  },
 ];

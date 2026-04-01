@@ -12,7 +12,6 @@ export type {
   RewardInput,
   FailureInput,
   WarnInput,  // v2.0: Consolidated warn tool input
-  PromptInput,
   FindDefinitionInput,
   FindCallersInput,  // v2.0: New callers tool
   ListExportsInput,

@@ -3,10 +3,12 @@
  *
  * Discovers source code files in a repository across multiple languages.
  * Uses Bun.Glob for fast file discovery with pattern exclusions.
+ * Respects .gitignore rules and detects symlink cycles.
  */
 
 import { join } from 'path';
-import { stat } from 'fs/promises';
+import { stat, lstat } from 'fs/promises';
+import { existsSync, readFileSync } from 'fs';
 import type { ScannedFile } from './types.js';
 import { getSupportedExtensions } from './languages/index.js';
 
@@ -52,6 +54,60 @@ export interface ScanOptions {
 }
 
 /**
+ * Parse a .gitignore file into regex patterns
+ */
+function parseGitignore(repoRoot: string): RegExp[] {
+  const gitignorePath = join(repoRoot, '.gitignore');
+  if (!existsSync(gitignorePath)) return [];
+
+  try {
+    const content = readFileSync(gitignorePath, 'utf-8');
+    const patterns: RegExp[] = [];
+
+    for (const rawLine of content.split('\n')) {
+      const line = rawLine.trim();
+      // Skip empty lines and comments
+      if (!line || line.startsWith('#')) continue;
+      // Skip negation patterns (too complex for simple matching)
+      if (line.startsWith('!')) continue;
+
+      // Convert gitignore glob to regex
+      let pattern = line;
+
+      // Remove trailing slash (directory marker — we match both)
+      const dirOnly = pattern.endsWith('/');
+      if (dirOnly) pattern = pattern.slice(0, -1);
+
+      // Escape regex special chars (except * and ?)
+      pattern = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+
+      // Convert gitignore wildcards to regex
+      pattern = pattern
+        .replace(/\*\*/g, '___GLOBSTAR___')
+        .replace(/\*/g, '[^/]*')
+        .replace(/\?/g, '[^/]')
+        .replace(/___GLOBSTAR___/g, '.*');
+
+      // If pattern doesn't contain /, it matches any path segment
+      if (!line.includes('/')) {
+        patterns.push(new RegExp(`(^|/)${pattern}(/|$)`));
+      } else {
+        // If starts with /, anchor to repo root
+        if (line.startsWith('/')) {
+          patterns.push(new RegExp(`^${pattern.slice(1)}(/|$)`));
+        } else {
+          patterns.push(new RegExp(`(^|/)${pattern}(/|$)`));
+        }
+      }
+    }
+
+    return patterns;
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Scan a repository for source code files across all supported languages
  */
 export async function scanRepository(options: ScanOptions): Promise<ScannedFile[]> {
@@ -63,6 +119,9 @@ export async function scanRepository(options: ScanOptions): Promise<ScannedFile[
   } = options;
 
   const files: ScannedFile[] = [];
+
+  // Parse .gitignore
+  const gitignorePatterns = parseGitignore(repoRoot);
 
   // Build glob pattern for all supported extensions
   const pattern = `**/*.{${EXTENSIONS.join(',')}}`;
@@ -105,6 +164,9 @@ export async function scanRepository(options: ScanOptions): Promise<ScannedFile[
     return { type: 'substring' as const, pattern: excludePattern };
   });
 
+  // Track real paths to detect symlink cycles
+  const seenRealPaths = new Set<string>();
+
   const glob = new Bun.Glob(pattern);
 
   for await (const filePath of glob.scan({
@@ -131,10 +193,27 @@ export async function scanRepository(options: ScanOptions): Promise<ScannedFile[
       continue;
     }
 
+    // Check .gitignore patterns
+    if (gitignorePatterns.some(rx => rx.test(filePath))) {
+      continue;
+    }
+
     const absolutePath = join(repoRoot, filePath);
 
     try {
-      const stats = await stat(absolutePath);
+      // Detect symlinks and check for cycles
+      const lstats = await lstat(absolutePath);
+      if (lstats.isSymbolicLink()) {
+        const realPath = await Bun.file(absolutePath).exists()
+          ? (await import('fs/promises')).realpath(absolutePath)
+          : null;
+        if (!realPath || seenRealPaths.has(await realPath)) {
+          continue; // Broken symlink or cycle
+        }
+        seenRealPaths.add(await realPath);
+      }
+
+      const stats = lstats.isSymbolicLink() ? await stat(absolutePath) : lstats;
 
       // Skip files larger than maxFileSize
       if (stats.size > maxFileSize) {
@@ -145,6 +224,7 @@ export async function scanRepository(options: ScanOptions): Promise<ScannedFile[
         path: filePath,
         absolutePath,
         mtime: Math.floor(stats.mtimeMs),
+        size: stats.size,
       });
     } catch {
       // File doesn't exist or can't be read, skip

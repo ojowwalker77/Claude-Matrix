@@ -56,7 +56,6 @@ const MATRIX_READ_TOOLS = new Set([
   'mcp__plugin_matrix_matrix__matrix_index_status',
   'mcp__plugin_matrix_matrix__matrix_reindex',
   // Utility (read-only)
-  'mcp__plugin_matrix_matrix__matrix_prompt',
   'mcp__plugin_matrix_matrix__matrix_doctor',
 ]);
 

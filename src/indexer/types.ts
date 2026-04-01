@@ -53,6 +53,7 @@ export interface ScannedFile {
   path: string;           // relative to repo root
   absolutePath: string;   // full path
   mtime: number;          // modification time (unix timestamp)
+  size?: number;          // file size in bytes
 }
 
 // Diff result for incremental updates

@@ -25,7 +25,6 @@ import { runMigrations } from '../db/migrate.js';
 
 
 const CURRENT_VERSION = '1.0.4';
-const CLAUDE_DIR = join(homedir(), '.claude');
 
 // File suggestion installation moved to utils/file-suggestion.ts
 
@@ -40,7 +39,6 @@ function ensureConfigComplete(): void {
 
     // Check for v2.0+ required sections
     const missingSections: string[] = [];
-    if (!config.hooks?.promptAnalysis?.memoryInjection) missingSections.push('memoryInjection');
     if (!config.hooks?.permissions) missingSections.push('permissions');
     if (!config.hooks?.userRules) missingSections.push('userRules');
     if (!config.hooks?.gitCommitReview) missingSections.push('gitCommitReview');

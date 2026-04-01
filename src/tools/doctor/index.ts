@@ -6,13 +6,12 @@
  */
 
 import { join } from 'path';
-import { homedir } from 'os';
 import { getConfigPath } from '../../config/index.js';
 import type { DiagnosticCheck, DoctorResult, DoctorInput } from './types.js';
 
 // Import checks
 import { checkMatrixDir, checkDatabase, checkConfig, checkConfigMigration, fixCoreCheck, MATRIX_DIR } from './checks/core.js';
-import { checkBackgroundJobs, checkHookExecutions, checkDreamer, fixTableCheck } from './checks/tables.js';
+import { checkHookExecutions, fixTableCheck } from './checks/tables.js';
 import { checkHooks, checkSubagentHooks, checkDelegation, fixHooksCheck } from './checks/hooks.js';
 import { checkIndex, checkRepoDetection, checkSkillsDirectory, checkFileSuggestion, fixFeatureCheck } from './checks/features.js';
 import { generateIssueTemplate, GITHUB_REPO } from './issue-template.js';
@@ -30,7 +29,7 @@ async function attemptFix(check: DiagnosticCheck): Promise<DiagnosticCheck> {
 
   // Route to appropriate fixer based on check category
   const coreChecks = ['Matrix Directory', 'Database', 'Configuration', 'Config Migration'];
-  const tableChecks = ['Background Jobs', 'Hook Executions', 'Dreamer Scheduler'];
+  const tableChecks = ['Hook Executions'];
   const hookChecks = ['Subagent Hooks', 'Model Delegation'];
   const featureChecks = ['Code Index', 'Skills Directory', 'File Suggestion'];
 
@@ -64,8 +63,7 @@ export async function matrixDoctor(input: DoctorInput = {}): Promise<DoctorResul
     checkConfig(),
     checkConfigMigration(),
 
-    // Database tables (v2.0+)
-    checkBackgroundJobs(),
+    // Database tables
     checkHookExecutions(),
 
     // Hooks system
@@ -83,9 +81,6 @@ export async function matrixDoctor(input: DoctorInput = {}): Promise<DoctorResul
 
     // Skills system (v2.0+)
     checkSkillsDirectory(),
-
-    // Scheduler system (v2.1+)
-    checkDreamer(),
 
     // File suggestion (v2.0+)
     checkFileSuggestion(),

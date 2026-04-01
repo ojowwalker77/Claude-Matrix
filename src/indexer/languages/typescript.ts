@@ -7,7 +7,7 @@
 
 import type { Node as SyntaxNode } from 'web-tree-sitter';
 import { LanguageParser } from './base.js';
-import type { ParseResult, ExtractedSymbol, ExtractedImport, SymbolKind } from '../types.js';
+import type { ExtractedSymbol, ExtractedImport, SymbolKind } from '../types.js';
 
 export class TypeScriptParser extends LanguageParser {
   protected extractSymbols(
@@ -259,10 +259,70 @@ export class TypeScriptParser extends LanguageParser {
     this.walkTree(rootNode, (node) => {
       if (node.type === 'import_statement') {
         this.handleImportStatement(node, imports);
-        return false; // Don't recurse into import
+        return false;
+      }
+      // Track re-exports: export { X } from './bar' and export * from './bar'
+      if (node.type === 'export_statement') {
+        this.handleReExport(node, imports);
+        return true; // Still recurse for nested declarations
       }
       return true;
     });
+  }
+
+  /**
+   * Handle re-export statements:
+   * - export { Foo, Bar } from './module'
+   * - export * from './module'
+   * - export * as Ns from './module'
+   * These create import edges in the dependency graph.
+   */
+  private handleReExport(node: SyntaxNode, imports: ExtractedImport[]): void {
+    const sourceNode = this.getChildByField(node, 'source');
+    if (!sourceNode) return; // Not a re-export (no "from" clause)
+
+    const sourcePath = this.getNodeText(sourceNode).replace(/^['"]|['"]$/g, '');
+    const line = node.startPosition.row + 1;
+
+    // Check for export * from './module'
+    const hasStar = node.children.some(c => c !== null && c.type === '*');
+    if (hasStar) {
+      // Check for export * as Ns from './module'
+      const nsImport = node.namedChildren.find(c => c !== null && c.type === 'namespace_export');
+      if (nsImport) {
+        const nameNode = nsImport.namedChildren.find(c => c !== null && c.type === 'identifier');
+        imports.push(
+          this.createImport(
+            nameNode ? this.getNodeText(nameNode) : '*',
+            sourcePath,
+            line,
+            { isNamespace: true }
+          )
+        );
+      } else {
+        imports.push(
+          this.createImport('*', sourcePath, line, { isNamespace: true })
+        );
+      }
+      return;
+    }
+
+    // Check for export { Foo, Bar } from './module'
+    const exportClause = node.namedChildren.find(c => c !== null && c.type === 'export_clause');
+    if (exportClause) {
+      for (const specifier of exportClause.namedChildren) {
+        if (!specifier || specifier.type !== 'export_specifier') continue;
+        const nameNode = this.getChildByField(specifier, 'name');
+        const aliasNode = this.getChildByField(specifier, 'alias');
+        if (nameNode) {
+          imports.push(
+            this.createImport(this.getNodeText(nameNode), sourcePath, line, {
+              localName: aliasNode ? this.getNodeText(aliasNode) : undefined,
+            })
+          );
+        }
+      }
+    }
   }
 
   private handleImportStatement(node: SyntaxNode, imports: ExtractedImport[]): void {

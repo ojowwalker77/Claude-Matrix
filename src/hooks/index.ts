@@ -26,17 +26,6 @@ export interface PreToolUseInput extends HookInput {
 
 
 /**
- * SubagentStart hook input (Claude Code 2.0.43+)
- * Fires when a subagent (Explore, Plan, etc.) starts
- */
-export interface SubagentStartInput extends HookInput {
-  agent_id: string;
-  agent_type: string;
-  hook_event_name: 'SubagentStart';
-}
-
-
-/**
  * PermissionRequest decision structure
  */
 export interface PermissionDecision {

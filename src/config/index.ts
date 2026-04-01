@@ -75,21 +75,6 @@ export interface CursedFilesConfig {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Prompt Analysis Hook Config
-// ═══════════════════════════════════════════════════════════════
-export interface PromptAnalysisConfig {
-  enabled: boolean;
-  shortcuts: { enabled: boolean };
-  codeNavigation: { enabled: boolean };
-  memoryInjection: {
-    enabled: boolean;
-    maxSolutions: number;
-    maxFailures: number;
-    minScore: number;
-  };
-}
-
-// ═══════════════════════════════════════════════════════════════
 // Code Review Config
 // ═══════════════════════════════════════════════════════════════
 export interface GitCommitReviewConfig {
@@ -99,30 +84,6 @@ export interface GitCommitReviewConfig {
   defaultMode: 'default' | 'lazy';
   /** Auto-run review (NOT recommended - prefer suggestion) */
   autoRun: boolean;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Dreamer Config (Scheduled Task Automation)
-// ═══════════════════════════════════════════════════════════════
-export interface DreamerWorktreeConfig {
-  /** Default branch prefix for worktree branches */
-  defaultBranchPrefix: string;
-  /** Default remote for pushing worktree branches */
-  defaultRemote: string;
-  /** Optional custom base path for worktrees */
-  defaultBasePath?: string;
-}
-
-export interface DreamerExecutionConfig {
-  /** Default timeout in seconds */
-  defaultTimeout: number;
-  /** Default value for skip permissions flag */
-  defaultSkipPermissions: boolean;
-}
-
-export interface DreamerConfig {
-  worktree: DreamerWorktreeConfig;
-  execution: DreamerExecutionConfig;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -170,7 +131,6 @@ export interface HooksConfig {
   stop: StopHookConfig;
   packageAuditor: PackageAuditorConfig;
   cursedFiles: CursedFilesConfig;
-  promptAnalysis: PromptAnalysisConfig;
   gitCommitReview: GitCommitReviewConfig;
   // v2.0 User Rules
   userRules: UserRulesConfig;
@@ -225,17 +185,6 @@ export interface MatrixConfig {
     enabled: boolean;
     /** Model for delegable tools: 'haiku' (cheaper) or 'sonnet' (more capable) */
     model: 'haiku' | 'sonnet';
-  };
-  /** Dreamer scheduled task automation settings */
-  dreamer: DreamerConfig;
-  /** Local HTTP dashboard settings */
-  dashboard: {
-    /** Enable the local dashboard HTTP server */
-    enabled: boolean;
-    /** TCP port to listen on (default: 4444) */
-    port: number;
-    /** Host to bind — 127.0.0.1 keeps it loopback-only */
-    host: string;
   };
 }
 
@@ -338,19 +287,6 @@ export const DEFAULT_CONFIG: MatrixConfig = {
       behavior: 'ask' as const,
     },
 
-    // ─── Prompt Analysis (UserPromptSubmit hook) ───
-    promptAnalysis: {
-      enabled: true,
-      shortcuts: { enabled: true },
-      codeNavigation: { enabled: true },
-      memoryInjection: {
-        enabled: true,
-        maxSolutions: 3,
-        maxFailures: 2,
-        minScore: 0.35,
-      },
-    },
-
     // ─── Code Review Config ───
     // Controls /matrix:review behavior and commit suggestions
     gitCommitReview: {
@@ -407,22 +343,6 @@ export const DEFAULT_CONFIG: MatrixConfig = {
   delegation: {
     enabled: true,
     model: 'haiku' as const,  // Use haiku for cheaper read-only operations
-  },
-  dreamer: {
-    worktree: {
-      defaultBranchPrefix: 'matrix-dreamer/',
-      defaultRemote: 'origin',
-      defaultBasePath: undefined,
-    },
-    execution: {
-      defaultTimeout: 300,  // 5 minutes
-      defaultSkipPermissions: false,
-    },
-  },
-  dashboard: {
-    enabled: true,
-    port: 4444,
-    host: '127.0.0.1',
   },
 };
 

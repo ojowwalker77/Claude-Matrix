@@ -3,17 +3,29 @@
  *
  * Compares current repository state against indexed state
  * to determine which files need re-indexing.
+ * Uses content hashing for reliable change detection beyond mtime.
  */
 
 import type { ScannedFile, FileDiff, RepoFileRow } from './types.js';
 
 /**
- * Compare scanned files against indexed files to find changes
+ * Compute a fast content hash for a file
  */
-export function computeDiff(
+export async function computeFileHash(absolutePath: string): Promise<string> {
+  const content = await Bun.file(absolutePath).arrayBuffer();
+  const hasher = new Bun.CryptoHasher('sha256');
+  hasher.update(new Uint8Array(content));
+  return hasher.digest('hex');
+}
+
+/**
+ * Compare scanned files against indexed files to find changes.
+ * Uses mtime as a fast first check, then content hash for accuracy.
+ */
+export async function computeDiff(
   scannedFiles: ScannedFile[],
   indexedFiles: Map<string, RepoFileRow>
-): FileDiff {
+): Promise<FileDiff> {
   const added: ScannedFile[] = [];
   const modified: ScannedFile[] = [];
   const deleted: string[] = [];
@@ -28,8 +40,17 @@ export function computeDiff(
       // New file, not in index
       added.push(file);
     } else if (file.mtime > indexed.mtime) {
-      // File has been modified since last index
-      modified.push(file);
+      // mtime changed — verify with content hash if we have one stored
+      if (indexed.hash) {
+        const currentHash = await computeFileHash(file.absolutePath);
+        if (currentHash !== indexed.hash) {
+          modified.push(file);
+        }
+        // Same hash despite mtime change — skip (e.g., touch without edit)
+      } else {
+        // No stored hash — assume modified
+        modified.push(file);
+      }
     }
     // else: file unchanged, skip
 
