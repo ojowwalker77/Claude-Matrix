@@ -235,7 +235,6 @@ async function runIndexer(repoRoot: string, repoId: string, config: IndexingConf
     // Dynamic import to avoid loading heavy modules if not needed
     const { indexRepository } = await import('../indexer/index.js');
 
-    let lastProgress = '';
     const result = await indexRepository({
       repoRoot,
       repoId,
@@ -244,21 +243,11 @@ async function runIndexer(repoRoot: string, repoId: string, config: IndexingConf
       excludePatterns: config.excludePatterns,
       maxFileSize: config.maxFileSize,
       includeTests: config.includeTests,
-      onProgress: (msg, pct) => {
-        // Update progress on same line
-        const progressLine = `\r\x1b[36m[Matrix]\x1b[0m ${msg} (${pct}%)`;
-        if (progressLine !== lastProgress) {
-          printToUser(progressLine);
-          lastProgress = progressLine;
-        }
-      },
     });
 
-    // Clear progress line and show result
+    // Show a single summary line (no per-file spam)
     if (result.filesIndexed > 0) {
-      printToUser(`\r\x1b[32m[Matrix]\x1b[0m Indexed ${result.filesIndexed} files, ${result.symbolsFound} symbols (${result.duration}ms)`);
-    } else if (result.filesSkipped > 0) {
-      printToUser(`\r\x1b[32m[Matrix]\x1b[0m Index up to date (${result.filesSkipped} files)`);
+      printToUser(`\x1b[32m[Matrix]\x1b[0m Indexed ${result.filesIndexed} files, ${result.symbolsFound} symbols (${result.duration}ms)`);
     }
   } catch (err) {
     // Silently fail - indexing is optional
