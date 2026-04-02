@@ -5,9 +5,70 @@
  * Builds on the existing index store (symbols, imports, repo_files tables).
  */
 
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 import { getDb } from '../db/client.js';
 import { findExports, findCallers } from './store.js';
-import type { ExportResult, SymbolKind } from './types.js';
+import type { SymbolKind } from './types.js';
+
+// ============================================================================
+// tsconfig Path Alias Resolution
+// ============================================================================
+
+interface TsconfigPaths {
+  baseUrl?: string;
+  paths?: Record<string, string[]>;
+}
+
+/**
+ * Load tsconfig.json path aliases from a repo root.
+ * Returns a map of alias prefix -> directory prefix for import resolution.
+ */
+export function loadTsconfigPaths(repoRoot: string): Map<string, string> {
+  const aliasMap = new Map<string, string>();
+
+  for (const configName of ['tsconfig.json', 'jsconfig.json']) {
+    const configPath = join(repoRoot, configName);
+    if (!existsSync(configPath)) continue;
+
+    try {
+      const raw = readFileSync(configPath, 'utf-8');
+      // Strip single-line comments (tsconfig allows them)
+      const stripped = raw.replace(/\/\/.*$/gm, '');
+      const config = JSON.parse(stripped) as { compilerOptions?: TsconfigPaths };
+
+      const baseUrl = config.compilerOptions?.baseUrl ?? '.';
+      const paths = config.compilerOptions?.paths;
+      if (!paths) continue;
+
+      for (const [alias, targets] of Object.entries(paths)) {
+        const target = targets[0];
+        if (!target) continue;
+
+        // Convert "src/*" -> "src/" and "@/*" -> "@/"
+        const aliasPrefix = alias.replace(/\/?\*$/, '');
+        const targetPrefix = join(baseUrl, target.replace(/\/?\*$/, ''));
+
+        aliasMap.set(aliasPrefix, targetPrefix);
+      }
+    } catch {
+      // Invalid config, skip
+    }
+  }
+
+  return aliasMap;
+}
+
+/** Cached tsconfig paths per repo root */
+const tsconfigPathsCache = new Map<string, Map<string, string>>();
+
+export function getTsconfigPaths(repoRoot: string): Map<string, string> {
+  const cached = tsconfigPathsCache.get(repoRoot);
+  if (cached) return cached;
+  const paths = loadTsconfigPaths(repoRoot);
+  tsconfigPathsCache.set(repoRoot, paths);
+  return paths;
+}
 
 // ============================================================================
 // Types
@@ -70,17 +131,34 @@ interface ImportGraphData {
 /**
  * Resolve an import source path to an actual indexed file path.
  *
- * Handles relative paths (./foo, ../bar), extension resolution (.ts/.tsx/.js/.jsx/.mjs),
- * and index file resolution (foo/index.ts).
+ * Handles:
+ * - Relative paths (./foo, ../bar)
+ * - Extension resolution (.ts/.tsx/.js/.jsx/.mjs)
+ * - Index file resolution (foo/index.ts)
+ * - tsconfig path aliases (@/utils, src/foo)
  *
- * Returns null for external packages (no ./ or ../ prefix).
+ * Returns null for unresolvable external packages.
  */
 function resolveImportPath(
   fromFile: string,
   sourcePath: string,
   knownFiles: Set<string>,
+  pathAliases?: Map<string, string>,
 ): string | null {
-  // Skip external packages
+  const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs'];
+
+  // Try tsconfig path aliases first (e.g., @/utils/foo -> src/utils/foo)
+  if (pathAliases && !sourcePath.startsWith('.')) {
+    for (const [alias, target] of pathAliases) {
+      if (sourcePath === alias || sourcePath.startsWith(alias + '/')) {
+        const resolved = sourcePath.replace(alias, target);
+        const result = tryResolve(resolved, knownFiles, extensions);
+        if (result) return result;
+      }
+    }
+  }
+
+  // Skip remaining external packages (no ./ or ../ and no alias match)
   if (!sourcePath.startsWith('.')) {
     return null;
   }
@@ -101,18 +179,18 @@ function resolveImportPath(
   }
   const base = segments.join('/');
 
-  const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mjs'];
+  return tryResolve(base, knownFiles, extensions);
+}
 
-  // Try exact match first (already has extension)
+/** Try resolving a base path with extensions and /index fallbacks */
+function tryResolve(base: string, knownFiles: Set<string>, extensions: string[]): string | null {
   if (knownFiles.has(base)) return base;
 
-  // Try with extensions
   for (const ext of extensions) {
     const candidate = base + ext;
     if (knownFiles.has(candidate)) return candidate;
   }
 
-  // Try as directory with /index
   for (const ext of extensions) {
     const candidate = base + '/index' + ext;
     if (knownFiles.has(candidate)) return candidate;
@@ -124,8 +202,9 @@ function resolveImportPath(
 /**
  * Build the import graph from the index database.
  * Returns both outgoing (what each file imports) and incoming (who imports each file) edges.
+ * Optionally resolves tsconfig path aliases for better import matching.
  */
-function buildImportGraph(repoId: string, pathPrefix?: string): ImportGraphData {
+function buildImportGraph(repoId: string, pathPrefix?: string, pathAliases?: Map<string, string>): ImportGraphData {
   const db = getDb();
 
   // Load ALL files for import resolution (unfiltered) to prevent
@@ -173,7 +252,7 @@ function buildImportGraph(repoId: string, pathPrefix?: string): ImportGraphData 
     if (!fromFile) continue;
 
     // Resolve against ALL files (not just scope) for accurate cross-boundary resolution
-    const resolved = resolveImportPath(fromFile, imp.source_path, allFiles);
+    const resolved = resolveImportPath(fromFile, imp.source_path, allFiles, pathAliases);
     if (!resolved) continue;
 
     outgoing.get(fromFile)?.add(resolved);
@@ -239,9 +318,10 @@ export function findOrphanedFiles(
   pathPrefix?: string,
   entryPointPatterns?: string[],
   limit: number = 100,
+  pathAliases?: Map<string, string>,
 ): OrphanedFile[] {
   const db = getDb();
-  const graph = buildImportGraph(repoId, pathPrefix);
+  const graph = buildImportGraph(repoId, pathPrefix, pathAliases);
   const isEntryPoint = buildEntryPointMatcher(entryPointPatterns || []);
 
   const orphaned: OrphanedFile[] = [];
@@ -287,8 +367,9 @@ export function findCircularDeps(
   repoId: string,
   pathPrefix?: string,
   maxDepth: number = 10,
+  pathAliases?: Map<string, string>,
 ): CircularDepsResult {
-  const graph = buildImportGraph(repoId, pathPrefix);
+  const graph = buildImportGraph(repoId, pathPrefix, pathAliases);
   const rawCycles = detectCycles(graph.outgoing, maxDepth);
   const cycles = deduplicateCycles(rawCycles);
 
@@ -465,8 +546,12 @@ export function analyzeDeadCode(
   pathPrefix?: string,
   entryPoints?: string[],
   limit: number = 100,
+  repoRoot?: string,
 ): DeadCodeResult {
   const db = getDb();
+
+  // Load tsconfig path aliases for better import resolution
+  const pathAliases = repoRoot ? getTsconfigPaths(repoRoot) : undefined;
 
   // Get total counts for summary
   const fileCount = db.query(
@@ -485,7 +570,7 @@ export function analyzeDeadCode(
   }
 
   if (category === 'orphaned_files' || category === 'all') {
-    orphanedFiles = findOrphanedFiles(repoId, pathPrefix, entryPoints, limit);
+    orphanedFiles = findOrphanedFiles(repoId, pathPrefix, entryPoints, limit, pathAliases);
   }
 
   return {

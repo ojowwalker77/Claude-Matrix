@@ -8,8 +8,8 @@ This document contains everything needed to understand, customize, fork, and sel
 
 Claude Matrix is a plugin for Claude Code that adds:
 - **Persistent memory** with semantic search (solutions, failures)
-- **Code indexing** for 15 languages
-- **Automatic hooks** for permissions, security, context injection
+- **Code indexing** for 15 languages with .gitignore support and content hash diffing
+- **Automatic hooks** for permissions, security, package auditing
 - **Codebase hygiene** via Nuke (dead code, orphans, circular deps)
 - **Library docs** via Context7
 - **Diagnostics** with auto-fix
@@ -27,7 +27,7 @@ Claude-Matrix/
 │   ├── db/
 │   │   ├── client.ts               # SQLite connection (bun:sqlite)
 │   │   ├── schema.ts               # Full database schema
-│   │   └── migrate.ts              # Schema migrations (v4 for v2.0)
+│   │   └── migrate.ts              # Flattened schema migrations (v9)
 │   ├── embeddings/
 │   │   ├── local.ts                # transformers.js embeddings
 │   │   └── utils.ts                # cosine similarity
@@ -39,59 +39,45 @@ Claude-Matrix/
 │   │   ├── reward.ts               # matrix_reward
 │   │   ├── failure.ts              # matrix_failure
 │   │   ├── status.ts               # matrix_status
-│   │   ├── warn.ts                 # matrix_warn (v2.0: consolidated)
-│   │   ├── prompt.ts               # matrix_prompt
-│   │   ├── doctor.ts               # matrix_doctor
-│   │   └── index-tools.ts          # Code index tools + find_callers + dead code + circular deps
+│   │   ├── warn.ts                 # matrix_warn (consolidated)
+│   │   ├── doctor/                 # matrix_doctor diagnostics
+│   │   └── index-tools.ts          # Code index tools + dead code + circular deps
 │   ├── server/
 │   │   └── handlers.ts             # Tool dispatch handler
 │   ├── hooks/
-│   │   ├── index.ts                # Hook dispatcher + re-exports
-│   │   ├── format-helpers.ts       # Verbosity-aware formatters (v2.0)
-│   │   ├── rule-engine.ts          # User-configurable rules (v2.0)
+│   │   ├── index.ts                # Hook utilities + re-exports
+│   │   ├── unified-entry.ts        # Hook dispatcher
+│   │   ├── format-helpers.ts       # Verbosity-aware formatters
+│   │   ├── rule-engine.ts          # User-configurable rules
 │   │   ├── session-start.ts        # Initialize DB, index code
 │   │   ├── permission-request.ts   # Auto-approve read-only tools
 │   │   ├── pre-tool-read.ts        # Sensitive file detection
 │   │   ├── pre-tool-bash.ts        # Package auditing
 │   │   ├── pre-tool-edit.ts        # File warnings (cursed files)
-│   │   ├── pre-tool-web.ts         # Intercept docs lookups → Context7
-│   │   ├── post-tool-bash.ts       # Log installs
-│   │   ├── prompt-utils.ts         # Prompt analysis utilities
-│   │   ├── subagent-start.ts       # Inject Matrix guidance for subagents
-│   │   └── task-completed.ts       # Offer to save notable solutions
+│   │   └── pre-tool-web.ts         # Intercept docs lookups -> Context7
 │   ├── indexer/
-│   │   ├── index.ts                # Main indexer
-│   │   ├── analysis.ts             # Dead code + circular dependency detection
-│   │   ├── parser.ts               # tree-sitter parsing
-│   │   ├── store.ts                # Index storage + find_callers
+│   │   ├── index.ts                # Main indexer with content hashing
+│   │   ├── scanner.ts              # File discovery (.gitignore, symlink safe)
+│   │   ├── diff.ts                 # Content hash diffing
+│   │   ├── analysis.ts             # Dead code + circular deps + tsconfig paths
+│   │   ├── parser.ts               # tree-sitter parsing (per-file timeout)
+│   │   ├── store.ts                # Index storage + fuzzy search + find_callers
 │   │   └── languages/              # Language-specific extractors (15 langs)
-│   ├── dreamer/                    # Scheduled task automation
-│   │   ├── index.ts                # Dreamer exports
-│   │   ├── store.ts                # Task persistence
-│   │   ├── types.ts                # Task types
-│   │   ├── cron/                   # Cron parsing + humanizer
-│   │   ├── scheduler/              # Native OS schedulers (launchd, crontab)
-│   │   └── actions/                # add, list, run, remove, status, logs, history
-│   ├── jobs/                       # Background job system
-│   │   ├── manager.ts              # Job lifecycle management
-│   │   └── workers.ts              # Job execution + timeouts
 │   ├── repo/
 │   │   ├── fingerprint.ts          # Detect project type
 │   │   └── store.ts                # Repo CRUD
 │   └── config/
-│       └── index.ts                # User configuration + verbosity + rules
+│       └── index.ts                # User configuration
 ├── hooks/
 │   └── hooks.json                  # Claude Code hook definitions
 ├── skills/                         # Slash commands (skills format)
-│   ├── list/                       # /matrix:list (includes export)
+│   ├── list/                       # /matrix:list
 │   ├── warn/                       # /matrix:warn
 │   ├── reindex/                    # /matrix:reindex
 │   ├── doctor/                     # /matrix:doctor
 │   ├── review/                     # /matrix:review
 │   ├── deep-research/              # /matrix:deep-research
-│   ├── nuke/                       # /matrix:nuke (v2.2.2)
-│   ├── clone-repo/                 # /matrix:clone-repo
-│   └── dreamer/                    # /matrix:dreamer (scheduled tasks)
+│   └── nuke/                       # /matrix:nuke
 ├── scripts/
 │   ├── run-hooks.sh                # Hook runner
 │   └── run-mcp.sh                  # MCP server runner
@@ -102,7 +88,7 @@ Claude-Matrix/
 
 ---
 
-## MCP Tools (22 total, v2.2.2)
+## MCP Tools (18 total)
 
 ### Memory Tools
 
@@ -115,7 +101,7 @@ Claude-Matrix/
 | `matrix_status` | Get memory statistics | `readOnlyHint`, `delegable` |
 | `matrix_get_solution` | Fetch full solution details by ID | `readOnlyHint`, `delegable` |
 
-### Warning Tool (v2.0 - Consolidated)
+### Warning Tool
 
 | Tool | Purpose | Annotations |
 |------|---------|-------------|
@@ -128,34 +114,24 @@ Claude-Matrix/
 | Tool | Purpose | Annotations |
 |------|---------|-------------|
 | `matrix_find_definition` | Find symbol definition | `readOnlyHint`, `delegable` |
-| `matrix_find_callers` | Find all files that use a symbol (v2.0) | `readOnlyHint`, `delegable` |
-| `matrix_search_symbols` | Search symbols by partial name | `readOnlyHint`, `delegable` |
+| `matrix_find_callers` | Find all files that use a symbol | `readOnlyHint`, `delegable` |
+| `matrix_search_symbols` | Fuzzy search symbols by name (filterable by kind) | `readOnlyHint`, `delegable` |
 | `matrix_list_exports` | List exports from file/directory | `readOnlyHint`, `delegable` |
 | `matrix_get_imports` | Get imports for a file | `readOnlyHint`, `delegable` |
 | `matrix_index_status` | Get index status | `readOnlyHint`, `delegable` |
 | `matrix_reindex` | Trigger reindexing | `idempotentHint`, `delegable` |
-| `matrix_find_dead_code` | Find exported symbols with zero callers and orphaned files (v2.2.2) | `readOnlyHint`, `delegable` |
-| `matrix_find_circular_deps` | Build import graph and detect circular dependency chains (v2.2.2) | `readOnlyHint`, `delegable` |
-
-### Scheduling & Jobs
-
-| Tool | Purpose | Annotations |
-|------|---------|-------------|
-| `matrix_dreamer` | Schedule and manage automated Claude tasks | — |
-| `matrix_job_status` | Get status of a background job | `readOnlyHint`, `delegable` |
-| `matrix_job_cancel` | Cancel a running background job | — |
-| `matrix_job_list` | List background jobs by status | `readOnlyHint`, `delegable` |
+| `matrix_find_dead_code` | Find exported symbols with zero callers and orphaned files | `readOnlyHint`, `delegable` |
+| `matrix_find_circular_deps` | Detect circular dependency chains | `readOnlyHint`, `delegable` |
 
 ### Other Tools
 
 | Tool | Purpose | Annotations |
 |------|---------|-------------|
-| `matrix_prompt` | Analyze prompt for ambiguity | `readOnlyHint` |
 | `matrix_doctor` | Run diagnostics and auto-fix | `idempotentHint` |
 
 ### Delegable Tools (for Haiku sub-agents)
 
-These 12 tools are marked with `_meta.delegable: true`:
+These tools are marked with `_meta.delegable: true`:
 ```
 matrix_recall, matrix_reward, matrix_status
 matrix_warn (all actions)
@@ -168,14 +144,13 @@ matrix_find_dead_code, matrix_find_circular_deps
 **Not delegable** (require Opus reasoning):
 - `matrix_store` - needs judgment on what to store
 - `matrix_failure` - needs root cause analysis
-- `matrix_prompt` - meta-analysis of prompts
 - `matrix_doctor` - diagnostics interpretation
 
 ---
 
 ## Database Schema
 
-SQLite database at `~/.claude/matrix/matrix.db`
+SQLite database at `~/.claude/matrix/matrix.db`. Schema version 9.
 
 ### Core Tables
 
@@ -221,17 +196,6 @@ CREATE TABLE failures (
     created_at TEXT
 );
 
--- Repos (project fingerprints)
-CREATE TABLE repos (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    path TEXT,
-    languages JSON DEFAULT '[]',
-    frameworks JSON DEFAULT '[]',
-    patterns JSON DEFAULT '[]',
-    fingerprint_embedding BLOB
-);
-
 -- Warnings (file/package grudges)
 CREATE TABLE warnings (
     id TEXT PRIMARY KEY,
@@ -248,13 +212,13 @@ CREATE TABLE warnings (
 ### Code Index Tables
 
 ```sql
--- Indexed files
+-- Indexed files (with content hash for reliable change detection)
 CREATE TABLE repo_files (
     id INTEGER PRIMARY KEY,
     repo_id TEXT NOT NULL,
     file_path TEXT NOT NULL,
     mtime INTEGER NOT NULL,
-    hash TEXT,
+    hash TEXT,           -- SHA-256 content hash
     indexed_at TEXT
 );
 
@@ -274,7 +238,7 @@ CREATE TABLE symbols (
     signature TEXT
 );
 
--- Imports
+-- Imports (including re-exports tracked by TS parser)
 CREATE TABLE imports (
     id INTEGER PRIMARY KEY,
     file_id INTEGER NOT NULL,
@@ -296,66 +260,12 @@ Defined in `hooks/hooks.json`:
 
 | Hook | Trigger | What it does |
 |------|---------|--------------|
-| `SessionStart` | Session begins | Init DB, auto-create config, index code (15 languages) |
+| `SessionStart` | Session begins | Init DB, auto-create config, index code |
 | `PermissionRequest` | Tool permission asked | Auto-approve read-only tools (configurable) |
 | `PreToolUse:Read` | Before reading file | Detect sensitive files (.env, keys, secrets) |
 | `PreToolUse:Bash` | Before shell command | Audit packages (CVEs, deprecation, size) |
 | `PreToolUse:Edit/Write` | Before file edit | Check for file warnings (cursed files) |
-| `PreToolUse:WebFetch/WebSearch` | Before web lookup | Intercept library docs → Context7 |
-| `PostToolUse:Bash` | After shell command | Log package installations |
-| `SubagentStart` | Subagent spawns | Inject Matrix guidance (prefer index tools, Context7) |
-| `TaskCompleted` | Task finishes | Suggest storing notable solutions |
-
-### Hook Configuration
-
-Each hook can be configured in `~/.claude/matrix/matrix.config`:
-
-```json
-{
-  "hooks": {
-    "permissions": {
-      "autoApproveReadOnly": true,
-      "autoApprove": {
-        "coreRead": true,      // Read, Glob, Grep
-        "web": true,           // WebFetch, WebSearch
-        "matrixRead": true,    // matrix_recall, status, find_definition, etc.
-        "context7": true       // resolve-library-id, query-docs
-      },
-      "neverAutoApprove": ["matrix_store", "matrix_warn_add"],
-      "additionalAutoApprove": []
-    },
-    "sensitiveFiles": {
-      "enabled": true,
-      "behavior": "ask",       // warn, block, ask, disabled
-      "patterns": {
-        "envFiles": true,
-        "keysAndCerts": true,
-        "secretDirs": true,
-        "configFiles": true,
-        "passwordFiles": true,
-        "cloudCredentials": true
-      },
-      "customPatterns": [],
-      "allowList": [".env.example", ".env.template"]
-    },
-    "packageAuditor": {
-      "enabled": true,
-      "behavior": "ask",
-      "checks": {
-        "cve": true,
-        "deprecated": true,
-        "bundleSize": true,
-        "localWarnings": true
-      },
-      "blockOnCriticalCVE": true
-    },
-    "cursedFiles": {
-      "enabled": true,
-      "behavior": "ask"
-    }
-  }
-}
-```
+| `PreToolUse:WebFetch/WebSearch` | Before web lookup | Intercept library docs -> Context7 |
 
 ---
 
@@ -370,34 +280,21 @@ File: `~/.claude/matrix/matrix.config` (auto-created on first run)
     "defaultMinScore": 0.3,
     "defaultScope": "all"
   },
-  "merge": {
-    "defaultThreshold": 0.8
-  },
-  "list": {
-    "defaultLimit": 20
-  },
-  "export": {
-    "defaultDirectory": "~/Downloads",
-    "defaultFormat": "json"
-  },
-  "display": {
-    "colors": true,
-    "boxWidth": 55,
-    "cardWidth": 70,
-    "truncateLength": 40
-  },
-  "scoring": {
-    "highThreshold": 0.7,
-    "midThreshold": 0.4
-  },
   "hooks": {
     "enabled": true,
-    "complexityThreshold": 5,
-    "permissions": { ... },
-    "sensitiveFiles": { ... },
-    "packageAuditor": { ... },
-    "cursedFiles": { ... },
-    "promptAnalysis": { ... }
+    "verbosity": "compact",
+    "permissions": {
+      "autoApproveReadOnly": true,
+      "autoApprove": {
+        "coreRead": true,
+        "web": true,
+        "matrixRead": true,
+        "context7": true
+      }
+    },
+    "sensitiveFiles": { "enabled": true, "behavior": "ask" },
+    "packageAuditor": { "enabled": true, "behavior": "ask" },
+    "cursedFiles": { "enabled": true, "behavior": "ask" }
   },
   "indexing": {
     "enabled": true,
@@ -410,7 +307,8 @@ File: `~/.claude/matrix/matrix.config` (auto-created on first run)
     "enabled": true,
     "preferMatrixIndex": true,
     "preferContext7": true
-  }
+  },
+  "delegation": { "enabled": true, "model": "haiku" }
 }
 ```
 
@@ -451,163 +349,14 @@ Tree-sitter grammars downloaded on first use (~1-2MB each):
 
 `function`, `class`, `interface`, `type`, `enum`, `variable`, `const`, `method`, `property`, `namespace`
 
----
+### Parser Features (v2.4.0)
 
-## Self-Hosting Guide
-
-### Fork & Customize
-
-1. Fork the repo:
-```bash
-git clone https://github.com/ojowwalker77/Claude-Matrix
-cd Claude-Matrix
-```
-
-2. Install dependencies:
-```bash
-bun install
-```
-
-3. Customize:
-- Edit `src/tools/schemas.ts` to add/modify tools
-- Edit `src/tools/validation.ts` for input validation
-- Edit `src/hooks/*.ts` to customize hook behavior
-- Edit `src/config/index.ts` for default settings
-- Edit `hooks/hooks.json` to enable/disable hooks
-
-4. Test:
-```bash
-bun test
-bun run lint
-```
-
-5. Test locally:
-```bash
-claude --plugin-dir /path/to/your-fork
-```
-
-### Create Your Own Plugin
-
-1. Update `.claude-plugin/plugin.json`:
-```json
-{
-  "name": "your-matrix",
-  "description": "Your custom Matrix",
-  "version": "1.0.0",
-  "author": { "name": "Your Name" },
-  "repository": "https://github.com/you/your-matrix"
-}
-```
-
-2. Update `.claude-plugin/marketplace.json`:
-```json
-{
-  "id": "you/your-matrix",
-  "name": "your-matrix",
-  "displayName": "Your Matrix",
-  "publisher": "you"
-}
-```
-
-3. Push to GitHub
-
-4. Install your version:
-```
-/plugin marketplace add you/your-matrix
-/plugin install your-matrix@you-your-matrix
-```
-
-### Key Customization Points
-
-| What | File | Purpose |
-|------|------|---------|
-| Add new tool | `src/tools/schemas.ts` + `src/server/handlers.ts` | Define schema and handler |
-| Add tool validation | `src/tools/validation.ts` | TypeBox input validation |
-| Modify recall scoring | `src/tools/recall.ts` | Change similarity thresholds |
-| Add language support | `src/indexer/languages/` | Add tree-sitter grammar |
-| Change hook behavior | `src/hooks/*.ts` | Modify automatic actions |
-| Disable a hook | `hooks/hooks.json` | Remove hook entry |
-| Change defaults | `src/config/index.ts` | Modify DEFAULT_CONFIG |
-| Add new config option | `src/config/index.ts` | Add to interface and defaults |
-
-### Adding a New Hook
-
-1. Create `src/hooks/your-hook.ts`:
-```typescript
-import { getConfig } from '../config/index.js';
-
-export async function yourHook(input: any): Promise<{ continue: boolean; message?: string }> {
-  const config = getConfig();
-  // Your logic here
-  return { continue: true };
-}
-```
-
-2. Register in `src/hooks/index.ts`
-
-3. Add to `hooks/hooks.json`:
-```json
-{
-  "hooks": [
-    {
-      "matcher": "YourTrigger",
-      "hooks": [{
-        "type": "command",
-        "command": "bun run hooks/your-hook.ts"
-      }]
-    }
-  ]
-}
-```
-
-### Adding a New Language
-
-1. Create `src/indexer/languages/yourlang.ts`:
-```typescript
-import { LanguageParser } from './base.js';
-import type { ParseResult } from '../types.js';
-
-export class YourLangParser extends LanguageParser {
-  parse(filePath: string, content: string): ParseResult {
-    // Extract symbols and imports using tree-sitter
-  }
-}
-```
-
-2. Register in `src/indexer/languages/index.ts`
-
-3. Add grammar URL to `src/indexer/parser.ts`
-
----
-
-## API Integrations
-
-| Service | Purpose | Used By |
-|---------|---------|---------|
-| OSV.dev | CVE database | Package auditing |
-| npm registry | Package metadata | Deprecation check |
-| Bundlephobia | Bundle size | Size warnings |
-| Context7 | Library docs | Auto-redirect from WebFetch |
-
----
-
-## Performance Optimizations
-
-### Token Savings
-- Compact JSON output (~10-15% reduction)
-- Haiku-delegable tools for simple operations (12 tools)
-
-### MCP Annotations
-All tools have official hints:
-- `readOnlyHint` - No side effects
-- `idempotentHint` - Safe to retry
-- `destructiveHint` - Deletes data (1 tool)
-
-### MCP Server Instructions
-Surfaced to LLM via `_meta.instructions`:
-- Prefer Matrix index tools over grep/bash
-- Prefer Context7 over WebFetch/WebSearch for docs
-- Delegation guidance for subagents
+- Per-file parse timeout (10s) prevents hangs
+- Python: decorator extraction (@property, @staticmethod, @classmethod, @dataclass)
+- TypeScript: re-export tracking (export { X } from, export * from)
+- Content hash diffing for reliable incremental indexing
+- .gitignore respected during scanning
+- tsconfig path alias resolution for import graph accuracy
 
 ---
 
@@ -618,12 +367,10 @@ Surfaced to LLM via `_meta.instructions`:
 | `/matrix:review` | 5-phase code review with impact analysis |
 | `/matrix:deep-research` | Multi-source research aggregation |
 | `/matrix:nuke` | Codebase hygiene analysis (dead code, orphans, circular deps) |
-| `/matrix:doctor` | Diagnostics + auto-fix |
-| `/matrix:list` | View solutions, stats, warnings (includes export) |
+| `/matrix:doctor` | Diagnostics and auto-fix |
+| `/matrix:list` | View solutions, stats, warnings |
 | `/matrix:warn` | Manage file/package warnings |
 | `/matrix:reindex` | Rebuild code index |
-| `/matrix:clone-repo` | Clone external repos for exploration |
-| `/matrix:dreamer` | Schedule and manage automated Claude tasks |
 
 ---
 
@@ -640,27 +387,51 @@ Surfaced to LLM via `_meta.instructions`:
 
 ---
 
-## Diagnostics (matrix_doctor)
+## Self-Hosting Guide
 
-Checks performed:
-1. **Directory** - ~/.claude/matrix/ exists and writable
-2. **Database** - matrix.db exists, not corrupted, schema valid
-3. **Config** - matrix.config parseable, valid structure
-4. **Hooks** - hooks.json valid, scripts executable
-5. **Code Index** - Repository detected, index populated
-6. **Repo Detection** - Project files found (package.json, go.mod, etc.)
+### Fork and Customize
 
-Auto-fixes (data-safe):
-- Create missing directories
-- Run schema migrations
-- Reset corrupted config (NOT database)
-- Rebuild code index
+1. Clone:
+```bash
+git clone https://github.com/ojowwalker77/Claude-Matrix
+cd Claude-Matrix && bun install
+```
 
-**Never auto-fixed** (requires user action):
-- Corrupted database (preserves user data)
+2. Test:
+```bash
+bun test && bun run lint
+```
+
+3. Run locally:
+```bash
+claude --plugin-dir /path/to/your-fork
+```
+
+### Key Customization Points
+
+| What | File | Purpose |
+|------|------|---------|
+| Add new tool | `src/tools/schemas.ts` + `src/server/handlers.ts` | Define schema and handler |
+| Add tool validation | `src/tools/validation.ts` | TypeBox input validation |
+| Modify recall scoring | `src/tools/recall.ts` | Change similarity thresholds |
+| Add language support | `src/indexer/languages/` | Add tree-sitter grammar |
+| Change hook behavior | `src/hooks/*.ts` | Modify automatic actions |
+| Disable a hook | `hooks/hooks.json` | Remove hook entry |
+| Change defaults | `src/config/index.ts` | Modify DEFAULT_CONFIG |
+
+---
+
+## API Integrations
+
+| Service | Purpose | Used By |
+|---------|---------|---------|
+| OSV.dev | CVE database | Package auditing |
+| npm registry | Package metadata | Deprecation check |
+| Bundlephobia | Bundle size | Size warnings |
+| Context7 | Library docs | Auto-redirect from WebFetch |
 
 ---
 
 ## License
 
-MIT - Fork freely, customize as needed.
+MIT

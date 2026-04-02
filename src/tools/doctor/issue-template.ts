@@ -2,7 +2,7 @@
  * GitHub Issue Template Generator
  */
 
-import type { DoctorResult, DiagnosticCheck } from './types.js';
+import type { DoctorResult } from './types.js';
 
 const GITHUB_REPO = 'https://github.com/ojowwalker77/Claude-Matrix';
 
@@ -27,7 +27,7 @@ export function generateIssueTemplate(result: DoctorResult): string {
 
   const categories = {
     core: ['Matrix Directory', 'Database', 'Configuration', 'Config Migration'],
-    database: ['Background Jobs', 'Hook Executions', 'Dreamer Scheduler'],
+    database: ['Hook Executions'],
     hooks: ['Hooks', 'Subagent Hooks'],
     config: ['Model Delegation'],
     features: ['Code Index', 'Skills Directory', 'File Suggestion', 'Repo Detection'],

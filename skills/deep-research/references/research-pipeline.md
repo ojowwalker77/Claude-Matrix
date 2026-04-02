@@ -26,7 +26,7 @@ Collect information from multiple sources in parallel:
 - Include related failures to avoid
 
 ### 4. GitHub Repositories
-- For implementation patterns, use `/matrix:clone-repo` to clone and explore authoritative repos
+- For implementation patterns, clone and explore authoritative repos via `git clone --depth 1`
 
 ### 5. Additional Sources (for exhaustive depth)
 - GitHub Issues/Discussions via `gh` CLI

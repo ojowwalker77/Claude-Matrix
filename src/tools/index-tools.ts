@@ -392,6 +392,7 @@ export function matrixFindDeadCode(input: FindDeadCodeInput): FindDeadCodeResult
     input.path,
     input.entryPoints,
     input.limit ?? 100,
+    repo.root,
   );
 
   return {

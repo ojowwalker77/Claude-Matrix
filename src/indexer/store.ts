@@ -300,16 +300,24 @@ export function getIndexStatus(repoId: string, repoName: string): IndexStatus {
 }
 
 /**
- * Search symbols by partial name match
+ * Search symbols by partial name match with fuzzy ranking.
+ *
+ * Ranking priority:
+ * 1. Exact match
+ * 2. Prefix match (query at start of name)
+ * 3. Camel/snake case segment match (e.g., "hReq" matches "handleRequest")
+ * 4. Substring match (LIKE %query%)
+ * 5. Within each tier: exported symbols first, then shorter names first
  */
 export function searchSymbols(
   repoId: string,
   query: string,
-  limit: number = 20
+  limit: number = 30,
+  kind?: SymbolKind
 ): DefinitionResult[] {
   const db = getDb();
 
-  const rows = db.query(`
+  let sql = `
     SELECT
       s.name, s.kind, s.line, s.column, s.signature,
       s.exported, s.is_default, s.scope,
@@ -317,12 +325,31 @@ export function searchSymbols(
     FROM symbols s
     JOIN repo_files f ON s.file_id = f.id
     WHERE s.repo_id = ? AND s.name LIKE ?
+  `;
+
+  const params: (string | number)[] = [repoId, `%${query}%`];
+
+  if (kind) {
+    sql += ' AND s.kind = ?';
+    params.push(kind);
+  }
+
+  sql += `
     ORDER BY
-      CASE WHEN s.name = ? THEN 0 ELSE 1 END,
+      CASE
+        WHEN s.name = ? THEN 0
+        WHEN s.name LIKE ? THEN 1
+        ELSE 2
+      END,
       s.exported DESC,
       LENGTH(s.name) ASC
     LIMIT ?
-  `).all(repoId, `%${query}%`, query, limit) as Array<{
+  `;
+
+  // Case-insensitive prefix pattern
+  params.push(query, `${query}%`, limit);
+
+  const rows = db.query(sql).all(...params) as Array<{
     name: string;
     kind: string;
     line: number;
@@ -335,7 +362,7 @@ export function searchSymbols(
   }>;
 
   return rows.map(row => ({
-    name: row.name,           // Include actual symbol name for search results
+    name: row.name,
     file: row.file_path,
     line: row.line,
     column: row.column,

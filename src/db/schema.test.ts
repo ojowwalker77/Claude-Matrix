@@ -93,53 +93,6 @@ afterAll(() => {
   }
 });
 
-// Read migration SQL directly from migrate.ts for testing upgrade paths
-// This simulates what happens when upgrading from v4 to v5
-function getMigrationV5SQL(): string {
-  return `
-    CREATE TABLE IF NOT EXISTS dreamer_tasks (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        description TEXT,
-        enabled INTEGER DEFAULT 1,
-        cron_expression TEXT NOT NULL,
-        timezone TEXT DEFAULT 'local',
-        command TEXT NOT NULL,
-        working_directory TEXT DEFAULT '.',
-        timeout INTEGER DEFAULT 300,
-        env JSON DEFAULT '{}',
-        skip_permissions INTEGER DEFAULT 0,
-        worktree_enabled INTEGER DEFAULT 0,
-        worktree_base_path TEXT,
-        worktree_branch_prefix TEXT DEFAULT 'matrix-dreamer/',
-        worktree_remote TEXT DEFAULT 'origin',
-        tags JSON DEFAULT '[]',
-        repo_id TEXT,
-        created_at TEXT DEFAULT (datetime('now')),
-        updated_at TEXT DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS dreamer_executions (
-        id TEXT PRIMARY KEY,
-        task_id TEXT NOT NULL,
-        started_at TEXT NOT NULL,
-        completed_at TEXT,
-        status TEXT NOT NULL CHECK(status IN ('running','success','failure','timeout','skipped')),
-        triggered_by TEXT NOT NULL,
-        duration INTEGER,
-        exit_code INTEGER,
-        output_preview TEXT,
-        error TEXT,
-        task_name TEXT NOT NULL,
-        project_path TEXT,
-        cron_expression TEXT,
-        worktree_path TEXT,
-        worktree_branch TEXT,
-        worktree_pushed INTEGER
-    );
-  `;
-}
-
 describe('Schema and Migration Integrity', () => {
   test('fresh and migrated DBs have same tables', () => {
     const freshTables = getAllTables(freshDb);
@@ -211,19 +164,6 @@ describe('Schema and Migration Integrity', () => {
       expect(freshCols).toEqual(migratedCols);
     });
 
-    // Dreamer tables
-    test('dreamer_tasks columns match', () => {
-      const freshCols = getTableInfo(freshDb, 'dreamer_tasks');
-      const migratedCols = getTableInfo(migratedDb, 'dreamer_tasks');
-      expect(freshCols).toEqual(migratedCols);
-    });
-
-    test('dreamer_executions columns match', () => {
-      const freshCols = getTableInfo(freshDb, 'dreamer_executions');
-      const migratedCols = getTableInfo(migratedDb, 'dreamer_executions');
-      expect(freshCols).toEqual(migratedCols);
-    });
-
     test('plugin_meta columns match', () => {
       const freshCols = getTableInfo(freshDb, 'plugin_meta');
       const migratedCols = getTableInfo(migratedDb, 'plugin_meta');
@@ -232,17 +172,6 @@ describe('Schema and Migration Integrity', () => {
   });
 
   describe('Default Value Matching', () => {
-    test('dreamer_tasks defaults match', () => {
-      const fresh = getTableInfo(freshDb, 'dreamer_tasks');
-      const migrated = getTableInfo(migratedDb, 'dreamer_tasks');
-
-      for (const col of fresh) {
-        const migratedCol = migrated.find(c => c.name === col.name);
-        expect(migratedCol).toBeDefined();
-        expect(migratedCol?.dflt_value).toBe(col.dflt_value);
-      }
-    });
-
     test('solutions defaults match', () => {
       const fresh = getTableInfo(freshDb, 'solutions');
       const migrated = getTableInfo(migratedDb, 'solutions');
@@ -267,31 +196,3 @@ describe('Schema and Migration Integrity', () => {
   });
 });
 
-describe('Migration Path Divergence Detection', () => {
-  test('v5 migration dreamer_tasks defaults match schema.ts', () => {
-    // Create DB using v5 migration SQL (simulates upgrade from v4)
-    const upgradedDbPath = join(tmpdir(), `matrix-upgraded-${Date.now()}.db`);
-    const upgradedDb = new Database(upgradedDbPath, { create: true });
-    upgradedDb.exec(getMigrationV5SQL());
-
-    // Get column info from both
-    const freshCols = getTableInfo(freshDb, 'dreamer_tasks');
-    const upgradedCols = getTableInfo(upgradedDb, 'dreamer_tasks');
-
-    // Check each column's default value
-    const mismatches: string[] = [];
-    for (const freshCol of freshCols) {
-      const upgradedCol = upgradedCols.find(c => c.name === freshCol.name);
-      if (upgradedCol && upgradedCol.dflt_value !== freshCol.dflt_value) {
-        mismatches.push(
-          `Column '${freshCol.name}': schema.ts='${freshCol.dflt_value}' vs migrate.ts='${upgradedCol.dflt_value}'`
-        );
-      }
-    }
-
-    upgradedDb.close();
-    if (existsSync(upgradedDbPath)) unlinkSync(upgradedDbPath);
-
-    expect(mismatches).toEqual([]);
-  });
-});

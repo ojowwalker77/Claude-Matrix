@@ -80,12 +80,6 @@ const SymbolKindEnum = Type.Union([
   Type.Literal('property'),
 ]);
 
-const PromptModeEnum = Type.Union([
-  Type.Literal('interactive'),
-  Type.Literal('auto'),
-  Type.Literal('spawn'),
-]);
-
 // ============================================================================
 // Analysis Enums
 // ============================================================================
@@ -176,12 +170,6 @@ export const WarnInputSchema = Type.Object({
   repoSpecific: Type.Optional(Type.Boolean({ description: 'Repo-specific warning (for add)' })),
 });
 
-export const PromptInputSchema = Type.Object({
-  rawPrompt: Type.String({ description: 'User prompt to analyze' }),
-  mode: Type.Optional(PromptModeEnum),
-  skipClarification: Type.Optional(Type.Boolean({ description: 'Skip clarification questions' })),
-});
-
 // Shared description for repoPath - remove redundancy
 const repoPathDesc = 'Repository path';
 
@@ -221,7 +209,6 @@ export const IndexStatusInputSchema = Type.Object({
 export const ReindexInputSchema = Type.Object({
   full: Type.Optional(Type.Boolean({ description: 'Force full reindex' })),
   repoPath: Type.Optional(Type.String({ description: repoPathDesc })),
-  async: Type.Optional(Type.Boolean({ description: 'Run in background, returns jobId for polling' })),
 });
 
 export const DoctorInputSchema = Type.Object({
@@ -243,80 +230,6 @@ export const FindCircularDepsInputSchema = Type.Object({
 });
 
 // ============================================================================
-// Background Job Schemas
-// ============================================================================
-
-export const JobStatusInputSchema = Type.Object({
-  jobId: Type.String({ description: 'Job ID to check' }),
-});
-
-export const JobCancelInputSchema = Type.Object({
-  jobId: Type.String({ description: 'Job ID to cancel' }),
-});
-
-export const JobListInputSchema = Type.Object({
-  status: Type.Optional(
-    Type.Union([
-      Type.Literal('queued'),
-      Type.Literal('running'),
-      Type.Literal('completed'),
-      Type.Literal('failed'),
-      Type.Literal('cancelled'),
-    ], { description: 'Filter by status' })
-  ),
-  limit: Type.Optional(Type.Number({ minimum: 1, maximum: 100, description: 'Max jobs to return' })),
-});
-
-// ============================================================================
-// Dreamer (Scheduled Task Automation) Schemas
-// ============================================================================
-
-const DreamerActionEnum = Type.Union([
-  Type.Literal('add'),
-  Type.Literal('list'),
-  Type.Literal('run'),
-  Type.Literal('remove'),
-  Type.Literal('status'),
-  Type.Literal('logs'),
-  Type.Literal('history'),
-]);
-
-const WorktreeConfigSchema = Type.Object({
-  enabled: Type.Optional(Type.Boolean({ description: 'Run in isolated git worktree' })),
-  basePath: Type.Optional(Type.String({ description: 'Worktree base directory' })),
-  branchPrefix: Type.Optional(Type.String({ description: 'Branch name prefix (default: claude-task/)' })),
-  remoteName: Type.Optional(Type.String({ description: 'Remote for pushing (default: origin)' })),
-});
-
-export const DreamerInputSchema = Type.Object({
-  action: DreamerActionEnum,
-
-  // For 'add' action
-  name: Type.Optional(Type.String({ description: 'Task name', maxLength: 100 })),
-  schedule: Type.Optional(Type.String({ description: 'Cron expression or natural language (e.g., "every day at 9am")' })),
-  command: Type.Optional(Type.String({ description: 'Claude prompt or /command to execute' })),
-  description: Type.Optional(Type.String({ description: 'Task description', maxLength: 500 })),
-  workingDirectory: Type.Optional(Type.String({ description: 'Working directory' })),
-  timeout: Type.Optional(Type.Number({ description: 'Timeout in seconds (default: 300)' })),
-  timezone: Type.Optional(Type.String({ description: 'IANA timezone or "local"' })),
-  tags: Type.Optional(Type.Array(Type.String(), { description: 'Tags for organization' })),
-  skipPermissions: Type.Optional(Type.Boolean({ description: 'Run with --dangerously-skip-permissions' })),
-  worktree: Type.Optional(WorktreeConfigSchema),
-  env: Type.Optional(Type.Record(Type.String(), Type.String(), { description: 'Environment variables' })),
-
-  // For 'run', 'remove', 'logs' actions
-  taskId: Type.Optional(Type.String({ description: 'Task ID' })),
-
-  // For 'list' and 'history' actions
-  limit: Type.Optional(Type.Number({ description: 'Max results to return' })),
-  tag: Type.Optional(Type.String({ description: 'Filter by tag' })),
-
-  // For 'logs' action
-  lines: Type.Optional(Type.Number({ description: 'Number of log lines (default: 50)' })),
-  stream: Type.Optional(Type.Union([Type.Literal('stdout'), Type.Literal('stderr'), Type.Literal('both')], { description: 'Log stream to read' })),
-});
-
-// ============================================================================
 // Type Exports (inferred from schemas)
 // ============================================================================
 
@@ -327,7 +240,6 @@ export type GetSolutionInput = Static<typeof GetSolutionInputSchema>;
 export type FailureInput = Static<typeof FailureInputSchema>;
 export type StatusInput = Static<typeof StatusInputSchema>;
 export type WarnInput = Static<typeof WarnInputSchema>;
-export type PromptInput = Static<typeof PromptInputSchema>;
 export type FindDefinitionInput = Static<typeof FindDefinitionInputSchema>;
 export type FindCallersInput = Static<typeof FindCallersInputSchema>;
 export type ListExportsInput = Static<typeof ListExportsInputSchema>;
@@ -336,10 +248,6 @@ export type GetImportsInput = Static<typeof GetImportsInputSchema>;
 export type IndexStatusInput = Static<typeof IndexStatusInputSchema>;
 export type ReindexInput = Static<typeof ReindexInputSchema>;
 export type DoctorInput = Static<typeof DoctorInputSchema>;
-export type JobStatusInput = Static<typeof JobStatusInputSchema>;
-export type JobCancelInput = Static<typeof JobCancelInputSchema>;
-export type JobListInput = Static<typeof JobListInputSchema>;
-export type DreamerInput = Static<typeof DreamerInputSchema>;
 export type FindDeadCodeInput = Static<typeof FindDeadCodeInputSchema>;
 export type FindCircularDepsInput = Static<typeof FindCircularDepsInputSchema>;
 
@@ -355,7 +263,6 @@ export const validators = {
   failure: TypeCompiler.Compile(FailureInputSchema),
   status: TypeCompiler.Compile(StatusInputSchema),
   warn: TypeCompiler.Compile(WarnInputSchema),
-  prompt: TypeCompiler.Compile(PromptInputSchema),
   findDefinition: TypeCompiler.Compile(FindDefinitionInputSchema),
   findCallers: TypeCompiler.Compile(FindCallersInputSchema),
   listExports: TypeCompiler.Compile(ListExportsInputSchema),
@@ -364,10 +271,6 @@ export const validators = {
   indexStatus: TypeCompiler.Compile(IndexStatusInputSchema),
   reindex: TypeCompiler.Compile(ReindexInputSchema),
   doctor: TypeCompiler.Compile(DoctorInputSchema),
-  jobStatus: TypeCompiler.Compile(JobStatusInputSchema),
-  jobCancel: TypeCompiler.Compile(JobCancelInputSchema),
-  jobList: TypeCompiler.Compile(JobListInputSchema),
-  dreamer: TypeCompiler.Compile(DreamerInputSchema),
   findDeadCode: TypeCompiler.Compile(FindDeadCodeInputSchema),
   findCircularDeps: TypeCompiler.Compile(FindCircularDepsInputSchema),
 } as const;

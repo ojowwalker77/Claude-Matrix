@@ -6,7 +6,7 @@
 
 import type { Node as SyntaxNode } from 'web-tree-sitter';
 import { LanguageParser } from './base.js';
-import type { ParseResult, ExtractedSymbol, ExtractedImport } from '../types.js';
+import type { ExtractedSymbol, ExtractedImport } from '../types.js';
 
 export class JavaParser extends LanguageParser {
   protected extractSymbols(rootNode: SyntaxNode, symbols: ExtractedSymbol[]): void {

@@ -8,7 +8,7 @@
  * only implement extractSymbols() and extractImports().
  */
 
-import type { Parser, Language, Node as SyntaxNode, Tree } from 'web-tree-sitter';
+import type { Parser, Language, Node as SyntaxNode } from 'web-tree-sitter';
 import type { ParseResult, ExtractedSymbol, ExtractedImport, SymbolKind } from '../types.js';
 
 export abstract class LanguageParser {
@@ -20,14 +20,20 @@ export abstract class LanguageParser {
     this.language = language;
   }
 
+  /** Per-file parse timeout in ms (default 10s) */
+  static PARSE_TIMEOUT_MS = 10_000;
+
   /**
    * Parse source code and extract symbols/imports
    * Template method - subclasses implement extractSymbols/extractImports
+   * Includes per-file timeout to prevent hangs on malformed files.
    */
   parse(filePath: string, content: string): ParseResult {
     const symbols: ExtractedSymbol[] = [];
     const imports: ExtractedImport[] = [];
     const errors: string[] = [];
+
+    const start = Date.now();
 
     try {
       this.parser.setLanguage(this.language);
@@ -43,6 +49,13 @@ export abstract class LanguageParser {
       }
 
       this.extractSymbols(tree.rootNode, symbols);
+
+      // Check timeout between extraction phases
+      if (Date.now() - start > LanguageParser.PARSE_TIMEOUT_MS) {
+        errors.push(`Parse timeout after ${LanguageParser.PARSE_TIMEOUT_MS}ms (symbols extracted, imports skipped)`);
+        return { symbols, imports, errors };
+      }
+
       this.extractImports(tree.rootNode, imports);
     } catch (err) {
       errors.push(`Parse error: ${err instanceof Error ? err.message : String(err)}`);

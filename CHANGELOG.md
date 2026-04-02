@@ -2,6 +2,44 @@
 
 All notable changes to Claude Matrix are documented here.
 
+## [2.4.0] - 2026-04-01
+
+> Leaner, sharper. Claude Code grew up, so we dropped what it handles natively and doubled down on what only Matrix can do.
+
+### Removed
+- **Dreamer (Scheduled Tasks)** - Removed the entire cron/scheduler system (`src/dreamer/`, `croner`, `cronstrue` packages). Claude Code now has native scheduling via `CronCreate`/`RemoteTrigger`.
+- **Background Jobs** - Removed async job system (`src/jobs/`). Reindex now runs synchronously. `matrix_job_status`, `matrix_job_cancel`, `matrix_job_list` tools removed.
+- **Prompt Tool** (`matrix_prompt`) - Removed prompt analysis tool. High token cost, marginal value.
+- **PromptAnalysis Hook** - Removed memory injection into prompts. Token overhead outweighed benefit.
+- **SubagentStart Hook** - Removed hint injection into subagents.
+- **PostToolUse:Bash Hook** - Removed bash output logging. Claude sees output directly.
+- **TaskCompleted Hook** - Removed task completion logging.
+- **Clone Repo Skill** (`/matrix:clone-repo`) - `git clone` works fine natively.
+- **RunMD Skill** (`/matrix:runmd`) - Bash tool covers this.
+- **`@anthropic-ai/sdk`** dependency - Was unused (never imported).
+
+### Changed
+- **DB Migrations Flattened** - Replaced 8 incremental migrations + 100 LOC version detection with a single idempotent legacy upgrade. `SCHEMA_VERSION` bumped to 9. Existing DBs at any version (1-8) upgrade cleanly.
+- **Dependencies Updated**
+  - `@modelcontextprotocol/sdk` 1.25.0 → 1.29.0
+  - `@sinclair/typebox` 0.34.45 → 0.34.49
+  - `web-tree-sitter` 0.26.3 → 0.26.8
+  - `@types/bun` 1.3.4 → 1.3.11
+  - `oxlint` 1.35.0 → 1.58.0
+
+### Improved
+- **Scanner: .gitignore support** - File scanner now parses `.gitignore` and respects all patterns. No more indexing build output or generated files.
+- **Scanner: symlink cycle detection** - Detects and skips symlink cycles and broken symlinks via `lstat()`.
+- **Incremental indexing: content hash** - Uses SHA-256 content hashing (stored in DB) instead of mtime-only detection. Catches refactors where timestamp is unreliable, skips `touch`-without-edit.
+- **Parser: per-file timeout** - 10s timeout per file prevents hangs on malformed/huge files.
+- **Python parser: decorator extraction** - Captures `@property`, `@staticmethod`, `@classmethod`, `@dataclass` and custom decorators. Properties correctly classified. Dataclass fields auto-extracted.
+- **TypeScript parser: re-export tracking** - `export { X } from './bar'`, `export * from './bar'` now create import edges. Fixes caller detection through barrel exports.
+- **Symbol search: fuzzy ranking** - `searchSymbols` now ranks exact > prefix > substring, with optional kind filter and higher default limit (30).
+- **Import resolution: tsconfig path aliases** - Loads `tsconfig.json`/`jsconfig.json` `compilerOptions.paths` for accurate import graph resolution (e.g., `@/utils/foo` → `src/utils/foo`).
+- **Zero lint warnings** - Cleaned all 15 pre-existing unused import warnings.
+
+---
+
 ## [2.3.1] - 2026-03-02
 
 ### Fixed

@@ -9,7 +9,7 @@
 import { readFile } from 'fs/promises';
 import { scanRepository } from './scanner.js';
 import { parseFile } from './parser.js';
-import { computeDiff, hasChanges, getDiffSummary } from './diff.js';
+import { computeDiff, computeFileHash, hasChanges, getDiffSummary } from './diff.js';
 import {
   getIndexedFiles,
   upsertFile,
@@ -71,7 +71,7 @@ export async function indexRepository(options: IndexerOptions): Promise<IndexRes
 
     if (incremental) {
       const indexedFiles = getIndexedFiles(repoId);
-      const diff = computeDiff(scannedFiles, indexedFiles);
+      const diff = await computeDiff(scannedFiles, indexedFiles);
 
       if (!hasChanges(diff)) {
         onProgress?.('Index up to date', 100);
@@ -122,8 +122,11 @@ export async function indexRepository(options: IndexerOptions): Promise<IndexRes
         // Read file content
         const content = await readFile(file.absolutePath, 'utf-8');
 
-        // Upsert file record
-        const fileId = upsertFile(repoId, file.path, file.mtime);
+        // Compute content hash for reliable change detection
+        const hash = await computeFileHash(file.absolutePath);
+
+        // Upsert file record with hash
+        const fileId = upsertFile(repoId, file.path, file.mtime, hash);
 
         // Clear existing symbols/imports for this file
         clearFileIndex(fileId);
