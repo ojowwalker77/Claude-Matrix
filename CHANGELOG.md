@@ -5,7 +5,7 @@ All notable changes to Claude Matrix are documented here.
 ## [2.4.1] - 2026-04-01
 
 ### Fixed
-- **Indexer spams terminal during session start** - Removed per-file progress output that flooded the terminal with `[Matrix] Indexing: ...` lines for every file. Now prints only a single summary line when indexing completes.
+- **Session start spams terminal** - Removed all `printToUser` and `console.error` output from the session-start hook. Initialization, migration, indexing, and errors are now completely silent.
 
 ---
 

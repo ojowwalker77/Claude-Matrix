@@ -81,12 +81,10 @@ function migrateExistingData(): boolean {
   for (const oldPath of oldPaths) {
     if (existsSync(oldPath) && oldPath !== DB_PATH) {
       try {
-        console.error(`[Matrix] Migrating database from ${oldPath}...`);
         copyFileSync(oldPath, DB_PATH);
-        console.error('[Matrix] Migration complete.');
         return true;
-      } catch (err) {
-        console.error(`[Matrix] Migration failed: ${err}`);
+      } catch {
+        // Migration failed, continue checking other paths
       }
     }
   }
@@ -115,19 +113,6 @@ function initDatabase(): void {
     VALUES ('version', ?, datetime('now'))
   `, [CURRENT_VERSION]);
   db.close();
-}
-
-/**
- * Print status to user (via stderr, visible in terminal)
- */
-function printToUser(message: string): void {
-  // Write directly to /dev/tty if available, otherwise stderr
-  try {
-    const tty = Bun.file('/dev/tty');
-    Bun.write(tty, message + '\n');
-  } catch {
-    console.error(message);
-  }
 }
 
 /**
@@ -235,7 +220,7 @@ async function runIndexer(repoRoot: string, repoId: string, config: IndexingConf
     // Dynamic import to avoid loading heavy modules if not needed
     const { indexRepository } = await import('../indexer/index.js');
 
-    const result = await indexRepository({
+    await indexRepository({
       repoRoot,
       repoId,
       incremental: true,
@@ -244,14 +229,8 @@ async function runIndexer(repoRoot: string, repoId: string, config: IndexingConf
       maxFileSize: config.maxFileSize,
       includeTests: config.includeTests,
     });
-
-    // Show a single summary line (no per-file spam)
-    if (result.filesIndexed > 0) {
-      printToUser(`\x1b[32m[Matrix]\x1b[0m Indexed ${result.filesIndexed} files, ${result.symbolsFound} symbols (${result.duration}ms)`);
-    }
-  } catch (err) {
+  } catch {
     // Silently fail - indexing is optional
-    console.error(`[Matrix] Indexer error: ${err}`);
   }
 }
 
@@ -275,17 +254,6 @@ export async function run() {
     const needsInit = !state || state.version !== CURRENT_VERSION || !existsSync(DB_PATH);
 
     if (needsInit) {
-      const isUpgrade = state && state.version !== CURRENT_VERSION;
-      const isFirstRun = !state;
-
-      if (isUpgrade && state) {
-        printToUser(`\x1b[36m[Matrix]\x1b[0m Upgrading ${state.version} → ${CURRENT_VERSION}...`);
-      } else if (isFirstRun) {
-        printToUser('\x1b[36m[Matrix]\x1b[0m Initializing...');
-      } else {
-        printToUser('\x1b[36m[Matrix]\x1b[0m Repairing...');
-      }
-
       // Create models directory
       if (!existsSync(MODELS_DIR)) {
         mkdirSync(MODELS_DIR, { recursive: true });
@@ -307,8 +275,6 @@ export async function run() {
         lastSessionAt: new Date().toISOString(),
       };
       writeFileSync(MARKER_FILE, JSON.stringify(newState, null, 2));
-
-      printToUser('\x1b[32m[Matrix]\x1b[0m Ready.');
     } else if (state) {
       // Update last session time
       state.lastSessionAt = new Date().toISOString();
@@ -330,8 +296,7 @@ export async function run() {
     }
 
     process.exit(0);
-  } catch (err) {
-    console.error(`[Matrix] Initialization error: ${err}`);
+  } catch {
     process.exit(1); // Non-blocking error
   }
 }
